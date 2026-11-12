@@ -13,6 +13,10 @@ import { ApiUtilModule } from '../common/utils/api-util/api-util.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { CategoriesModule } from './categories/categories.module';
+import { ProductImagesModule } from './product-images/product-images.module';
+import { ProductVariantsModule } from './product-variants/product-variants.module';
+import { ProductsModule } from './products/products.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -23,6 +27,10 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     AuthModule,
     UsersModule,
+    CategoriesModule,
+    ProductsModule,
+    ProductVariantsModule,
+    ProductImagesModule,
   ],
   controllers: [AppController],
   providers: [

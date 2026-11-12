@@ -4,17 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  OrderStatus,
-  Prisma,
-  ProductStatus,
-  Role,
-  UserStatus,
-} from '@prisma/client';
+import { OrderStatus, Prisma, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { UserInfo } from '../../common/decorators/user.decorator';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
+import { ProductsService } from '../products/products.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -31,7 +26,10 @@ const SENSITIVE_FIELDS = {
 
 @Injectable()
 export class UsersService extends PrismaBaseService<'user'> {
-  constructor(prismaService: PrismaService) {
+  constructor(
+    prismaService: PrismaService,
+    private readonly productsService: ProductsService,
+  ) {
     super(prismaService, 'user');
   }
 
@@ -61,20 +59,7 @@ export class UsersService extends PrismaBaseService<'user'> {
     const ids = await this.getWishlistIDs(userID);
     if (!ids.length) return [];
 
-    // TODO: chuyển sang ProductsService khi có module products
-    const products = await this.prismaService.extended.product.findMany({
-      where: { id: { in: ids }, status: ProductStatus.active },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        images: true,
-        minPrice: true,
-        maxPrice: true,
-        ratingAvg: true,
-        ratingCount: true,
-      },
-    });
+    const products = await this.productsService.findCardsByIDs(ids);
 
     // Sản phẩm thêm sau hiện trước. Sản phẩm đã ẩn / xóa thì không hiện (vẫn giữ ID trong mảng)
     const byID = new Map(products.map((p) => [p.id, p]));
@@ -86,13 +71,7 @@ export class UsersService extends PrismaBaseService<'user'> {
 
   async addToWishlist(userID: string, productID: string) {
     await this.ensureExists(userID);
-
-    // TODO: chuyển sang ProductsService khi có module products
-    const product = await this.prismaService.extended.product.findFirst({
-      where: { id: productID, status: ProductStatus.active },
-      select: { id: true },
-    });
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
+    await this.productsService.ensureActive(productID);
 
     // Atomic: chỉ push khi chưa có, nên gọi 2 lần cũng không bị trùng
     await this.extended.updateMany({

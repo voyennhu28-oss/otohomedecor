@@ -7,9 +7,22 @@ export class IDDto extends createZodDto(
   }),
 ) {}
 
+/** "ban-tra", "sofa-3-cho": chữ thường không dấu, số, gạch ngang giữa các từ. */
+export const slugSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(120)
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+    'Slug chỉ gồm chữ thường không dấu, số và dấu gạch ngang',
+  );
+
+export class SlugDto extends createZodDto(z.object({ slug: slugSchema })) {}
+
 export class ExportExcelDto extends createZodDto(
   z.object({
-    ids: z.array(z.string().uuid()).optional().nullable().default(null),
+    ids: z.array(objectId).optional().nullable().default(null),
     select: z.string().optional().nullish().default(null),
   }),
 ) {}

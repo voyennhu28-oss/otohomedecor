@@ -1,5 +1,5 @@
 /**
- * Seed dữ liệu ban đầu: admin, customer mẫu (chỉ ngoài production), cây danh mục.
+ * Seed dữ liệu ban đầu: admin, customer mẫu (chỉ ngoài production), cây danh mục, sản phẩm mẫu.
  * Chạy: npm run db:seed. Chạy lại nhiều lần vẫn an toàn (upsert theo email / slug,
  * không ghi đè mật khẩu của tài khoản đã có).
  *
@@ -7,9 +7,11 @@
  *   SEED_ADMIN_EMAIL     mặc định admin@homedecor.local
  *   SEED_ADMIN_PASSWORD  bỏ trống thì sinh ngẫu nhiên và in ra một lần
  */
-import { PrismaClient, Role, UserStatus } from '@prisma/client';
+import { PrismaClient, ProductStatus, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'node:crypto';
+import { computeProductSummary } from '../src/app/products/product-summary';
+import { SEED_PRODUCTS } from './seed-data/products';
 
 try {
   process.loadEnvFile('.env');
@@ -116,10 +118,61 @@ async function seedCategories() {
   console.log(`• ${count} danh mục (${Object.keys(CATEGORY_TREE).length} danh mục cha)`);
 }
 
+/**
+ * Sản phẩm mẫu. Bỏ qua sản phẩm đã có (theo slug) hoặc có SKU đã tồn tại,
+ * nên chạy lại không bị trùng. minPrice / maxPrice / colors tính bằng đúng hàm của API.
+ */
+async function seedProducts() {
+  const categories = await prisma.category.findMany({ select: { id: true, slug: true } });
+  const categoryIDBySlug = new Map(categories.map((c) => [c.slug, c.id]));
+  let created = 0;
+  let skipped = 0;
+
+  for (const [index, { category, variants, ...product }] of SEED_PRODUCTS.entries()) {
+    const slug = slugify(product.name);
+    const categoryID = categoryIDBySlug.get(category);
+    if (!categoryID) throw new Error(`Seed: chưa có danh mục "${category}"`);
+
+    const [existedProduct, existedSku] = await Promise.all([
+      prisma.product.findUnique({ where: { slug }, select: { id: true } }),
+      prisma.productVariant.findFirst({
+        where: { sku: { in: variants.map((v) => v.sku) } },
+        select: { id: true },
+      }),
+    ]);
+    if (existedProduct || existedSku) {
+      skipped++;
+      continue;
+    }
+
+    await prisma.product.create({
+      data: {
+        ...product,
+        slug,
+        categoryID,
+        status: ProductStatus.active,
+        images: [
+          {
+            url: `https://placehold.co/800x800/EEE/333?text=${encodeURIComponent(product.name)}`,
+            alt: product.name,
+            sortOrder: 0,
+          },
+        ],
+        soldCount: (index * 7) % 40, // để sắp xếp "bán chạy" có dữ liệu
+        ...computeProductSummary(variants.map((v) => ({ ...v, isActive: true }))),
+        variants: { create: variants },
+      },
+    });
+    created++;
+  }
+  console.log(`• Sản phẩm: tạo mới ${created}, bỏ qua ${skipped} (đã có)`);
+}
+
 async function main() {
   console.log('Seeding...');
   await seedUsers();
   await seedCategories();
+  await seedProducts();
   console.log('Xong.');
 }
 

@@ -27,9 +27,9 @@ import { FileEnvs, UPLOADS_GROUP_FILE } from './file-util.const';
         storage: diskStorage({
           destination: (_req, file, cb) => {
             const ext = extname(file.originalname).toLowerCase();
-            let destination = configService.get<string>(
-              FileEnvs.MULTER_DESTINATION_FILE,
-            )!;
+            let destination =
+              configService.get<string>(FileEnvs.MULTER_DESTINATION_FILE) ??
+              './uploads'; // .env không khai báo thì join(undefined) sẽ văng lỗi
             for (const [folder, extensions] of Object.entries(
               UPLOADS_GROUP_FILE,
             )) {

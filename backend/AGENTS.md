@@ -78,6 +78,7 @@ src/
 
 **Prisma**
 - Service truy vấn qua `this.prisma.extended.<model>`, hoặc `this.extended` nếu kế thừa `PrismaBaseService` (client đã extend, tự lọc soft delete). `client` / `this.prisma.<model>` là client gốc, chỉ dùng khi cần đọc cả bản ghi đã xóa. Model soft delete: `User`, `Category`, `Product`, `ProductVariant`, `Promotion`. Xóa bằng `softDelete()`, không xóa cứng các model này.
+- Soft delete bản ghi có field `@unique` do người dùng đặt (slug, sku, code): đổi luôn giá trị đó thành `<giá trị>--deleted-<id>` để giải phóng, vì index unique vẫn tính bản ghi đã xóa. Xem `CategoriesService.remove`. Riêng email của User thì giữ nguyên (chưa chốt).
 - Lọc "chưa xóa" phải dùng `NOT_DELETED` (`deletedAt` null **hoặc** chưa tồn tại), không viết `deletedAt: null`.
 - Bên trong `$transaction(async (tx) => ...)`, `tx` là client gốc, **không** có filter soft delete. Phải tự thêm `...NOT_DELETED` vào `where`.
 - Giữ transaction ngắn: **không** gọi cổng thanh toán, Cloudinary hay gửi mail bên trong transaction. Bọc transaction có ghi tồn kho bằng `withRetry` (retry khi gặp lỗi `P2034`).
