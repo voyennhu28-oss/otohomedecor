@@ -1,7 +1,7 @@
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { INestApplication, VersioningType } from '@nestjs/common';
-// import { applyMiddlewares } from './common/middlewares/common.middleware';
+import { applyMiddlewares } from './common/middlewares/common.middleware';
 
 const removeFieldsAndRelations = (document: any) => {
   const otherFields = ['id', 'userID'];
@@ -66,17 +66,20 @@ const initOpenAPI = (app: INestApplication) => {
 };
 
 const initApp = (app: INestApplication) => {
-  const { APP_PREFIX = '/api', FE_URL } = process.env;
+  const { APP_PREFIX = '/api', FE_URL = 'http://localhost:3000' } = process.env;
   app.setGlobalPrefix(APP_PREFIX);
+  // Auth dùng cookie nên phải bật credentials, và khi đó origin KHÔNG được là '*'.
+  // FE_URL có thể chứa nhiều địa chỉ, cách nhau bằng dấu phẩy.
   app.enableCors({
-    origin: FE_URL ? FE_URL : ['*'],
+    origin: FE_URL.split(',').map((url) => url.trim()),
+    credentials: true,
   });
   // app.enableVersioning({
   //   type: VersioningType.HEADER,
   //   header: 'x-api-version',
   //   defaultVersion: '1',
   // });
-  //   applyMiddlewares(app);
+  applyMiddlewares(app);
   initOpenAPI(app);
   app.enableShutdownHooks();
   return app;

@@ -129,7 +129,7 @@ src/
 
 ### Biến môi trường
 
-Khai báo trong `.example.env` và validate trong `src/common/envs/validate.env.ts` (bật `validate` trong `ConfigModule`). Danh sách đầy đủ ở plan mục 2.4: `PORT`, `APP_PREFIX`, `APP_NAME`, `NODE_ENV`, `FE_URL`, `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_*`, `MAIL_*`, `VNPAY_*`, `MOMO_*`, `ORDER_UNPAID_TIMEOUT_MINUTES`, cùng với `OBSERVE_APP_KEY`, `OBSERVE_APP_SECRET` (xem mục Observe bên dưới).
+Khai báo trong `.example.env` và validate trong `src/common/envs/validate.env.ts` (bật `validate` trong `ConfigModule`). Danh sách đầy đủ ở plan mục 2.4: `PORT`, `APP_PREFIX`, `APP_NAME`, `NODE_ENV`, `FE_URL`, `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_*`, `MAIL_*`, `VNPAY_*`, `MOMO_*`, `ORDER_UNPAID_TIMEOUT_MINUTES`, `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (tùy chọn, cho `db:seed`), cùng với `OBSERVE_APP_KEY`, `OBSERVE_APP_SECRET` (xem mục Observe bên dưới).
 
 ### Lộ trình
 

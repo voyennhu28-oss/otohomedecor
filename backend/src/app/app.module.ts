@@ -1,17 +1,39 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { ZodValidationPipe } from 'nestjs-zod';
+import { CatchEverythingFilter } from '../catch-everything/catch-everything.filter';
+import { ZodExceptionFilter } from '../catch-everything/zod-exception/zod-exception.filter';
 import { AdminGuard } from '../common/guards/admin.guard';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { PrismaModule } from '../common/prisma/prisma.module';
+import { RateLimitModule } from '../common/security/rate-limit/rate-limit.module';
+import { ApiUtilModule } from '../common/utils/api-util/api-util.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // nạp .env vào process.env
+    RateLimitModule,
+    ApiUtilModule,
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Global guard chạy theo thứ tự khai báo: ThrottlerGuard → AuthGuard → AdminGuard.
-    // Khi thêm ThrottlerGuard / AuthGuard, đặt chúng TRƯỚC AdminGuard
-    // (AdminGuard cần `req.user` do AuthGuard gắn vào).
+    ZodExceptionFilter, // CatchEverythingFilter dùng để định dạng lỗi Zod
+    { provide: APP_FILTER, useClass: CatchEverythingFilter }, // định dạng mọi lỗi, map lỗi Prisma
+    { provide: APP_PIPE, useClass: ZodValidationPipe }, // validate mọi DTO tạo bằng createZodDto
+    // Global guard chạy theo thứ tự khai báo:
+    // ThrottlerGuard chặn spam trước → AuthGuard gắn req.user → AdminGuard đọc req.user
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: AdminGuard },
   ],
 })

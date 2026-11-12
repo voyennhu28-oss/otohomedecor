@@ -1,14 +1,9 @@
 import { CookieOptions } from 'express';
-import { JWTToken } from '../../../app/auth/consts/jwt.const';
-
-enum CookiesToken {
-  ACCESS_TOKEN_EXPIRE_IN = JWTToken.ACCESS_TOKEN_EXPIRE_IN,
-  REFRESH_TOKEN_EXPIRE_IN = JWTToken.REFRESH_TOKEN_EXPIRE_IN,
-}
 
 const COOKIE_CONFIG_DEFAULT: CookieOptions = {
   httpOnly: true,
-  sameSite: 'strict',
+  sameSite: 'none',
+  secure: true,
 };
 
-export { CookiesToken, COOKIE_CONFIG_DEFAULT };
+export { COOKIE_CONFIG_DEFAULT };

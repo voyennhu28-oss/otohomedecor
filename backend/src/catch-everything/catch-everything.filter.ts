@@ -1,60 +1,120 @@
 import {
-  ExceptionFilter,
-  Catch,
-  HttpStatus,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { ZodExceptionFilter } from './zod-exception/zod-exception.filter';
+import { Prisma } from '@prisma/client';
+import type { Request } from 'express';
 import { ZodSerializationException, ZodValidationException } from 'nestjs-zod';
 import { ApiUtilService } from '../common/utils/api-util/api-util.service';
-import { Prisma } from '@prisma/client';
+import { ZodExceptionFilter } from './zod-exception/zod-exception.filter';
+
+type ErrorItem = { message: string; [key: string]: unknown };
+
+/** Lỗi Prisma hay gặp → HTTP status + câu thông báo cho client (không lộ query / tên index). */
+const PRISMA_ERRORS: Record<string, { status: HttpStatus; message: string }> = {
+  P2002: { status: HttpStatus.CONFLICT, message: 'Dữ liệu đã tồn tại' },
+  P2025: { status: HttpStatus.NOT_FOUND, message: 'Không tìm thấy dữ liệu' },
+  P2023: { status: HttpStatus.BAD_REQUEST, message: 'ID không hợp lệ' },
+  P2034: {
+    status: HttpStatus.CONFLICT,
+    message: 'Dữ liệu đang được cập nhật, vui lòng thử lại',
+  },
+};
+
+/**
+ * Field bị trùng của lỗi P2002. MongoDB trả tên index (vd "Product_slug_key"),
+ * SQL trả mảng field (vd ["slug"]).
+ */
+const duplicatedFields = (target: unknown): string[] => {
+  if (Array.isArray(target)) return target.map(String);
+  if (typeof target === 'string') {
+    const match = /^[A-Za-z]+_(.+)_key$/.exec(target);
+    return match ? match[1].split('_') : [target];
+  }
+  return [];
+};
 
 @Catch()
 export class CatchEverythingFilter implements ExceptionFilter {
+  private readonly logger = new Logger(CatchEverythingFilter.name);
+
   constructor(
     private readonly httpAdapterHost: HttpAdapterHost,
     private readonly zodFilter: ZodExceptionFilter,
-    private apiUtilService: ApiUtilService,
+    private readonly apiUtilService: ApiUtilService,
   ) {}
 
-  catch(exception: any, host: ArgumentsHost): void {
+  catch(exception: unknown, host: ArgumentsHost): void {
     const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
+    const { status, errors } = this.resolve(exception);
 
-    const exceptionValue: {
-      status: number;
-      exceptions: any;
-    } = {
-      status: exception.getStatus?.() ?? HttpStatus.INTERNAL_SERVER_ERROR,
-      exceptions: [{ message: exception.message ?? exception.error?.message }],
-    };
+    // Lỗi 5xx là lỗi của server: ghi log đầy đủ để debug, client chỉ thấy câu chung
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      const req = ctx.getRequest<Request>();
+      this.logger.error(
+        `${req?.method} ${req?.url}`,
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+    }
 
-    if (
-      exception instanceof ZodValidationException ||
-      exception instanceof ZodSerializationException
-    ) {
+    const responseBody = this.apiUtilService.formatResponse({ errors });
+    httpAdapter.reply(ctx.getResponse(), responseBody, status);
+  }
+
+  private resolve(exception: unknown): { status: number; errors: ErrorItem[] } {
+    // Dữ liệu client gửi lên sai schema
+    if (exception instanceof ZodValidationException) {
       const zodErrors = this.zodFilter.catch(exception);
-      if (zodErrors) {
-        exceptionValue.exceptions = zodErrors;
-        exceptionValue.status = HttpStatus.BAD_REQUEST;
-      }
-    }
-    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      const map: Record<string, number> = {
-        P2002: HttpStatus.CONFLICT, // trùng unique (email, slug, sku, code)
-        P2025: HttpStatus.NOT_FOUND, // không tìm thấy bản ghi để update/delete
-        P2023: HttpStatus.BAD_REQUEST, // ObjectId sai định dạng
-        P2034: HttpStatus.CONFLICT, // xung đột transaction (đã retry hết lượt)
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        errors: Array.isArray(zodErrors)
+          ? zodErrors
+          : [{ message: exception.message }],
       };
-      exceptionValue.status =
-        map[exception.code] ?? HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
-    const responseBody = this.apiUtilService.formatResponse({
-      errors: exceptionValue.exceptions,
-    });
+    // Response của server không khớp schema: lỗi của server
+    if (exception instanceof ZodSerializationException) {
+      return this.internalError();
+    }
 
-    httpAdapter.reply(ctx.getResponse(), responseBody, exceptionValue.status);
+    if (exception instanceof HttpException) {
+      return {
+        status: exception.getStatus(),
+        errors: [{ message: exception.message }],
+      };
+    }
+
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      const known = PRISMA_ERRORS[exception.code];
+      if (!known) return this.internalError();
+      const fields =
+        exception.code === 'P2002'
+          ? duplicatedFields(exception.meta?.target)
+          : undefined;
+      return {
+        status: known.status,
+        errors: [
+          fields?.length
+            ? { message: `${known.message}: ${fields.join(', ')}`, fields }
+            : { message: known.message },
+        ],
+      };
+    }
+
+    return this.internalError();
+  }
+
+  private internalError() {
+    return {
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      errors: [{ message: 'Lỗi hệ thống, vui lòng thử lại sau' }],
+    };
   }
 }

@@ -11,7 +11,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/src/main",
     "lint": "oxlint src/ test/",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -44,6 +44,7 @@
     "helmet": "8.1.0",
     "nest-winston": "1.10.2",
     "nestjs-zod": "5.0.1",
+    "nodemailer": "^10.5.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "winston": "3.17.0",
@@ -64,6 +65,7 @@
     "@types/jest": "^30.0.0",
     "@types/multer": "2.0.0",
     "@types/node": "^22.10.7",
+    "@types/nodemailer": "^8.0.2",
     "@types/supertest": "^6.0.2",
     "eslint": "9.18.0",
     "eslint-config-prettier": "10.0.1",
@@ -84,5 +86,26 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "src/**/*.(t|j)s",
+      "!src/generated/**"
+    ],
+    "coverageDirectory": "./coverage",
+    "testEnvironment": "node"
   }
 }
