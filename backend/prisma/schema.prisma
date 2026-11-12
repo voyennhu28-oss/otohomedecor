@@ -1,0 +1,379 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator json {
+  provider = "prisma-json-types-generator"
+}
+
+generator zod {
+  provider          = "zod-prisma-types"
+  output            = "../src/generated/zod"
+  useTypeAssertions = true
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator custom_generator {
+  provider = "prisma-generator-fake-data"
+  output   = "../src/generated/faker/data.ts"
+}
+
+// ───────────── ENUMS ─────────────
+
+enum Role {
+  admin
+  customer
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+enum ProductStatus {
+  draft
+  active
+  inactive
+}
+
+enum OrderStatus {
+  pending // vừa đặt, chờ xác nhận / chờ thanh toán
+  confirmed // shop đã xác nhận (hoặc đã thanh toán online)
+  processing // đang chuẩn bị / đang sản xuất (hàng đặt làm)
+  shipping // đang giao
+  delivered // đã giao
+  cancelled
+  returned
+}
+
+enum PaymentMethod {
+  cod
+  vnpay
+  momo
+  bank_transfer
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum PromotionType {
+  percentage
+  fixed_amount
+  free_shipping
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  hidden
+}
+
+// ───────────── EMBEDDED TYPES ─────────────
+
+type Dimensions {
+  lengthCm Float
+  widthCm  Float
+  heightCm Float
+}
+
+type ImageItem {
+  url       String
+  publicID  String? // Cloudinary public_id, để xóa ảnh
+  alt       String?
+  sortOrder Int
+}
+
+type VariantOption {
+  name  String // "Màu", "Kích thước", "Chất liệu"
+  value String // "Xám", "3 chỗ", "Gỗ sồi"
+}
+
+type CartItem {
+  variantID String   @db.ObjectId
+  quantity  Int
+  addedAt   DateTime
+}
+
+type OrderItem {
+  productID   String  @db.ObjectId
+  variantID   String  @db.ObjectId
+  name        String
+  variantName String?
+  sku         String
+  imageUrl    String?
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+  assemblyFee Int // phí lắp đặt cho dòng này (0 nếu không lắp)
+}
+
+type ShippingAddress {
+  fullName String
+  phone    String
+  province String
+  district String
+  ward     String
+  street   String
+}
+
+type OrderStatusLog {
+  status    OrderStatus
+  note      String?
+  changedBy String? // email người thao tác hoặc "system". KHÔNG đặt tên `by`: zod-prisma-types crash
+  at        DateTime
+}
+
+// ───────────── MODELS ─────────────
+
+model User {
+  id                 String     @id @default(auto()) @map("_id") @db.ObjectId
+  email              String     @unique
+  password           String
+  fullName           String
+  phone              String?
+  avatarUrl          String?
+  role               Role       @default(customer)
+  status             UserStatus @default(active)
+  wishlistProductIDs String[]   @db.ObjectId
+  resetPasswordToken String? // lưu dạng hash
+  resetPasswordExp   DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  deletedAt          DateTime?
+
+  addresses Address[]
+  cart      Cart?
+  orders    Order[]
+  reviews   Review[]
+}
+
+model Address {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userID    String   @db.ObjectId
+  fullName  String
+  phone     String
+  province  String
+  district  String
+  ward      String
+  street    String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userID], references: [id])
+
+  @@index([userID])
+}
+
+model Category {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  parentID    String?   @db.ObjectId
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // MongoDB: quan hệ tự trỏ bắt buộc NoAction
+  parent   Category?  @relation("CategoryTree", fields: [parentID], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@index([parentID])
+}
+
+model Product {
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  slug             String      @unique
+  shortDescription String?
+  description      String? // HTML / markdown
+  categoryID       String      @db.ObjectId
+  images           ImageItem[]
+
+  // Các field để lọc. Giá trị lấy từ hằng số (mục 3.2)
+  rooms     String[] // "living-room", "bedroom"...
+  styles    String[] // "scandinavian", "japandi"...
+  materials String[] // "oak", "rattan"...
+  colors    String[] // tổng hợp từ các variant
+  tags      String[]
+
+  // Giá hiển thị: tính lại mỗi khi sửa variant
+  minPrice Int @default(0)
+  maxPrice Int @default(0)
+
+  requiresAssembly Boolean @default(false)
+  assemblyFee      Int     @default(0) // VND / sản phẩm
+  allowBackorder   Boolean @default(false) // hàng đặt làm: cho đặt khi hết kho
+  leadTimeDays     Int     @default(0) // thời gian sản xuất nếu đặt làm
+  warrantyMonths   Int     @default(0)
+
+  isFeatured  Boolean       @default(false)
+  status      ProductStatus @default(draft)
+  ratingAvg   Float         @default(0)
+  ratingCount Int           @default(0)
+  soldCount   Int           @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  category Category         @relation(fields: [categoryID], references: [id])
+  variants ProductVariant[]
+  reviews  Review[]
+
+  @@index([categoryID])
+  @@index([status, isFeatured])
+}
+
+/// Mọi sản phẩm có ít nhất 1 variant (variant mặc định), nên giỏ hàng và đơn hàng luôn trỏ tới variant.
+model ProductVariant {
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  productID      String          @db.ObjectId
+  sku            String          @unique // BẮT BUỘC (xem lưu ý mục 9)
+  name           String // "Sofa 3 chỗ - Xám"
+  options        VariantOption[]
+  price          Int
+  compareAtPrice Int? // giá gạch ngang
+  stock          Int             @default(0)
+  dimensions     Dimensions?
+  weightKg       Float           @default(0)
+  images         ImageItem[]
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  product Product @relation(fields: [productID], references: [id])
+
+  @@index([productID])
+}
+
+model Cart {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  userID    String     @unique @db.ObjectId
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [userID], references: [id])
+}
+
+model Order {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber     String          @unique
+  userID          String          @db.ObjectId
+  items           OrderItem[]
+  shippingAddress ShippingAddress
+  note            String?
+
+  subtotal      Int
+  shippingFee   Int     @default(0)
+  assemblyFee   Int     @default(0)
+  discount      Int     @default(0)
+  total         Int
+  promotionCode String?
+  promotionID   String? @db.ObjectId
+
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus    @default(pending)
+  status        OrderStatus      @default(pending)
+  statusHistory OrderStatusLog[]
+  cancelReason  String?
+
+  expectedDeliveryAt DateTime?
+  paidAt             DateTime?
+  shippedAt          DateTime?
+  deliveredAt        DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user     User      @relation(fields: [userID], references: [id])
+  payments Payment[]
+
+  @@index([userID, createdAt])
+  @@index([status, createdAt])
+}
+
+model Payment {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  orderID       String        @db.ObjectId
+  method        PaymentMethod
+  amount        Int
+  status        PaymentStatus @default(pending)
+  transactionID String? // mã giao dịch từ cổng thanh toán
+  rawResponse   Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderID], references: [id])
+
+  @@index([orderID])
+  @@index([transactionID]) // KHÔNG dùng @unique vì field optional
+}
+
+model Promotion {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  code          String        @unique
+  name          String
+  description   String?
+  type          PromotionType
+  value         Int // % (1–100) hoặc số tiền VND
+  maxDiscount   Int? // trần giảm cho loại percentage
+  minOrderValue Int           @default(0)
+  usageLimit    Int? // tổng lượt dùng
+  usedCount     Int           @default(0)
+  perUserLimit  Int?
+  startsAt      DateTime
+  endsAt        DateTime?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+}
+
+model Review {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  productID String       @db.ObjectId
+  userID    String       @db.ObjectId
+  orderID   String       @db.ObjectId
+  rating    Int // 1–5
+  comment   String?
+  images    ImageItem[]
+  status    ReviewStatus @default(approved)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  product Product @relation(fields: [productID], references: [id])
+  user    User    @relation(fields: [userID], references: [id])
+
+  @@unique([userID, productID, orderID])
+  @@index([productID, status])
+}
+
+model ShippingZone {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  name              String // "Nội thành HCM", "Miền Bắc"...
+  provinces         String[] // danh sách tỉnh thuộc vùng
+  baseFee           Int // phí cho khối lượng đầu
+  baseWeightKg      Float // vd 5kg
+  feePerKg          Int // phí mỗi kg tiếp theo
+  bulkySurcharge    Int      @default(0) // phụ phí hàng cồng kềnh
+  freeShipThreshold Int? // đơn >= giá trị này thì free ship (trừ hàng cồng kềnh)
+  estimatedDays     Int
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
