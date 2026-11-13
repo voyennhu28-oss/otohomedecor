@@ -1,13 +1,14 @@
-import { NestFactory } from '@nestjs/core';
-
-import { initApp } from './init';
-import { AppModule } from './app/app.module';
 import { Logger } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { AppModule } from './app/app.module';
+import { initApp, NEST_APP_OPTIONS } from './init';
 import { LoggerModule } from './logger/logger.module';
 
 async function bootstrap() {
   const app = initApp(
-    await NestFactory.create(AppModule, {
+    await NestFactory.create<NestExpressApplication>(AppModule, {
+      ...NEST_APP_OPTIONS,
       logger: LoggerModule.createLogger(),
     }),
   );

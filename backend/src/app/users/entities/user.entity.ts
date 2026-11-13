@@ -14,5 +14,6 @@ export class User implements UserPrisma {
   createdAt: Date;
   resetPasswordExp: Date | null;
   resetPasswordToken: string | null;
+  tokenVersion: number | null;
   updatedAt: Date;
 }

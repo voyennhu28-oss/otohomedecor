@@ -23,23 +23,39 @@ export class ProductImagesService {
 
   /**
    * Upload ảnh lên Cloudinary rồi thêm vào cuối danh sách ảnh của product.
-   * File tạm trên đĩa luôn bị xóa sau khi xong (kể cả khi lỗi).
+   * Tất cả hoặc không: 1 ảnh upload lỗi hoặc ghi DB lỗi thì xóa các ảnh đã lên Cloudinary
+   * (không để ảnh mồ côi). File tạm trên đĩa luôn bị xóa sau khi xong (kể cả khi lỗi).
    */
   async upload(productID: string, files: UploadedImage[]) {
     try {
       if (!files?.length) throw new BadRequestException('Chưa chọn ảnh nào');
       await this.productsService.findOneOrThrow(productID);
 
-      const uploaded: UploadApiResponse[] = await Promise.all(
-        files.map((file) =>
-          this.fileStrategy.upload(this.newPublicID(productID), resolve(file.path)),
+      const results = await Promise.allSettled(
+        files.map(
+          (file) =>
+            this.fileStrategy.upload(
+              this.newPublicID(productID),
+              resolve(file.path),
+            ) as Promise<UploadApiResponse>,
         ),
       );
+      const uploaded = results
+        .filter((r) => r.status === 'fulfilled')
+        .map((r) => ({ url: r.value.secure_url, publicID: r.value.public_id }));
 
-      return this.productsService.appendImages(
-        productID,
-        uploaded.map((result) => ({ url: result.secure_url, publicID: result.public_id })),
-      );
+      const failed = results.find((r) => r.status === 'rejected');
+      if (failed) {
+        this.destroyQuietly(uploaded.map((img) => img.publicID));
+        throw failed.reason;
+      }
+
+      try {
+        return await this.productsService.appendImages(productID, uploaded);
+      } catch (error) {
+        this.destroyQuietly(uploaded.map((img) => img.publicID));
+        throw error;
+      }
     } finally {
       await Promise.all((files ?? []).map((file) => unlink(file.path).catch(() => undefined)));
     }
@@ -48,10 +64,17 @@ export class ProductImagesService {
   /** Bỏ ảnh khỏi product, rồi xóa trên Cloudinary (lỗi Cloudinary chỉ ghi log, không chặn). */
   async remove(productID: string, publicID: string) {
     const images = await this.productsService.removeImage(productID, publicID);
-    this.fileStrategy.remove(publicID).catch((error: unknown) => {
-      this.logger.warn(`Xóa ảnh ${publicID} trên Cloudinary thất bại: ${String(error)}`);
-    });
+    this.destroyQuietly([publicID]);
     return images;
+  }
+
+  /** Xóa ảnh trên Cloudinary ở nền: không chặn response, lỗi chỉ ghi log. */
+  private destroyQuietly(publicIDs: string[]) {
+    for (const publicID of publicIDs) {
+      Promise.resolve(this.fileStrategy.remove(publicID)).catch((error: unknown) => {
+        this.logger.warn(`Xóa ảnh ${publicID} trên Cloudinary thất bại: ${String(error)}`);
+      });
+    }
   }
 
   /**

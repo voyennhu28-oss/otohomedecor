@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { createPrismaModelMock, PrismaModelMock } from '../../../test/mocks/prisma.mock';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ProductsService } from '../products/products.service';
@@ -24,17 +25,25 @@ const existingVariant = (overrides = {}) => ({
 describe('ProductVariantsService', () => {
   let service: ProductVariantsService;
   let variant: PrismaModelMock;
+  let prisma: PrismaService;
+  let transaction: jest.Mock;
   let products: {
     findOneOrThrow: jest.Mock;
     recalculateSummary: jest.Mock;
   };
 
+  /** recalculateSummary được gọi trong transaction (tx = mock prisma), với ensureSelling tương ứng. */
+  const expectRecalculated = (ensureSelling: boolean) =>
+    expect(products.recalculateSummary).toHaveBeenCalledWith(P, { tx: prisma, ensureSelling });
+
   beforeEach(() => {
     variant = createPrismaModelMock();
-    const prisma = {
+    prisma = {
       productVariant: variant,
       extended: { productVariant: variant },
     } as unknown as PrismaService;
+    transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
+    Object.assign(prisma, { $transaction: transaction });
     products = {
       findOneOrThrow: jest.fn().mockResolvedValue({ id: P, status: 'active' }),
       recalculateSummary: jest.fn(),
@@ -45,14 +54,15 @@ describe('ProductVariantsService', () => {
   describe('create', () => {
     const dto = { sku: 'SOFA-3C', name: '3 chỗ', options: [], price: 12_000_000, stock: 5, weightKg: 50, isActive: true };
 
-    it('tạo variant rồi tính lại giá / màu của product', async () => {
+    it('tạo variant rồi tính lại giá / màu của product trong cùng transaction', async () => {
       variant.findMany.mockResolvedValue([]); // SKU chưa có
       variant.create.mockResolvedValue({ id: 'new' });
 
-      await service.create(P, dto);
+      await expect(service.create(P, dto)).resolves.toEqual({ id: 'new' });
 
+      expect(transaction).toHaveBeenCalledTimes(1);
       expect(variant.create).toHaveBeenCalledWith({ data: { ...dto, productID: P } });
-      expect(products.recalculateSummary).toHaveBeenCalledWith(P);
+      expectRecalculated(false);
     });
 
     it('SKU đã tồn tại → 409, không tạo', async () => {
@@ -74,10 +84,10 @@ describe('ProductVariantsService', () => {
       variant.update.mockImplementation(({ data }) => data);
     });
 
-    it('cập nhật rồi tính lại giá / màu của product', async () => {
+    it('cập nhật rồi tính lại giá / màu của product trong cùng transaction', async () => {
       await service.update(P, V, { price: 8_500_000 });
       expect(variant.update).toHaveBeenCalledWith({ where: { id: V }, data: { price: 8_500_000 } });
-      expect(products.recalculateSummary).toHaveBeenCalledWith(P);
+      expectRecalculated(false);
     });
 
     it('variant không thuộc product này → 404', async () => {
@@ -101,26 +111,36 @@ describe('ProductVariantsService', () => {
       await expect(service.update(P, V, { sku: 'SOFA-3C' })).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('tắt variant đang bán cuối cùng của product active → 409', async () => {
-      variant.count.mockResolvedValue(0);
-      await expect(service.update(P, V, { isActive: false })).rejects.toBeInstanceOf(ConflictException);
-      expect(variant.count).toHaveBeenCalledWith({
-        where: { productID: P, isActive: true, id: { not: V } },
-      });
+    it('tắt variant đang bán: kiểm tra "còn variant đang bán" trong transaction', async () => {
+      await service.update(P, V, { isActive: false });
+      expectRecalculated(true);
     });
 
-    it('tắt variant khi product đang draft thì được', async () => {
-      products.findOneOrThrow.mockResolvedValue({ id: P, status: 'draft' });
+    it('tắt variant đang bán cuối cùng của product active → 409 (lỗi từ recalculateSummary, transaction rollback)', async () => {
+      products.recalculateSummary.mockRejectedValue(new ConflictException());
+      await expect(service.update(P, V, { isActive: false })).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('variant đang tắt mà tắt tiếp / sửa field khác thì không cần kiểm tra', async () => {
+      variant.findFirst.mockResolvedValue(existingVariant({ isActive: false }));
       await service.update(P, V, { isActive: false });
-      expect(variant.count).not.toHaveBeenCalled();
-      expect(variant.update).toHaveBeenCalled();
+      expectRecalculated(false);
+    });
+
+    it('BUG-08: 2 admin cùng tắt 2 variant cuối → transaction sau xung đột (P2034), chạy lại thì nhận 409', async () => {
+      const conflict = new Prisma.PrismaClientKnownRequestError('WriteConflict', { code: 'P2034', clientVersion: 't' });
+      products.recalculateSummary
+        .mockRejectedValueOnce(conflict) // lần 1: document product đã bị transaction kia ghi
+        .mockRejectedValueOnce(new ConflictException()); // lần 2: đọc lại thấy không còn variant đang bán
+
+      await expect(service.update(P, V, { isActive: false })).rejects.toBeInstanceOf(ConflictException);
+      expect(transaction).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('remove', () => {
-    it('soft delete, đổi SKU để giải phóng, tính lại product', async () => {
+    it('soft delete, đổi SKU để giải phóng, tính lại product trong cùng transaction', async () => {
       variant.findFirst.mockResolvedValue(existingVariant());
-      variant.count.mockResolvedValue(2); // còn variant khác đang bán
 
       await expect(service.remove(P, V)).resolves.toEqual({ id: V });
 
@@ -128,20 +148,34 @@ describe('ProductVariantsService', () => {
         where: { id: V },
         data: { deletedAt: expect.any(Date), sku: `SOFA-2C--deleted-${V}` },
       });
-      expect(products.recalculateSummary).toHaveBeenCalledWith(P);
+      expectRecalculated(true);
     });
 
     it('xóa variant đang bán cuối cùng của product active → 409', async () => {
       variant.findFirst.mockResolvedValue(existingVariant());
-      variant.count.mockResolvedValue(0);
+      products.recalculateSummary.mockRejectedValue(new ConflictException());
       await expect(service.remove(P, V)).rejects.toBeInstanceOf(ConflictException);
-      expect(variant.update).not.toHaveBeenCalled();
     });
 
     it('variant đang tắt thì xóa luôn, không cần kiểm tra', async () => {
       variant.findFirst.mockResolvedValue(existingVariant({ isActive: false }));
       await service.remove(P, V);
-      expect(variant.count).not.toHaveBeenCalled();
+      expectRecalculated(false);
+    });
+
+    it('variant không thuộc product → 404, không ghi', async () => {
+      variant.findFirst.mockResolvedValue(null);
+      await expect(service.remove(P, V)).rejects.toBeInstanceOf(NotFoundException);
+      expect(transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findByProduct', () => {
+    it('kiểm tra product tồn tại rồi lấy mọi variant chưa xóa', async () => {
+      variant.findMany.mockResolvedValue([{ id: V }]);
+      await expect(service.findByProduct(P)).resolves.toEqual([{ id: V }]);
+      expect(products.findOneOrThrow).toHaveBeenCalledWith(P);
+      expect(variant.findMany).toHaveBeenCalledWith({ where: { productID: P }, orderBy: { createdAt: 'asc' } });
     });
   });
 

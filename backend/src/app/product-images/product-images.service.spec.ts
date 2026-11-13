@@ -63,6 +63,44 @@ describe('ProductImagesService', () => {
       expect(fs.unlink).toHaveBeenCalledTimes(2);
     });
 
+    it('BUG-09: 1 ảnh upload lỗi → xóa các ảnh đã lên Cloudinary, không lưu gì vào DB', async () => {
+      strategy.upload
+        .mockImplementationOnce((publicID: string) => Promise.resolve({ public_id: publicID, secure_url: 'u' }))
+        .mockRejectedValueOnce(new Error('Cloudinary down'));
+
+      await expect(service.upload(P, files)).rejects.toThrow('Cloudinary down');
+
+      const uploadedID = strategy.upload.mock.calls[0][0];
+      expect(strategy.remove).toHaveBeenCalledTimes(1);
+      expect(strategy.remove).toHaveBeenCalledWith(uploadedID);
+      expect(products.appendImages).not.toHaveBeenCalled();
+    });
+
+    it('BUG-09: ghi DB lỗi → xóa mọi ảnh vừa upload', async () => {
+      products.appendImages.mockRejectedValue(new NotFoundException());
+
+      await expect(service.upload(P, files)).rejects.toBeInstanceOf(NotFoundException);
+
+      const uploadedIDs = strategy.upload.mock.calls.map(([publicID]) => publicID);
+      expect(strategy.remove.mock.calls.map(([publicID]) => publicID)).toEqual(uploadedIDs);
+    });
+
+    it('BUG-09: dọn ảnh lỗi thì chỉ ghi log, vẫn ném lỗi gốc', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      products.appendImages.mockRejectedValue(new Error('db down'));
+      strategy.remove.mockRejectedValue(new Error('timeout'));
+
+      await expect(service.upload(P, files)).rejects.toThrow('db down');
+      await new Promise(process.nextTick);
+      expect(warn).toHaveBeenCalledTimes(2);
+      warn.mockRestore();
+    });
+
+    it('upload thành công thì không xóa ảnh nào', async () => {
+      await service.upload(P, files);
+      expect(strategy.remove).not.toHaveBeenCalled();
+    });
+
     it('product không tồn tại → 404, không upload, vẫn xóa file tạm', async () => {
       products.findOneOrThrow.mockRejectedValue(new NotFoundException());
       await expect(service.upload(P, files)).rejects.toBeInstanceOf(NotFoundException);

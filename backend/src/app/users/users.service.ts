@@ -8,6 +8,7 @@ import { OrderStatus, Prisma, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { UserInfo } from '../../common/decorators/user.decorator';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
+import { withRetry } from '../../common/prisma/with-retry';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
 import { ProductsService } from '../products/products.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -22,7 +23,11 @@ const SENSITIVE_FIELDS = {
   password: true,
   resetPasswordToken: true,
   resetPasswordExp: true,
+  tokenVersion: true,
 } satisfies Prisma.UserOmit;
+
+/** Tăng tokenVersion → mọi refresh token đã phát mất hiệu lực (field thiếu = 0). */
+const nextTokenVersion = (current?: number | null) => (current ?? 0) + 1;
 
 @Injectable()
 export class UsersService extends PrismaBaseService<'user'> {
@@ -86,16 +91,28 @@ export class UsersService extends PrismaBaseService<'user'> {
   }
 
   async removeFromWishlist(userID: string, productID: string) {
-    // Prisma + MongoDB không có `pull` cho mảng scalar, nên đọc rồi ghi lại cả mảng
-    const ids = await this.getWishlistIDs(userID);
-    const next = ids.filter((id) => id !== productID);
-    if (next.length !== ids.length) {
-      await this.extended.update({
-        where: { id: userID },
-        data: { wishlistProductIDs: { set: next } },
-      });
-    }
-    return { wishlistProductIDs: next };
+    // Prisma + MongoDB không có `pull` cho mảng scalar, nên phải đọc rồi ghi lại cả mảng.
+    // Chạy trong transaction: nếu request khác (vd thêm sản phẩm) ghi chen vào giữa thì
+    // transaction bị xung đột (P2034) và chạy lại với dữ liệu mới, không ghi đè mất.
+    const wishlistProductIDs = await withRetry(() =>
+      this.prismaService.$transaction(async (tx) => {
+        const user = await tx.user.findFirst({
+          where: { id: userID, ...NOT_DELETED },
+          select: { wishlistProductIDs: true },
+        });
+        if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
+
+        const next = user.wishlistProductIDs.filter((id) => id !== productID);
+        if (next.length !== user.wishlistProductIDs.length) {
+          await tx.user.update({
+            where: { id: userID },
+            data: { wishlistProductIDs: { set: next } },
+          });
+        }
+        return next;
+      }),
+    );
+    return { wishlistProductIDs };
   }
 
   async findAll({ page, itemPerPage, q, role, status }: QueryUsersDto) {
@@ -185,10 +202,15 @@ export class UsersService extends PrismaBaseService<'user'> {
       }
     }
 
-    await this.ensureExists(id);
+    const current = await this.ensureExists(id);
+    // Khóa tài khoản: thu hồi luôn refresh token, để mở khóa sau này token cũ không dùng lại được
+    const isLocking =
+      dto.status === UserStatus.inactive && current.status !== UserStatus.inactive;
     return this.extended.update({
       where: { id },
-      data: dto,
+      data: isLocking
+        ? { ...dto, tokenVersion: nextTokenVersion(current.tokenVersion) }
+        : dto,
       omit: SENSITIVE_FIELDS,
     });
   }
@@ -226,20 +248,29 @@ export class UsersService extends PrismaBaseService<'user'> {
         resetPasswordExp: { gt: new Date() },
         status: UserStatus.active,
       },
-      select: { id: true },
+      select: { id: true, tokenVersion: true },
     });
   }
 
-  /** Hash mật khẩu mới và vô hiệu hóa token reset (nếu có). */
-  async updatePassword(id: string, plainPassword: string) {
+  /**
+   * Hash mật khẩu mới, vô hiệu hóa token reset (nếu có) và mọi refresh token đã phát.
+   * Trả về tokenVersion mới để auth cấp token mới cho phiên hiện tại.
+   */
+  async updatePassword(
+    user: { id: string; tokenVersion?: number | null },
+    plainPassword: string,
+  ) {
+    const tokenVersion = nextTokenVersion(user.tokenVersion);
     await this.extended.update({
-      where: { id },
+      where: { id: user.id },
       data: {
         password: await bcrypt.hash(plainPassword, SALT_ROUNDS),
         resetPasswordToken: null,
         resetPasswordExp: null,
+        tokenVersion,
       },
     });
+    return tokenVersion;
   }
 
   // ───────────── helpers ─────────────
@@ -248,9 +279,10 @@ export class UsersService extends PrismaBaseService<'user'> {
   private async ensureExists(id: string) {
     const user = await this.extended.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, status: true, tokenVersion: true },
     });
     if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
+    return user;
   }
 
   private async getWishlistIDs(userID: string) {

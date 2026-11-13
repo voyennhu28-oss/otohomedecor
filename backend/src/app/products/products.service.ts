@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, ProductStatus } from '@prisma/client';
+import { ImageItem, Prisma, ProductStatus } from '@prisma/client';
 import { MATERIALS, ROOMS, STYLES } from '../../common/constants/catalog.const';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
+import { withRetry } from '../../common/prisma/with-retry';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
 import { pickAvailableSlug } from '../../common/utils/string-util/slug.util';
 import { StringUtilService } from '../../common/utils/string-util/string-util.service';
@@ -57,6 +58,21 @@ const PUBLIC_VARIANT_SELECT = {
 const CATEGORY_SELECT = { id: true, name: true, slug: true } as const;
 
 const emptyPage = () => ({ list: [], totalItems: 0, totalPages: 0 });
+
+export interface RecalculateOptions {
+  /** Client của transaction đang chạy (mặc định: client gốc). */
+  tx?: Prisma.TransactionClient;
+  ensureSelling?: boolean;
+}
+
+/** Sản phẩm "active" (hiện cho khách) phải có ít nhất 1 variant đang bán. */
+const assertCanBeActive = (status: ProductStatus | undefined, sellingVariants: number) => {
+  if (status === ProductStatus.active && sellingVariants === 0) {
+    throw new BadRequestException(
+      'Sản phẩm phải có ít nhất 1 variant đang bán mới chuyển sang "active" được',
+    );
+  }
+};
 
 @Injectable()
 export class ProductsService extends PrismaBaseService<'product'> {
@@ -249,6 +265,7 @@ export class ProductsService extends PrismaBaseService<'product'> {
   async create(dto: CreateProductDto) {
     const { variants, ...productData } = dto;
 
+    assertCanBeActive(productData.status, variants.filter((v) => v.isActive).length);
     await this.categoriesService.ensureExists(productData.categoryID);
     await assertSkusAvailable(
       this.prismaService,
@@ -282,11 +299,7 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
     if (!current) throw new NotFoundException('Không tìm thấy sản phẩm');
 
-    if (dto.status === ProductStatus.active && current._count.variants === 0) {
-      throw new BadRequestException(
-        'Sản phẩm phải có ít nhất 1 variant đang bán mới chuyển sang "active" được',
-      );
-    }
+    assertCanBeActive(dto.status, current._count.variants);
     if (dto.categoryID) await this.categoriesService.ensureExists(dto.categoryID);
     if (dto.slug && dto.slug !== current.slug) {
       await this.assertSlugAvailable(dto.slug, id);
@@ -299,6 +312,9 @@ export class ProductsService extends PrismaBaseService<'product'> {
    * DELETE /admin/products/:id: soft delete product và mọi variant của nó.
    * Đổi slug / SKU thành "...--deleted-<id>" để giải phóng (index @unique tính cả bản ghi đã xóa).
    * Đơn hàng cũ không bị ảnh hưởng vì đơn lưu snapshot.
+   *
+   * CỐ Ý giữ ảnh trên Cloudinary: soft delete còn khôi phục được, và đơn hàng cũ (snapshot)
+   * vẫn trỏ tới imageUrl. Nếu sau này có xóa cứng thì phải xóa ảnh (images[].publicID) ở bước đó.
    */
   async remove(id: string) {
     const product = await this.extended.findUnique({
@@ -357,60 +373,89 @@ export class ProductsService extends PrismaBaseService<'product'> {
 
   /**
    * Tính lại minPrice / maxPrice / colors từ variant hiện có.
-   * PHẢI gọi sau mỗi lần tạo / sửa / xóa variant.
+   * PHẢI gọi sau mỗi lần tạo / sửa / xóa variant, trong CÙNG transaction với lần ghi variant.
+   *
+   * Hàm luôn ghi vào document product, nên 2 transaction sửa variant của cùng product sẽ
+   * xung đột (P2034) và bị chạy lại tuần tự: summary luôn đúng, và kiểm tra `ensureSelling`
+   * không bị lọt khi 2 admin cùng tắt 2 variant cuối (write skew).
+   *
+   * @param ensureSelling ném 409 nếu product đang "active" mà không còn variant đang bán
    */
-  async recalculateSummary(productID: string) {
-    const variants = await this.prismaService.productVariant.findMany({
+  async recalculateSummary(
+    productID: string,
+    { tx = this.prismaService, ensureSelling = false }: RecalculateOptions = {},
+  ) {
+    const variants = await tx.productVariant.findMany({
       where: { productID, ...NOT_DELETED },
       select: { price: true, isActive: true, options: true },
     });
-    await this.prismaService.product.update({
+
+    if (ensureSelling && !variants.some((v) => v.isActive)) {
+      const product = await tx.product.findFirst({
+        where: { id: productID, ...NOT_DELETED },
+        select: { status: true },
+      });
+      if (product?.status === ProductStatus.active) {
+        throw new ConflictException(
+          'Đây là variant đang bán cuối cùng của sản phẩm đang hiển thị. Hãy thêm variant khác hoặc chuyển sản phẩm sang "draft" / "inactive" trước',
+        );
+      }
+    }
+
+    await tx.product.update({
       where: { id: productID },
       data: computeProductSummary(variants),
     });
   }
 
   /** Thêm ảnh vào cuối danh sách ảnh của product. Trả về danh sách ảnh mới. */
-  async appendImages(productID: string, images: { url: string; publicID: string }[]) {
-    const product = await this.extended.findUnique({
-      where: { id: productID },
-      select: { images: true },
+  appendImages(productID: string, images: { url: string; publicID: string }[]) {
+    // Transaction: 2 lần upload song song không bị trùng sortOrder (lần sau xung đột và chạy lại)
+    return this.updateImages(productID, (current) => {
+      const nextOrder = current.reduce((max, img) => Math.max(max, img.sortOrder + 1), 0);
+      return [
+        ...current,
+        ...images.map((img, i) => ({ ...img, alt: null, sortOrder: nextOrder + i })),
+      ];
     });
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-
-    const nextOrder = product.images.reduce((max, img) => Math.max(max, img.sortOrder + 1), 0);
-    const updated = await this.extended.update({
-      where: { id: productID },
-      data: {
-        images: {
-          push: images.map((img, i) => ({ ...img, sortOrder: nextOrder + i })),
-        },
-      },
-      select: { images: true },
-    });
-    return updated.images;
   }
 
   /** Bỏ 1 ảnh khỏi product theo publicID (Cloudinary). Trả về danh sách ảnh còn lại. */
-  async removeImage(productID: string, publicID: string) {
-    const product = await this.extended.findUnique({
-      where: { id: productID },
-      select: { images: true },
+  removeImage(productID: string, publicID: string) {
+    // Transaction: ảnh vừa upload xong trong lúc đang xóa không bị `set` ghi đè mất
+    return this.updateImages(productID, (current) => {
+      const remaining = current.filter((img) => img.publicID !== publicID);
+      if (remaining.length === current.length) {
+        throw new NotFoundException('Sản phẩm không có ảnh này');
+      }
+      return remaining;
     });
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-
-    const remaining = product.images.filter((img) => img.publicID !== publicID);
-    if (remaining.length === product.images.length) {
-      throw new NotFoundException('Sản phẩm không có ảnh này');
-    }
-    await this.extended.update({
-      where: { id: productID },
-      data: { images: { set: remaining } },
-    });
-    return remaining;
   }
 
   // ───────────── helpers ─────────────
+
+  /**
+   * Đọc - sửa - ghi lại cả mảng ảnh trong 1 transaction (Prisma không có `pull` cho composite list).
+   * Request khác ghi chen vào giữa → xung đột P2034 → withRetry chạy lại với dữ liệu mới.
+   */
+  private updateImages(productID: string, change: (current: ImageItem[]) => ImageItem[]) {
+    return withRetry(() =>
+      this.prismaService.$transaction(async (tx) => {
+        const product = await tx.product.findFirst({
+          where: { id: productID, ...NOT_DELETED },
+          select: { images: true },
+        });
+        if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
+
+        const images = change(product.images);
+        await tx.product.update({
+          where: { id: productID },
+          data: { images: { set: images } },
+        });
+        return images;
+      }),
+    );
+  }
 
   /** Dùng client gốc vì index @unique của slug tính cả bản ghi đã xóa. */
   private async assertSlugAvailable(slug: string, exceptID?: string) {

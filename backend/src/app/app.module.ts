@@ -5,6 +5,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { CatchEverythingFilter } from '../catch-everything/catch-everything.filter';
 import { ZodExceptionFilter } from '../catch-everything/zod-exception/zod-exception.filter';
+import { validate } from '../common/envs/validate.env';
 import { AdminGuard } from '../common/guards/admin.guard';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { PrismaModule } from '../common/prisma/prisma.module';
@@ -21,7 +22,8 @@ import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // nạp .env vào process.env
+    // nạp .env vào process.env; thiếu / sai biến bắt buộc thì dừng ngay lúc khởi động
+    ConfigModule.forRoot({ isGlobal: true, validate }),
     RateLimitModule,
     ApiUtilModule,
     PrismaModule,

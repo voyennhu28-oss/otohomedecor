@@ -39,7 +39,7 @@ describe('AuthController', () => {
     authService = module.get(AuthService);
   });
 
-  /** Cả 2 cookie phải httpOnly + Secure + SameSite=None; refresh chỉ gửi tới /api/auth. */
+  /** Cả 2 cookie phải httpOnly + Secure + SameSite=Lax (chống CSRF); refresh chỉ gửi tới /api/auth. */
   const expectTokenCookies = (res: ReturnType<typeof createResponse>) => {
     expect(res.cookie).toHaveBeenCalledTimes(2);
     expect(res.cookie).toHaveBeenCalledWith(
@@ -48,7 +48,7 @@ describe('AuthController', () => {
       expect.objectContaining({
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/',
         maxAge: ACCESS_TOKEN_TTL * 1000,
       }),
@@ -59,7 +59,7 @@ describe('AuthController', () => {
       expect.objectContaining({
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/api/auth',
         maxAge: REFRESH_TOKEN_TTL * 1000,
       }),
@@ -184,11 +184,32 @@ describe('AuthController', () => {
       expect(authService.resetPassword).toHaveBeenCalledWith(dto);
     });
 
-    it('changePassword truyền user lấy từ token, không lấy từ body', async () => {
+    it('changePassword truyền user lấy từ token, set cookie token mới cho phiên hiện tại', async () => {
       const dto = { oldPassword: 'old12345', newPassword: 'new12345' };
-      authService.changePassword.mockResolvedValue({ message: 'ok' });
-      await controller.changePassword(currentUser, dto);
+      authService.changePassword.mockResolvedValue({ message: 'ok', ...tokens });
+      const res = createResponse();
+
+      await expect(controller.changePassword(currentUser, dto, res)).resolves.toEqual({
+        message: 'ok',
+        ...tokens,
+      });
       expect(authService.changePassword).toHaveBeenCalledWith(currentUser, dto);
+      expectTokenCookies(res);
+    });
+  });
+
+  describe('COOKIE_SAME_SITE', () => {
+    it('đọc từ config (FE và API khác domain gốc thì đặt "none")', async () => {
+      const config = { get: (key: string) => (key === 'COOKIE_SAME_SITE' ? 'none' : undefined) };
+      const ctrl = new AuthController(authService, config as never);
+      authService.signIn.mockResolvedValue({ user, ...tokens } as any);
+      const res = createResponse();
+
+      await ctrl.signIn({ email: 'c@x.com', password: '12345678' }, res);
+
+      for (const [, , options] of res.cookie.mock.calls) {
+        expect(options).toMatchObject({ sameSite: 'none', secure: true, httpOnly: true });
+      }
     });
   });
 });

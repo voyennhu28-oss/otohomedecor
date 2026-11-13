@@ -71,6 +71,42 @@ describe('ProductsExcelService', () => {
       expect(fs.unlink).toHaveBeenCalledWith(file.path);
     });
 
+    it('BUG-04: sản phẩm "active" mà mọi variant đều tắt → nằm trong errors đúng các dòng, không trong created', async () => {
+      // Dùng ProductsService thật (prisma mock) để chạy đúng rule của create()
+      const productModel = { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(({ data }) => Promise.resolve(data)) };
+      const prisma = {
+        product: productModel,
+        productVariant: { findMany: jest.fn().mockResolvedValue([]) },
+        extended: { product: productModel },
+      } as unknown as PrismaService;
+      const realProducts = new ProductsService(
+        prisma,
+        { ensureExists: jest.fn() } as unknown as CategoriesService,
+        { toSlug: (s: string) => s.toLowerCase().replace(/\s+/g, '-') } as never,
+      );
+      const importService = new ProductsExcelService(
+        prisma,
+        excel as unknown as ExcelUtilService,
+        realProducts,
+        { findIDsBySlugs: jest.fn().mockResolvedValue(new Map([['sofa', CATEGORY_ID]])) } as unknown as CategoriesService,
+      );
+      excel.read.mockResolvedValue({
+        Products: [
+          row('Sofa A', 'A1', { status: 'active', variantActive: false }), // dòng 2
+          row('Sofa A', 'A2', { status: 'active', variantActive: false }), // dòng 3
+          row('Kệ B', 'B1', { status: 'active' }), //                         dòng 4: hợp lệ
+        ],
+      });
+
+      const result = await importService.import(file);
+
+      expect(result.created).toEqual([{ name: 'Kệ B', slug: 'kệ-b' }]);
+      expect(result.errors).toEqual([
+        { rows: [2, 3], product: 'Sofa A', messages: [expect.stringContaining('ít nhất 1 variant đang bán')] },
+      ]);
+      expect(productModel.create).toHaveBeenCalledTimes(1);
+    });
+
     it('file rỗng → 400, vẫn xóa file tạm', async () => {
       excel.read.mockResolvedValue({ Products: [] });
       await expect(service.import(file)).rejects.toBeInstanceOf(BadRequestException);

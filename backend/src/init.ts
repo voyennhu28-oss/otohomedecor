@@ -1,7 +1,9 @@
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { INestApplication, VersioningType } from '@nestjs/common';
+import { INestApplication, NestApplicationOptions } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { applyMiddlewares } from './common/middlewares/common.middleware';
+import { parseOrigins } from './common/middlewares/csrf.middleware';
 
 const removeFieldsAndRelations = (document: any) => {
   const otherFields = ['id', 'userID'];
@@ -65,23 +67,19 @@ const initOpenAPI = (app: INestApplication) => {
   SwaggerModule.setup(APP_PREFIX, app, cleanupOpenApiDoc(openApiDoc));
 };
 
-const initApp = (app: INestApplication) => {
+/** Tắt body parser mặc định (có urlencoded); `applyMiddlewares` chỉ bật lại parser JSON. */
+const NEST_APP_OPTIONS = { bodyParser: false } satisfies NestApplicationOptions;
+
+const initApp = (app: NestExpressApplication) => {
   const { APP_PREFIX = '/api', FE_URL = 'http://localhost:3000' } = process.env;
+  // FE_URL có thể chứa nhiều địa chỉ, cách nhau bằng dấu phẩy
+  const allowedOrigins = parseOrigins(FE_URL);
   app.setGlobalPrefix(APP_PREFIX);
   // Auth dùng cookie nên phải bật credentials, và khi đó origin KHÔNG được là '*'.
-  // FE_URL có thể chứa nhiều địa chỉ, cách nhau bằng dấu phẩy.
-  app.enableCors({
-    origin: FE_URL.split(',').map((url) => url.trim()),
-    credentials: true,
-  });
-  // app.enableVersioning({
-  //   type: VersioningType.HEADER,
-  //   header: 'x-api-version',
-  //   defaultVersion: '1',
-  // });
-  applyMiddlewares(app);
+  app.enableCors({ origin: allowedOrigins, credentials: true });
+  applyMiddlewares(app, allowedOrigins);
   initOpenAPI(app);
   app.enableShutdownHooks();
   return app;
 };
-export { initApp };
+export { initApp, NEST_APP_OPTIONS };

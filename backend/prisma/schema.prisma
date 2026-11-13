@@ -113,13 +113,16 @@ type OrderItem {
   quantity    Int
   lineTotal   Int
   assemblyFee Int // phí lắp đặt cho dòng này (0 nếu không lắp)
+  // Đã trừ kho lúc đặt hay chưa (false: hàng đặt làm allowBackorder). Hủy đơn chỉ hoàn kho dòng true,
+  // không phụ thuộc allowBackorder hiện tại của product (admin có thể đã đổi).
+  stockReserved Boolean
 }
 
 type ShippingAddress {
   fullName String
   phone    String
   province String
-  district String
+  district String? // từ 01/07/2025 không còn cấp huyện, giữ cho địa chỉ cũ
   ward     String
   street   String
 }
@@ -145,6 +148,9 @@ model User {
   wishlistProductIDs String[]   @db.ObjectId
   resetPasswordToken String? // lưu dạng hash
   resetPasswordExp   DateTime?
+  // Tăng lên khi đổi / reset mật khẩu hoặc bị khóa → mọi refresh token đã phát mất hiệu lực.
+  // Optional (thiếu = 0) để document cũ chưa có field này vẫn đọc được, không cần migrate.
+  tokenVersion       Int?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
   deletedAt          DateTime?
@@ -161,7 +167,7 @@ model Address {
   fullName  String
   phone     String
   province  String
-  district  String
+  district  String? // từ 01/07/2025 không còn cấp huyện, giữ cho địa chỉ cũ
   ward      String
   street    String
   isDefault Boolean  @default(false)
@@ -305,6 +311,7 @@ model Order {
 
   @@index([userID, createdAt])
   @@index([status, createdAt])
+  @@index([promotionID, userID]) // đếm lượt dùng mã của 1 user (perUserLimit)
 }
 
 model Payment {

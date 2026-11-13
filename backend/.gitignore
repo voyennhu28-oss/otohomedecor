@@ -3,7 +3,7 @@
 /node_modules
 /build
 /src/generated
-
+/qa_test
 # TypeScript build cache
 *.tsbuildinfo
 

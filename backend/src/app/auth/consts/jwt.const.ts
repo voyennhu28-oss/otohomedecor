@@ -24,4 +24,6 @@ export enum TokenType {
 
 export interface JwtPayload extends UserInfo {
   type: TokenType;
+  /** Chỉ có ở refresh token: `User.tokenVersion` lúc phát token. Token cũ không có = 0. */
+  ver?: number;
 }

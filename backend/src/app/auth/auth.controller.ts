@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { CookieOptions, Response } from 'express';
-import { COOKIE_CONFIG_DEFAULT } from '../../common/decorators/cookie/cookie.const';
+import {
+  COOKIE_CONFIG_DEFAULT,
+  type CookieSameSite,
+} from '../../common/decorators/cookie/cookie.const';
 import { Cookies } from '../../common/decorators/cookie/cookie.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
@@ -30,6 +33,7 @@ interface Tokens {
 @Controller('auth')
 export class AuthController {
   private readonly refreshCookiePath: string;
+  private readonly sameSite: CookieSameSite;
 
   constructor(
     private readonly authService: AuthService,
@@ -37,6 +41,8 @@ export class AuthController {
   ) {
     // Refresh token chỉ được gửi kèm request tới /api/auth/*
     this.refreshCookiePath = `${config.get<string>('APP_PREFIX') ?? '/api'}/auth`;
+    this.sameSite =
+      config.get<CookieSameSite>('COOKIE_SAME_SITE') ?? COOKIE_CONFIG_DEFAULT.sameSite;
   }
 
   @Public()
@@ -107,14 +113,21 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
+  /** Token cũ ở mọi thiết bị mất hiệu lực; phiên hiện tại nhận cookie token mới. */
   @Throttle(STRICT_THROTTLE) // chống dò mật khẩu cũ khi bị lộ token
   @Patch('change-password')
-  changePassword(@User() user: UserInfo, @Body() dto: ChangePasswordDto) {
-    return this.authService.changePassword(user, dto);
+  async changePassword(
+    @User() user: UserInfo,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.changePassword(user, dto);
+    this.setTokenCookies(res, result);
+    return result;
   }
 
   private cookieOptions(path = '/'): CookieOptions {
-    return { ...COOKIE_CONFIG_DEFAULT, path };
+    return { ...COOKIE_CONFIG_DEFAULT, sameSite: this.sameSite, path };
   }
 
   private setTokenCookies(

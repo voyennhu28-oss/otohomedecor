@@ -1,10 +1,11 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { objectId, slugSchema } from '../../../common/dto/param.dto';
+import { httpUrlSchema } from '../../../common/dto/url.schema';
 
 const name = z.string().trim().min(1).max(100);
 const description = z.string().trim().max(1000);
-const imageUrl = z.string().url();
+const imageUrl = httpUrlSchema;
 const sortOrder = z.number().int().min(0);
 
 /** POST /admin/categories. Không gửi slug thì tự sinh từ name. parentID null/không gửi = danh mục gốc. */

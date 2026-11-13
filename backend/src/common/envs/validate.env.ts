@@ -1,83 +1,116 @@
 import { Logger } from '@nestjs/common';
-import { z, ZodTypeAny } from 'zod';
+import { z } from 'zod';
+import { COOKIE_SAME_SITE_VALUES } from '../decorators/cookie/cookie.const';
+import { parseOrigins } from '../middlewares/csrf.middleware';
 
-const zodWarnOptional = <T extends ZodTypeAny>(schema: T, envName: string) =>
-  schema.optional().transform((val) => {
-    if (val === undefined || val === null || val === '') {
-      Logger.warn(`ENV [${envName}] is not set. Some features may not work.`);
-      return undefined;
+const MIN_SECRET_LENGTH = 32;
+
+const emptyToUndefined = (value: unknown) => (value === '' ? undefined : value);
+
+/** Biến tùy chọn: thiếu thì chỉ cảnh báo (tính năng liên quan không chạy). */
+const optionalWithWarning = (envName: string) =>
+  z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .optional()
+      .transform((value) => {
+        if (value === undefined) {
+          Logger.warn(`ENV [${envName}] chưa đặt, một số tính năng sẽ không chạy`, 'Env');
+        }
+        return value;
+      }),
+  );
+
+const optionalString = z.preprocess(emptyToUndefined, z.string().optional());
+
+/** Số nguyên dương, để trống thì lấy mặc định. */
+const positiveInt = (defaultValue: number) =>
+  z.preprocess(emptyToUndefined, z.coerce.number().int().positive().default(defaultValue));
+
+/** Bắt buộc có. Độ dài tối thiểu chỉ chặn ở production (dev: cảnh báo). */
+const secret = z.preprocess(emptyToUndefined, z.string({ required_error: 'bắt buộc' }).min(1, 'bắt buộc'));
+const SECRET_KEYS = ['JWT_SECRET', 'JWT_REFRESH_SECRET'] as const;
+
+const CLOUDINARY_KEYS = ['CLOUDINARY_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'] as const;
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: positiveInt(5000),
+    HOST: z.string().default('localhost'),
+    APP_PREFIX: z.string().default('/api'),
+    APP_NAME: z.string().default('home_decor'),
+
+    FE_URL: z
+      .string()
+      .default('http://localhost:3000')
+      .refine((value) => parseOrigins(value).length > 0, 'phải là URL (nhiều URL cách nhau bằng dấu phẩy)'),
+    COOKIE_SAME_SITE: z.preprocess(emptyToUndefined, z.enum(COOKIE_SAME_SITE_VALUES).default('lax')),
+
+    DATABASE_URL: z
+      .string({ required_error: 'bắt buộc' })
+      .regex(
+        /^mongodb(\+srv)?:\/\/[^/]+\/[^/?]+/,
+        'phải là URL MongoDB có tên database, vd ".../home_decor?retryWrites=true"',
+      ),
+
+    JWT_SECRET: secret,
+    JWT_REFRESH_SECRET: secret,
+
+    CLOUDINARY_NAME: optionalWithWarning('CLOUDINARY_NAME'),
+    CLOUDINARY_API_KEY: optionalWithWarning('CLOUDINARY_API_KEY'),
+    CLOUDINARY_API_SECRET: optionalWithWarning('CLOUDINARY_API_SECRET'),
+
+    MAIL_HOST: optionalString, // bỏ trống: không gửi mail (dev in nội dung ra log)
+    MAIL_PORT: positiveInt(587),
+    MAIL_USER: optionalString,
+    MAIL_PASS: optionalString,
+    MAIL_FROM: optionalString,
+
+    ORDER_UNPAID_TIMEOUT_MINUTES: positiveInt(30),
+
+    THROTTLE_TTL: positiveInt(60_000),
+    THROTTLE_LIMIT: positiveInt(100),
+    CACHE_INTERNAL_TTL: positiveInt(30_000),
+    MULTER_DESTINATION_FILE: z.string().default('./uploads'),
+  })
+  .passthrough() // giữ các biến chưa khai báo ở đây (VNPAY_*, MOMO_*, SEED_*...)
+  .superRefine((env, ctx) => {
+    if (env.JWT_SECRET && env.JWT_SECRET === env.JWT_REFRESH_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JWT_REFRESH_SECRET'],
+        message: 'phải khác JWT_SECRET',
+      });
     }
-    return val;
+    const isProduction = env.NODE_ENV === 'production';
+    for (const key of SECRET_KEYS) {
+      if (!env[key] || env[key].length >= MIN_SECRET_LENGTH) continue;
+      const message = `phải dài ít nhất ${MIN_SECRET_LENGTH} ký tự`;
+      if (isProduction) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message });
+      else Logger.warn(`ENV [${key}] ${message} (bắt buộc khi production)`, 'Env');
+    }
+    if (isProduction) {
+      for (const key of CLOUDINARY_KEYS) {
+        if (!env[key]) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: 'bắt buộc khi production' });
+        }
+      }
+    }
   });
 
-const baseEnvSchema = z.object({
-  NODE_ENV: z
-    .enum(['development', 'production', 'test'])
-    .default('development'),
-  PORT: z.coerce.number().default(3000),
-  HOST: z.string().default('localhost'),
-  APP_PREFIX: z.string().default('/api'),
-  APP_NAME: z.string().default('nestjs_ecommerce'),
-  APP_URL: z.string().url().optional(),
+export type Env = z.infer<typeof envSchema>;
 
-  FE_URL: z.string().optional(),
-
-  THROTTLE_TTL: z.coerce.number().default(600000),
-  THROTTLE_LIMIT: z.coerce.number().default(100),
-
-  JWT_SECRET: z.string().optional(),
-
-  MULTER_DESTINATION_FILE: z.string().default('./uploads'),
-
-  CLOUDINARY_NAME: zodWarnOptional(z.string(), 'CLOUDINARY_NAME'),
-  CLOUDINARY_API_KEY: zodWarnOptional(z.string(), 'CLOUDINARY_API_KEY'),
-  CLOUDINARY_API_SECRET: zodWarnOptional(z.string(), 'CLOUDINARY_API_SECRET'),
-
-  CACHE_INTERNAL_TTL: z.coerce.number().default(30000),
-
-  MAIL_INCOMING_USER: zodWarnOptional(z.string(), 'MAIL_INCOMING_USER'),
-  MAIL_INCOMING_PASS: zodWarnOptional(z.string(), 'MAIL_INCOMING_PASS'),
-  MAIL_HOST: zodWarnOptional(z.string(), 'MAIL_HOST'),
-  MAIL_PORT: zodWarnOptional(z.string(), 'MAIL_PORT'),
-
-  DATABASE_URL: z.string().url(),
-});
-
-const envSchema = baseEnvSchema.transform((data) => {
-  const expectedUrl = `http://${data.HOST}:${data.PORT}${data.APP_PREFIX}`;
-
-  if (!data.APP_URL) {
-    data = { ...data, APP_URL: expectedUrl };
-  }
-
-  if (data.APP_URL !== expectedUrl) {
-    throw new Error(`APP_URL must be "${expectedUrl}"`);
-  }
-
-  if (!data.JWT_SECRET) {
-    data = { ...data, JWT_SECRET: `JWT_SECRET_${data.APP_NAME}` };
-  }
-
-  return data;
-});
-
-type EnvSchema = z.infer<typeof baseEnvSchema>;
-
-export const EnvVars = Object.keys(baseEnvSchema.shape).reduce(
-  (acc, key) => {
-    acc[key] = key;
-    return acc;
-  },
-  {} as Record<keyof EnvSchema, keyof EnvSchema>,
-);
-
-export const validate = (config: Record<string, unknown>) => {
+/**
+ * Dùng trong `ConfigModule.forRoot({ validate })`: thiếu / sai biến bắt buộc thì app dừng
+ * ngay lúc khởi động, báo rõ tên biến (không đợi tới khi có request chạm tới).
+ */
+export const validate = (config: Record<string, unknown>): Env => {
   const parsed = envSchema.safeParse(config);
   if (!parsed.success) {
-    const errors = parsed.error.errors.map(
-      (err) => `[${err.path[0]}] ${err.message}`,
-    );
-    throw new Error(`Please check .env config: ${errors.join('\n')}`);
+    const errors = parsed.error.issues.map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`);
+    throw new Error(`Cấu hình .env không hợp lệ:\n${errors.join('\n')}`);
   }
   return parsed.data;
 };

@@ -4,8 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ProductStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
+import { withRetry } from '../../common/prisma/with-retry';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
 import {
   COMPARE_AT_PRICE_MESSAGE,
@@ -21,7 +22,8 @@ import {
 
 /**
  * Quy tắc:
- *  - Sau mỗi lần tạo / sửa / xóa variant → tính lại minPrice, maxPrice, colors của product.
+ *  - Sau mỗi lần tạo / sửa / xóa variant → tính lại minPrice, maxPrice, colors của product
+ *    (trong cùng transaction, xem `writeAndRecalculate`).
  *  - Sản phẩm đang "active" luôn phải còn ít nhất 1 variant đang bán.
  */
 @Injectable()
@@ -46,13 +48,13 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
     await this.productsService.findOneOrThrow(productID);
     await assertSkusAvailable(this.prismaService, [dto.sku]);
 
-    const variant = await this.extended.create({ data: { ...dto, productID } });
-    await this.productsService.recalculateSummary(productID);
-    return variant;
+    return this.writeAndRecalculate(productID, false, (tx) =>
+      tx.productVariant.create({ data: { ...dto, productID } }),
+    );
   }
 
   async update(productID: string, variantID: string, dto: UpdateVariantDto) {
-    const product = await this.productsService.findOneOrThrow(productID);
+    await this.productsService.findOneOrThrow(productID);
     const current = await this.findInProductOrThrow(productID, variantID);
 
     const price = dto.price ?? current.price;
@@ -64,31 +66,24 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
     if (dto.sku && dto.sku !== current.sku) {
       await assertSkusAvailable(this.prismaService, [dto.sku]);
     }
-    if (current.isActive && dto.isActive === false) {
-      await this.assertNotLastSellingVariant(product, variantID);
-    }
 
-    const variant = await this.extended.update({
-      where: { id: variantID },
-      data: dto,
-    });
-    await this.productsService.recalculateSummary(productID);
-    return variant;
+    const isDeactivating = current.isActive && dto.isActive === false;
+    return this.writeAndRecalculate(productID, isDeactivating, (tx) =>
+      tx.productVariant.update({ where: { id: variantID }, data: dto }),
+    );
   }
 
   /** Soft delete, đổi SKU thành "...--deleted-<id>" để giải phóng SKU. */
   async remove(productID: string, variantID: string) {
-    const product = await this.productsService.findOneOrThrow(productID);
+    await this.productsService.findOneOrThrow(productID);
     const variant = await this.findInProductOrThrow(productID, variantID);
-    if (variant.isActive) {
-      await this.assertNotLastSellingVariant(product, variantID);
-    }
 
-    await this.extended.update({
-      where: { id: variantID },
-      data: { deletedAt: new Date(), sku: `${variant.sku}--deleted-${variantID}` },
-    });
-    await this.productsService.recalculateSummary(productID);
+    await this.writeAndRecalculate(productID, variant.isActive, (tx) =>
+      tx.productVariant.update({
+        where: { id: variantID },
+        data: { deletedAt: new Date(), sku: `${variant.sku}--deleted-${variantID}` },
+      }),
+    );
     return { id: variantID };
   }
 
@@ -133,27 +128,36 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
 
   // ───────────── helpers ─────────────
 
+  /**
+   * Ghi variant rồi tính lại summary của product trong CÙNG 1 transaction.
+   * Lần ghi summary vào document product làm 2 request song song trên cùng product
+   * xung đột (P2034) → withRetry chạy lại request sau với dữ liệu mới. Nhờ vậy 2 admin
+   * cùng tắt 2 variant cuối thì chỉ 1 người thành công, người còn lại nhận 409.
+   *
+   * @param reducesSelling lần ghi làm giảm số variant đang bán (tắt / xóa variant đang bán)
+   */
+  private writeAndRecalculate<T>(
+    productID: string,
+    reducesSelling: boolean,
+    write: (tx: Prisma.TransactionClient) => Promise<T>,
+  ) {
+    return withRetry(() =>
+      this.prismaService.$transaction(async (tx) => {
+        const result = await write(tx);
+        await this.productsService.recalculateSummary(productID, {
+          tx,
+          ensureSelling: reducesSelling,
+        });
+        return result;
+      }),
+    );
+  }
+
   private async findInProductOrThrow(productID: string, variantID: string) {
     const variant = await this.extended.findFirst({
       where: { id: variantID, productID },
     });
     if (!variant) throw new NotFoundException('Không tìm thấy variant của sản phẩm này');
     return variant;
-  }
-
-  /** Product đang bán thì không được tắt / xóa variant đang bán cuối cùng. */
-  private async assertNotLastSellingVariant(
-    product: { id: string; status: ProductStatus },
-    variantID: string,
-  ) {
-    if (product.status !== ProductStatus.active) return;
-    const otherSelling = await this.extended.count({
-      where: { productID: product.id, isActive: true, id: { not: variantID } },
-    });
-    if (otherSelling === 0) {
-      throw new ConflictException(
-        'Đây là variant đang bán cuối cùng của sản phẩm đang hiển thị. Hãy thêm variant khác hoặc chuyển sản phẩm sang "draft" / "inactive" trước',
-      );
-    }
   }
 }
