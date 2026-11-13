@@ -422,6 +422,18 @@ export class ProductsService extends PrismaBaseService<'product'> {
     }
   }
 
+  /**
+   * Lưu điểm đánh giá (lưu thừa để lọc / sắp xếp "rating" không phải join review).
+   * Reviews gọi trong transaction mỗi khi review thêm / sửa / xóa / đổi trạng thái.
+   */
+  async setRating(
+    productID: string,
+    rating: { ratingAvg: number; ratingCount: number },
+    tx: Prisma.TransactionClient,
+  ) {
+    await tx.product.updateMany({ where: { id: productID }, data: rating });
+  }
+
   /** Thêm ảnh vào cuối danh sách ảnh của product. Trả về danh sách ảnh mới. */
   appendImages(productID: string, images: { url: string; publicID: string }[]) {
     // Transaction: 2 lần upload song song không bị trùng sortOrder (lần sau xung đột và chạy lại)

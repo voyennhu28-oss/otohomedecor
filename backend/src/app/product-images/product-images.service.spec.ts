@@ -1,6 +1,7 @@
 import { BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import * as fs from 'node:fs/promises';
 import { FileStrategy } from '../../common/utils/file-util/base/file.strategy';
+import { ImageUploadService } from '../../common/utils/file-util/image-upload.service';
 import { ProductsService } from '../products/products.service';
 import { ProductImagesService } from './product-images.service';
 
@@ -30,9 +31,10 @@ describe('ProductImagesService', () => {
       appendImages: jest.fn((_id, images) => Promise.resolve(images)),
       removeImage: jest.fn().mockResolvedValue([]),
     };
+    // ImageUploadService thật (bọc FileStrategy giả): kiểm tra luôn phần dùng chung
     service = new ProductImagesService(
       products as unknown as ProductsService,
-      strategy as unknown as FileStrategy,
+      new ImageUploadService(strategy as unknown as FileStrategy),
     );
   });
 

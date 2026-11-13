@@ -207,6 +207,22 @@ describe('ProductVariantsService', () => {
     });
   });
 
+  describe('findLowStock (dashboard)', () => {
+    it('variant đang bán của product đang bán, không phải hàng đặt làm, ít hàng nhất trước', async () => {
+      variant.findMany.mockResolvedValue([]);
+      await service.findLowStock(5, 20);
+      expect(variant.findMany.mock.calls[0][0]).toMatchObject({
+        where: {
+          isActive: true,
+          stock: { lte: 5 },
+          product: { is: { status: 'active', allowBackorder: false, OR: expect.any(Array) } },
+        },
+        orderBy: [{ stock: 'asc' }, { sku: 'asc' }],
+        take: 20,
+      });
+    });
+  });
+
   describe('findByProduct', () => {
     it('kiểm tra product tồn tại rồi lấy mọi variant chưa xóa', async () => {
       variant.findMany.mockResolvedValue([{ id: V }]);

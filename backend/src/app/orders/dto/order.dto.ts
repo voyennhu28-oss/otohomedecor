@@ -1,25 +1,15 @@
 import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { itemPerPageQuery, pageQuery, searchQuery } from '../../../common/dto/query.dto';
+import {
+  itemPerPageQuery,
+  pageQuery,
+  searchQuery,
+  vnDateQuery as vnDay,
+} from '../../../common/dto/query.dto';
 import { ORDER_NUMBER_REGEX } from '../order-number';
 
 const note = z.string().trim().min(1).max(500);
-
-/**
- * Ngày trong query: "2026-11-13" hiểu là cả ngày theo giờ Việt Nam
- * (from = 00:00, to = 23:59:59.999); chuỗi ISO đầy đủ thì giữ nguyên.
- */
-const vnDay = (edge: 'start' | 'end') =>
-  z
-    .string()
-    .trim()
-    .transform((value) =>
-      /^\d{4}-\d{2}-\d{2}$/.test(value)
-        ? `${value}T${edge === 'start' ? '00:00:00.000' : '23:59:59.999'}+07:00`
-        : value,
-    )
-    .pipe(z.coerce.date());
 
 export class OrderNumberParamDto extends createZodDto(
   z.object({ orderNumber: z.string().trim().toUpperCase().regex(ORDER_NUMBER_REGEX, 'Mã đơn không hợp lệ') }),

@@ -125,6 +125,17 @@ src/
 - Webhook: header `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>` (so bằng `timingSafeEqual`, sai → 401) → chỉ `transferType === 'in'` → **idempotent theo `id` của SePay** (lưu vào `Payment.transactionID`) → đơn `pending` và số tiền **khớp đúng** `order.total` thì mới `paid` + `confirmed`. Sai tiền / đơn đã hủy / đã trả rồi: lưu `Payment` + log để admin xử lý, không tự đổi đơn.
 - Response webhook: HTTP 200 + đúng body `{ "success": true }`, kể cả khi bỏ qua giao dịch (để SePay không gửi lại). Không bọc qua format response chung.
 
+**Review** (module `reviews`)
+- Chỉ viết review khi có đơn `delivered` chứa sản phẩm, mỗi đơn 1 review (unique `userID + productID + orderID`). Chỉ review `approved` được hiển thị và tính điểm.
+- Mọi thay đổi review (thêm / sửa / xóa / đổi trạng thái) tính lại `ratingAvg`, `ratingCount` của product trong CÙNG transaction (`ProductsService.setRating`).
+- Ảnh review: tối đa 5 ảnh, upload sau khi tạo review (`POST /reviews/:id/images`). Xóa review thì xóa ảnh trên Cloudinary sau khi DB đã xóa.
+
+**Upload ảnh** (sản phẩm, review...): dùng `ImageUploadService` (`common/utils/file-util`, global) + `imageUploadOptions(maxFiles)` cho multer. Service lo phần tất cả hoặc không (lỗi giữa chừng thì xóa ảnh đã lên Cloudinary) và luôn xóa file tạm. Không tự gọi `FileStrategy.upload` trực tiếp.
+
+**Dashboard** (module `dashboard`, không có collection): tổng hợp đơn bằng `aggregateRaw` trong `OrdersService.salesReport`, nhóm theo ngày giờ Việt Nam (`timezone: 'Asia/Ho_Chi_Minh'`). Doanh thu = tổng `total` của đơn, không tính đơn hủy / trả hàng. Đọc số / ObjectId từ kết quả thô qua `common/prisma/raw.util.ts`.
+
+**Deploy: Render, Node runtime, không dùng Docker.** Xem `DEPLOY.md`. Build phải là `npm ci --include=dev && npx prisma generate && npm run build`; production cần `TRUST_PROXY=1`; health check `GET /api/health`.
+
 **Mail: Brevo SMTP relay** qua `MailUtilService` (nodemailer). Email đơn hàng gửi qua `OrderNotificationService` (template trong `orders/order-mail.ts`, dựng bằng `safeHtml`), luôn gọi SAU khi transaction commit và chạy nền. `MAIL_HOST=smtp-relay.brevo.com`, `MAIL_USER` là SMTP login do Brevo cấp, `MAIL_PASS` là **SMTP key** (không phải API key), `MAIL_FROM` bắt buộc và phải là sender đã xác minh trên Brevo.
 
 **Lọc sản phẩm** (plan mục 8)

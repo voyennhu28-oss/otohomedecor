@@ -181,6 +181,16 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     return toPage(list, totalItems, pagination.itemPerPage);
   }
 
+  /**
+   * Dashboard: số giao dịch tiền vào không áp được vào đơn trong khoảng thời gian (cần đối soát).
+   * Đếm theo khoảng vì Payment "failed" không có trạng thái "đã xử lý".
+   */
+  countFailed({ from, to }: { from: Date; to: Date }) {
+    return this.extended.count({
+      where: { status: PaymentStatus.failed, createdAt: { gte: from, lte: to } },
+    });
+  }
+
   // ───────────── helpers ─────────────
 
   private ignore(

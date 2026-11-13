@@ -17,7 +17,13 @@ import { CheckoutService } from './checkout/checkout.service';
 import { AdminOrdersController } from './orders/admin-orders.controller';
 import { OrdersController } from './orders/orders.controller';
 import { OrdersService } from './orders/orders.service';
+import { AdminDashboardController } from './dashboard/admin-dashboard.controller';
+import { DashboardService } from './dashboard/dashboard.service';
 import { AdminPaymentsController } from './payments/admin-payments.controller';
+import { AdminReviewsController } from './reviews/admin-reviews.controller';
+import { ReviewImagesService } from './reviews/review-images.service';
+import { ReviewsController } from './reviews/reviews.controller';
+import { ReviewsService } from './reviews/reviews.service';
 import { PaymentsController } from './payments/payments.controller';
 import { PaymentsService } from './payments/payments.service';
 import { AdminPromotionsController } from './promotions/admin-promotions.controller';
@@ -50,12 +56,27 @@ describe('Controller giai đoạn 3', () => {
       },
     );
 
-    it.each([AdminOrdersController, AdminPromotionsController, AdminShippingZonesController, AdminPaymentsController])(
+    it.each([
+      AdminOrdersController,
+      AdminPromotionsController,
+      AdminShippingZonesController,
+      AdminPaymentsController,
+      AdminReviewsController,
+      AdminDashboardController,
+    ])(
       '%p: @AdminOnly ở cấp class',
       (controller) => {
         expect(Reflect.getMetadata(IS_ADMIN_ONLY, controller)).toBe(true);
       },
     );
+
+    it('review: xem là public; viết / sửa / xóa cần đăng nhập', () => {
+      expect(Reflect.getMetadata(IS_PUBLIC, ReviewsController.prototype.findByProduct)).toBe(true);
+      for (const method of ['create', 'update', 'remove'] as const) {
+        expect(Reflect.getMetadata(IS_PUBLIC, ReviewsController.prototype[method])).toBeUndefined();
+      }
+      expect(Reflect.getMetadata(IS_ADMIN_ONLY, ReviewsController)).toBeUndefined();
+    });
 
     it('GET /shipping-zones/provinces là public (form địa chỉ dùng trước khi đăng nhập)', () => {
       expect(Reflect.getMetadata(IS_PUBLIC, ShippingZonesController.prototype.listProvinces)).toBe(true);
@@ -136,6 +157,38 @@ describe('Controller giai đoạn 3', () => {
 
       await ctrl.markPaid(admin, { id: ID }, { note: 'Khách chuyển sai nội dung' });
       expect(orders.markPaidManually).toHaveBeenCalledWith(admin, ID, 'Khách chuyển sai nội dung');
+    });
+
+    it('reviews / dashboard: chuyển tiếp đúng tham số, userID lấy từ token', async () => {
+      const reviewModule = await AutoMockingModule.createTestingModule({ controllers: [ReviewsController] });
+      const adminReviewModule = await AutoMockingModule.createTestingModule({ controllers: [AdminReviewsController] });
+      const dashboardModule = await AutoMockingModule.createTestingModule({ controllers: [AdminDashboardController] });
+      const reviews = reviewModule.get(ReviewsService) as jest.Mocked<ReviewsService>;
+      const adminReviews = adminReviewModule.get(ReviewsService) as jest.Mocked<ReviewsService>;
+      const dashboard = dashboardModule.get(DashboardService) as jest.Mocked<DashboardService>;
+
+      const ctrl = reviewModule.get(ReviewsController);
+      await ctrl.findByProduct({ productID: ID }, { sort: 'newest', page: 1, itemPerPage: 10 });
+      await ctrl.create(me, { productID: ID }, { rating: 5 });
+      await ctrl.update(me, { id: ID }, { rating: 4 });
+      await ctrl.remove(me, { id: ID });
+      expect(reviews.findPublic).toHaveBeenCalledWith(ID, { sort: 'newest', page: 1, itemPerPage: 10 });
+      expect(reviews.create).toHaveBeenCalledWith(me, ID, { rating: 5 });
+      expect(reviews.updateMine).toHaveBeenCalledWith('u1', ID, { rating: 4 });
+      expect(reviews.removeMine).toHaveBeenCalledWith('u1', ID);
+
+      const adminCtrl = adminReviewModule.get(AdminReviewsController);
+      await adminCtrl.findList({ page: 1, itemPerPage: 20 });
+      await adminCtrl.updateStatus({ id: ID }, { status: 'hidden' });
+      expect(adminReviews.updateStatus).toHaveBeenCalledWith(ID, 'hidden');
+
+      await adminCtrl.removeImage({ id: ID, publicID: 'hd-review-x' });
+      expect(
+        (adminReviewModule.get(ReviewImagesService) as jest.Mocked<ReviewImagesService>).removeAsAdmin,
+      ).toHaveBeenCalledWith(ID, 'hd-review-x');
+
+      await dashboardModule.get(AdminDashboardController).getOverview({ lowStockThreshold: 5, topLimit: 10 });
+      expect(dashboard.getOverview).toHaveBeenCalledWith({ lowStockThreshold: 5, topLimit: 10 });
     });
 
     it('payments: thông tin chuyển khoản lấy userID từ token; admin xem danh sách giao dịch', async () => {

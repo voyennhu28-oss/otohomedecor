@@ -19,12 +19,14 @@ import { AuthModule } from './auth/auth.module';
 import { CartsModule } from './carts/carts.module';
 import { CategoriesModule } from './categories/categories.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ProductImagesModule } from './product-images/product-images.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
 import { ProductsModule } from './products/products.module';
 import { PromotionsModule } from './promotions/promotions.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { ShippingZonesModule } from './shipping-zones/shipping-zones.module';
 import { UsersModule } from './users/users.module';
 
@@ -51,6 +53,9 @@ import { UsersModule } from './users/users.module';
     // Giai đoạn 4: thanh toán (SePay) + cron
     ScheduleModule.forRoot(),
     PaymentsModule,
+    // Giai đoạn 5: review + dashboard
+    ReviewsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

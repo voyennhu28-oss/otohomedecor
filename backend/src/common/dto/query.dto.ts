@@ -16,6 +16,27 @@ export const searchQuery = z.string().trim().min(1).max(100);
 /** "2026-11-01" hoặc ISO datetime → Date. */
 export const dateQuery = z.coerce.date();
 
+export const VN_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
+/**
+ * Ngày trong query: "2026-11-13" hiểu là cả ngày theo giờ Việt Nam
+ * (start = 00:00, end = 23:59:59.999); chuỗi ISO đầy đủ thì giữ nguyên.
+ */
+export const vnDateQuery = (edge: 'start' | 'end') =>
+  z
+    .string()
+    .trim()
+    .transform((value) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? `${value}T${edge === 'start' ? '00:00:00.000' : '23:59:59.999'}+07:00`
+        : value,
+    )
+    .pipe(z.coerce.date());
+
+/** "YYYY-MM-DD" của 1 thời điểm theo giờ Việt Nam. */
+export const toVnDate = (date: Date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: VN_TIMEZONE }).format(date);
+
 export interface Page<T> {
   list: T[];
   totalItems: number;

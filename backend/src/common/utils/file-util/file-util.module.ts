@@ -12,6 +12,7 @@ import { FileUtilService } from './file-util.service';
 import { FileStrategy } from './base/file.strategy';
 import { CloudinaryStrategy } from './cloudinary/cloudinary.strategy';
 import { FileEnvs, UPLOADS_GROUP_FILE } from './file-util.const';
+import { ImageUploadService } from './image-upload.service';
 
 @Global()
 @Module({
@@ -68,7 +69,8 @@ import { FileEnvs, UPLOADS_GROUP_FILE } from './file-util.const';
       provide: FileStrategy,
       useClass: CloudinaryStrategy,
     },
+    ImageUploadService,
   ],
-  exports: [MulterModule, FileStrategy],
+  exports: [MulterModule, FileStrategy, ImageUploadService],
 })
 export class FileUtilModule {}

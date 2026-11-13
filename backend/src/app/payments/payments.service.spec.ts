@@ -215,5 +215,13 @@ describe('PaymentsService', () => {
       expect(payment.count).toHaveBeenCalledWith({ where: args.where });
       expect(result).toMatchObject({ totalItems: 3, totalPages: 1 });
     });
+
+    it('countFailed: giao dịch cần đối soát trong khoảng thời gian', async () => {
+      payment.count.mockResolvedValue(2);
+      const from = new Date('2026-11-01');
+      const to = new Date('2026-11-30');
+      await expect(service.countFailed({ from, to })).resolves.toBe(2);
+      expect(payment.count).toHaveBeenCalledWith({ where: { status: 'failed', createdAt: { gte: from, lte: to } } });
+    });
   });
 });

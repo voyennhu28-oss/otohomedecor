@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, ProductStatus } from '@prisma/client';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
 import { withRetry } from '../../common/prisma/with-retry';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
@@ -199,6 +199,29 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
         data: { stock: { increment: quantity } },
       });
     }
+  }
+
+  /**
+   * Dashboard: variant đang bán sắp hết hàng (stock <= threshold), ít hàng nhất trước.
+   * Bỏ qua hàng đặt làm (allowBackorder) vì hết kho vẫn bán được.
+   */
+  findLowStock(threshold: number, limit: number) {
+    return this.extended.findMany({
+      where: {
+        isActive: true,
+        stock: { lte: threshold },
+        product: { is: { status: ProductStatus.active, allowBackorder: false, ...NOT_DELETED } },
+      },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        stock: true,
+        product: { select: { id: true, name: true, slug: true } },
+      },
+      orderBy: [{ stock: 'asc' }, { sku: 'asc' }],
+      take: limit,
+    });
   }
 
   // ───────────── helpers ─────────────

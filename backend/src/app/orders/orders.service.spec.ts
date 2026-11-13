@@ -300,6 +300,50 @@ describe('OrdersService', () => {
     });
   });
 
+  describe('reviews / dashboard', () => {
+    it('findReviewableOrderIDs: đơn ĐÃ GIAO của user có chứa sản phẩm, mới giao trước', async () => {
+      order.findMany.mockResolvedValue([{ id: 'o2' }, { id: 'o1' }]);
+      await expect(service.findReviewableOrderIDs('u1', 'p1')).resolves.toEqual(['o2', 'o1']);
+      expect(order.findMany.mock.calls[0][0]).toMatchObject({
+        where: { userID: 'u1', status: 'delivered', items: { some: { productID: 'p1' } } },
+        orderBy: { deliveredAt: 'desc' },
+      });
+    });
+
+    it('salesReport: nhóm theo ngày giờ VN, bỏ đơn hủy / trả hàng, đọc số từ Extended JSON', async () => {
+      const aggregateRaw = jest
+        .fn()
+        .mockResolvedValueOnce([{ _id: '2026-11-01', revenue: { $numberLong: '3000000000' }, orders: 2 }])
+        .mockResolvedValueOnce([
+          { _id: { $oid: 'aaaaaaaaaaaaaaaaaaaaaaaa' }, name: 'Sofa', quantity: 3, revenue: { $numberLong: '45000000' } },
+        ]);
+      Object.assign(order, { aggregateRaw, groupBy: jest.fn().mockResolvedValue([{ status: 'delivered', _count: { _all: 4 } }]) });
+      const from = new Date('2026-11-01T00:00:00+07:00');
+      const to = new Date('2026-11-30T23:59:59.999+07:00');
+
+      const report = await service.salesReport({ from, to }, 5);
+
+      const dailyPipeline = aggregateRaw.mock.calls[0][0].pipeline;
+      expect(dailyPipeline[0].$match).toEqual({
+        createdAt: { $gte: { $date: from.toISOString() }, $lte: { $date: to.toISOString() } },
+        status: { $nin: ['cancelled', 'returned'] },
+      });
+      expect(dailyPipeline[1].$group._id.$dateToString).toMatchObject({ format: '%Y-%m-%d', timezone: 'Asia/Ho_Chi_Minh' });
+      expect(aggregateRaw.mock.calls[1][0].pipeline).toContainEqual({ $limit: 5 });
+
+      expect(report.daily).toEqual([{ date: '2026-11-01', revenue: 3_000_000_000, orders: 2 }]);
+      expect(report.topProducts).toEqual([{ productID: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Sofa', quantity: 3, revenue: 45_000_000 }]);
+      expect(report.byStatus).toMatchObject({ delivered: 4, pending: 0, cancelled: 0 });
+      expect(Object.keys(report.byStatus)).toHaveLength(7);
+    });
+
+    it('countPending: đơn đang chờ xác nhận', async () => {
+      order.count.mockResolvedValue(3);
+      await expect(service.countPending()).resolves.toBe(3);
+      expect(order.count).toHaveBeenCalledWith({ where: { status: 'pending' } });
+    });
+  });
+
   describe('đơn của tôi', () => {
     it('findMine: lọc theo userID trong token + trạng thái, phân trang', async () => {
       order.findMany.mockResolvedValue([]);

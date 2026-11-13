@@ -48,6 +48,8 @@ const envSchema = z
       .default('http://localhost:3000')
       .refine((value) => parseOrigins(value).length > 0, 'phải là URL (nhiều URL cách nhau bằng dấu phẩy)'),
     COOKIE_SAME_SITE: z.preprocess(emptyToUndefined, z.enum(COOKIE_SAME_SITE_VALUES).default('lax')),
+    // Số reverse proxy phía trước app (Render / Railway: 1). 0 = không có proxy
+    TRUST_PROXY: z.preprocess(emptyToUndefined, z.coerce.number().int().min(0).max(10).default(0)),
 
     DATABASE_URL: z
       .string({ required_error: 'bắt buộc' })

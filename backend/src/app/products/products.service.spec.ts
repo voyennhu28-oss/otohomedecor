@@ -482,6 +482,12 @@ describe('ProductsService', () => {
       expect(tx.product.updateMany).toHaveBeenCalledWith({ where: { id: 'p2' }, data: { soldCount: { increment: 1 } } });
     });
 
+    it('setRating: lưu điểm đánh giá trong transaction được truyền vào', async () => {
+      const tx = { product: { updateMany: jest.fn() } };
+      await service.setRating('p1', { ratingAvg: 4.5, ratingCount: 2 }, tx as never);
+      expect(tx.product.updateMany).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { ratingAvg: 4.5, ratingCount: 2 } });
+    });
+
     it('findCardsByIDs: chỉ lấy sản phẩm đang bán trong danh sách', async () => {
       product.findMany.mockResolvedValue([]);
       await service.findCardsByIDs(['a', 'b']);

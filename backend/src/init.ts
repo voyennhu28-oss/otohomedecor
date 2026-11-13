@@ -71,7 +71,11 @@ const initOpenAPI = (app: INestApplication) => {
 const NEST_APP_OPTIONS = { bodyParser: false } satisfies NestApplicationOptions;
 
 const initApp = (app: NestExpressApplication) => {
-  const { APP_PREFIX = '/api', FE_URL = 'http://localhost:3000' } = process.env;
+  const { APP_PREFIX = '/api', FE_URL = 'http://localhost:3000', TRUST_PROXY = '0' } = process.env;
+  // Sau reverse proxy (Render, Railway, Nginx): tin X-Forwarded-For của N proxy gần nhất để req.ip
+  // là IP thật của khách (rate limit theo IP). KHÔNG bật khi không có proxy: client sẽ giả được IP.
+  const proxyHops = Number(TRUST_PROXY);
+  if (proxyHops > 0) app.set('trust proxy', proxyHops);
   // FE_URL có thể chứa nhiều địa chỉ, cách nhau bằng dấu phẩy
   const allowedOrigins = parseOrigins(FE_URL);
   app.setGlobalPrefix(APP_PREFIX);

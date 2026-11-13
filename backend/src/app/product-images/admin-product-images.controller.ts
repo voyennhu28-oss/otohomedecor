@@ -13,7 +13,8 @@ import { z } from 'zod';
 import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { objectId } from '../../common/dto/param.dto';
 import { IMAGE_UPLOAD_OPTIONS, MAX_IMAGES_PER_UPLOAD } from './product-images.const';
-import { ProductImagesService, type UploadedImage } from './product-images.service';
+import type { UploadedImage } from '../../common/utils/file-util/image-upload.service';
+import { ProductImagesService } from './product-images.service';
 
 class ProductIDParamDto extends createZodDto(z.object({ productID: objectId })) {}
 

@@ -14,8 +14,9 @@ import {
   Prisma,
 } from '@prisma/client';
 import type { UserInfo } from '../../common/decorators/user.decorator';
-import { paginate, toPage } from '../../common/dto/query.dto';
+import { paginate, toPage, VN_TIMEZONE } from '../../common/dto/query.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { rawDate, rawId, rawNumber } from '../../common/prisma/raw.util';
 import { withRetry } from '../../common/prisma/with-retry';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
 import { ExcelUtilService } from '../../common/utils/excel-util/excel-util.service';
@@ -31,7 +32,11 @@ import {
 import { ORDER_EXCEL_COLUMNS, toOrderExcelRows } from './order-excel';
 import { OrderNotificationService } from './order-notification.service';
 import { generateOrderNumber } from './order-number';
-import { assertTransition, CUSTOMER_CANCELLABLE, statusTimestamp } from './order-status';
+import {
+  assertTransition,
+  CUSTOMER_CANCELLABLE,
+  statusTimestamp,
+} from './order-status';
 
 export const MAX_EXPORT_ORDERS = 5000;
 /** Số đơn quá hạn xử lý mỗi lần cron chạy (còn lại để lần sau). */
@@ -48,12 +53,14 @@ const PAYMENT_ORDER_SELECT = {
   createdAt: true,
 } satisfies Prisma.OrderSelect;
 
-export type PaymentOrder = Prisma.OrderGetPayload<{ select: typeof PAYMENT_ORDER_SELECT }>;
+export type PaymentOrder = Prisma.OrderGetPayload<{
+  select: typeof PAYMENT_ORDER_SELECT;
+}>;
 
 interface TransitionOptions {
   changedBy: string;
   note?: string;
-  /** Chỉ chuyển khi đơn đang ở các trạng thái này (vd khách tự hủy: chỉ pending). */
+
   allowedFrom?: readonly OrderStatus[];
   /** Chỉ chuyển khi đơn CHƯA trả tiền (cron hủy đơn quá hạn: tránh hủy đơn vừa nhận tiền). */
   requireUnpaid?: boolean;
@@ -72,7 +79,9 @@ const MY_ORDER_LIST_SELECT = {
   createdAt: true,
 } satisfies Prisma.OrderSelect;
 
-const CUSTOMER_SELECT = { select: { id: true, email: true, fullName: true, phone: true } };
+const CUSTOMER_SELECT = {
+  select: { id: true, email: true, fullName: true, phone: true },
+};
 
 export type NewOrder = Omit<
   Prisma.OrderUncheckedCreateInput,
@@ -80,15 +89,21 @@ export type NewOrder = Omit<
 >;
 
 /** Bộ lọc admin → where của Prisma. Lọc theo email qua quan hệ user. */
-export const buildAdminOrderWhere = (f: AdminOrderFilter): Prisma.OrderWhereInput => ({
+export const buildAdminOrderWhere = (
+  f: AdminOrderFilter,
+): Prisma.OrderWhereInput => ({
   ...(f.status && { status: f.status }),
   ...(f.paymentMethod && { paymentMethod: f.paymentMethod }),
   ...(f.paymentStatus && { paymentStatus: f.paymentStatus }),
   ...((f.from || f.to) && {
     createdAt: { ...(f.from && { gte: f.from }), ...(f.to && { lte: f.to }) },
   }),
-  ...(f.orderNumber && { orderNumber: { contains: f.orderNumber, mode: 'insensitive' } }),
-  ...(f.email && { user: { is: { email: { contains: f.email, mode: 'insensitive' } } } }),
+  ...(f.orderNumber && {
+    orderNumber: { contains: f.orderNumber, mode: 'insensitive' },
+  }),
+  ...(f.email && {
+    user: { is: { email: { contains: f.email, mode: 'insensitive' } } },
+  }),
 });
 
 @Injectable()
@@ -106,12 +121,17 @@ export class OrdersService extends PrismaBaseService<'order'> {
     config: ConfigService,
   ) {
     super(prismaService, 'order');
-    this.unpaidTimeoutMinutes = Number(config.get('ORDER_UNPAID_TIMEOUT_MINUTES') ?? 30);
+    this.unpaidTimeoutMinutes = Number(
+      config.get('ORDER_UNPAID_TIMEOUT_MINUTES') ?? 30,
+    );
   }
 
   // ───────────── đơn của tôi ─────────────
 
-  async findMine(userID: string, { status, ...pagination }: MyOrderListQueryDto) {
+  async findMine(
+    userID: string,
+    { status, ...pagination }: MyOrderListQueryDto,
+  ) {
     const where: Prisma.OrderWhereInput = { userID, ...(status && { status }) };
     const [list, totalItems] = await Promise.all([
       this.extended.findMany({
@@ -127,7 +147,9 @@ export class OrdersService extends PrismaBaseService<'order'> {
 
   /** Chi tiết + lịch sử trạng thái. Đơn của người khác cũng trả 404 (không lộ mã đơn tồn tại). */
   async findMineByNumber(userID: string, orderNumber: string) {
-    const order = await this.extended.findFirst({ where: { orderNumber, userID } });
+    const order = await this.extended.findFirst({
+      where: { orderNumber, userID },
+    });
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
     return order;
   }
@@ -144,7 +166,11 @@ export class OrdersService extends PrismaBaseService<'order'> {
 
   // ───────────── admin ─────────────
 
-  async findAdminList({ page, itemPerPage, ...filter }: AdminOrderListQueryDto) {
+  async findAdminList({
+    page,
+    itemPerPage,
+    ...filter
+  }: AdminOrderListQueryDto) {
     const where = buildAdminOrderWhere(filter);
     const [list, totalItems] = await Promise.all([
       this.extended.findMany({
@@ -161,13 +187,20 @@ export class OrdersService extends PrismaBaseService<'order'> {
   async findAdminByID(id: string) {
     const order = await this.extended.findUnique({
       where: { id },
-      include: { user: CUSTOMER_SELECT, payments: { orderBy: { createdAt: 'desc' } } },
+      include: {
+        user: CUSTOMER_SELECT,
+        payments: { orderBy: { createdAt: 'desc' } },
+      },
     });
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
     return order;
   }
 
-  updateStatus(admin: UserInfo, id: string, { status, note }: UpdateOrderStatusDto) {
+  updateStatus(
+    admin: UserInfo,
+    id: string,
+    { status, note }: UpdateOrderStatusDto,
+  ) {
     return this.transition(id, status, { changedBy: admin.userEmail, note });
   }
 
@@ -178,13 +211,21 @@ export class OrdersService extends PrismaBaseService<'order'> {
   async markPaidManually(admin: UserInfo, id: string, note?: string) {
     const { order, confirmed } = await withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
-        const current = await tx.order.findUnique({ where: { id }, select: PAYMENT_ORDER_SELECT });
+        const current = await tx.order.findUnique({
+          where: { id },
+          select: PAYMENT_ORDER_SELECT,
+        });
         if (!current) throw new NotFoundException('Không tìm thấy đơn hàng');
         if (current.paymentStatus === PaymentStatus.paid) {
           throw new BadRequestException('Đơn đã được thanh toán');
         }
-        if (current.status === OrderStatus.cancelled || current.status === OrderStatus.returned) {
-          throw new BadRequestException('Đơn đã hủy / trả hàng, không thể xác nhận thanh toán');
+        if (
+          current.status === OrderStatus.cancelled ||
+          current.status === OrderStatus.returned
+        ) {
+          throw new BadRequestException(
+            'Đơn đã hủy / trả hàng, không thể xác nhận thanh toán',
+          );
         }
         return this.markPaid(current, tx, {
           changedBy: admin.userEmail,
@@ -229,7 +270,9 @@ export class OrdersService extends PrismaBaseService<'order'> {
         orderNumber: generateOrderNumber(),
         status: OrderStatus.pending,
         paymentStatus: PaymentStatus.pending,
-        statusHistory: [{ status: OrderStatus.pending, changedBy, at: new Date() }],
+        statusHistory: [
+          { status: OrderStatus.pending, changedBy, at: new Date() },
+        ],
       },
     });
   }
@@ -246,8 +289,14 @@ export class OrdersService extends PrismaBaseService<'order'> {
   }
 
   /** Đơn để đối chiếu giao dịch chuyển khoản (payments dùng, trong transaction của webhook). */
-  findForPayment(orderNumber: string, db: Prisma.TransactionClient = this.prismaService) {
-    return db.order.findUnique({ where: { orderNumber }, select: PAYMENT_ORDER_SELECT });
+  findForPayment(
+    orderNumber: string,
+    db: Prisma.TransactionClient = this.prismaService,
+  ) {
+    return db.order.findUnique({
+      where: { orderNumber },
+      select: PAYMENT_ORDER_SELECT,
+    });
   }
 
   /**
@@ -269,7 +318,9 @@ export class OrdersService extends PrismaBaseService<'order'> {
         paidAt: now,
         ...(confirmed && {
           status: OrderStatus.confirmed,
-          statusHistory: { push: { status: OrderStatus.confirmed, note, changedBy, at: now } },
+          statusHistory: {
+            push: { status: OrderStatus.confirmed, note, changedBy, at: now },
+          },
         }),
       },
     });
@@ -282,7 +333,9 @@ export class OrdersService extends PrismaBaseService<'order'> {
    * @returns số đơn đã hủy
    */
   async cancelExpiredUnpaid(now = new Date()) {
-    const deadline = new Date(now.getTime() - this.unpaidTimeoutMinutes * 60_000);
+    const deadline = new Date(
+      now.getTime() - this.unpaidTimeoutMinutes * 60_000,
+    );
     const expired = await this.extended.findMany({
       where: {
         paymentMethod: PaymentMethod.bank_transfer,
@@ -308,11 +361,117 @@ export class OrdersService extends PrismaBaseService<'order'> {
       } catch (error) {
         // HttpException: đơn vừa được thanh toán / đổi trạng thái → bỏ qua là đúng
         if (!(error instanceof HttpException)) {
-          this.logger.error(`Hủy đơn quá hạn ${orderNumber} thất bại`, (error as Error)?.stack);
+          this.logger.error(
+            `Hủy đơn quá hạn ${orderNumber} thất bại`,
+            (error as Error)?.stack,
+          );
         }
       }
     }
     return cancelled;
+  }
+
+  // ───────────── dùng cho reviews / dashboard ─────────────
+
+  /** ID các đơn ĐÃ GIAO của user có chứa sản phẩm (mới nhất trước): điều kiện để viết review. */
+  async findReviewableOrderIDs(
+    userID: string,
+    productID: string,
+    db: Prisma.TransactionClient = this.prismaService,
+  ) {
+    const orders = await db.order.findMany({
+      where: {
+        userID,
+        status: OrderStatus.delivered,
+        items: { some: { productID } },
+      },
+      select: { id: true },
+      orderBy: { deliveredAt: 'desc' },
+    });
+    return orders.map((o) => o.id);
+  }
+
+  /**
+   * Báo cáo bán hàng trong khoảng [from, to] (dashboard, plan mục 15):
+   *  - daily: doanh thu + số đơn theo NGÀY GIỜ VIỆT NAM (aggregateRaw, Prisma groupBy không nhóm theo ngày được)
+   *  - topProducts: sản phẩm bán nhiều nhất (theo số lượng, lấy từ snapshot trong đơn)
+   *  - byStatus: số đơn theo trạng thái
+   * Doanh thu = tổng `total` của đơn tạo trong khoảng, KHÔNG tính đơn đã hủy / trả hàng.
+   */
+  async salesReport({ from, to }: { from: Date; to: Date }, topLimit: number) {
+    const match = {
+      createdAt: { $gte: rawDate(from), $lte: rawDate(to) },
+      status: { $nin: [OrderStatus.cancelled, OrderStatus.returned] },
+    };
+
+    const [daily, top, byStatus] = await Promise.all([
+      this.prismaService.order.aggregateRaw({
+        pipeline: [
+          { $match: match },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: '$createdAt',
+                  timezone: VN_TIMEZONE,
+                },
+              },
+              revenue: { $sum: '$total' },
+              orders: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ],
+      }),
+      this.prismaService.order.aggregateRaw({
+        pipeline: [
+          { $match: match },
+          { $unwind: '$items' },
+          {
+            $group: {
+              _id: '$items.productID',
+              name: { $first: '$items.name' },
+              quantity: { $sum: '$items.quantity' },
+              revenue: { $sum: '$items.lineTotal' },
+            },
+          },
+          { $sort: { quantity: -1, revenue: -1 } },
+          { $limit: topLimit },
+        ],
+      }),
+      this.extended.groupBy({
+        by: ['status'],
+        where: { createdAt: { gte: from, lte: to } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    type Row = Record<string, unknown>;
+    return {
+      daily: (daily as unknown as Row[]).map((r) => ({
+        date: String(r._id),
+        revenue: rawNumber(r.revenue),
+        orders: rawNumber(r.orders),
+      })),
+      topProducts: (top as unknown as Row[]).map((r) => ({
+        productID: rawId(r._id),
+        name: String(r.name ?? ''),
+        quantity: rawNumber(r.quantity),
+        revenue: rawNumber(r.revenue),
+      })),
+      byStatus: Object.fromEntries(
+        Object.values(OrderStatus).map((status) => [
+          status,
+          byStatus.find((s) => s.status === status)?._count._all ?? 0,
+        ]),
+      ) as Record<OrderStatus, number>,
+    };
+  }
+
+  /** Dashboard: đơn đang chờ xác nhận (cần xử lý ngay, không phụ thuộc khoảng ngày). */
+  countPending() {
+    return this.extended.count({ where: { status: OrderStatus.pending } });
   }
 
   /** Tổng chi tiêu: chỉ tính đơn đã giao (tiền đã thực sự trả). */
@@ -337,7 +496,11 @@ export class OrdersService extends PrismaBaseService<'order'> {
    * request sau xung đột, chạy lại, đọc trạng thái mới và bị từ chối (không hoàn kho 2 lần).
    * Commit xong thì gửi email cho khách (chạy nền).
    */
-  private async transition(id: string, to: OrderStatus, opts: TransitionOptions) {
+  private async transition(
+    id: string,
+    to: OrderStatus,
+    opts: TransitionOptions,
+  ) {
     const updated = await withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
         const order = await tx.order.findUnique({
@@ -352,7 +515,9 @@ export class OrdersService extends PrismaBaseService<'order'> {
         });
         if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
         if (opts.allowedFrom && !opts.allowedFrom.includes(order.status)) {
-          throw new BadRequestException('Đơn đã được xác nhận, không thể tự hủy. Vui lòng liên hệ shop');
+          throw new BadRequestException(
+            'Đơn đã được xác nhận, không thể tự hủy. Vui lòng liên hệ shop',
+          );
         }
         if (opts.requireUnpaid && order.paymentStatus === PaymentStatus.paid) {
           throw new BadRequestException('Đơn đã được thanh toán');
@@ -362,7 +527,14 @@ export class OrdersService extends PrismaBaseService<'order'> {
         const now = new Date();
         const data: Prisma.OrderUpdateInput = {
           status: to,
-          statusHistory: { push: { status: to, note: opts.note, changedBy: opts.changedBy, at: now } },
+          statusHistory: {
+            push: {
+              status: to,
+              note: opts.note,
+              changedBy: opts.changedBy,
+              at: now,
+            },
+          },
           ...statusTimestamp(to, now),
         };
         const isPaid = order.paymentStatus === PaymentStatus.paid;
@@ -373,7 +545,8 @@ export class OrdersService extends PrismaBaseService<'order'> {
               order.items.filter((i) => i.stockReserved),
               tx,
             );
-            if (order.promotionID) await this.promotionsService.release(order.promotionID, tx);
+            if (order.promotionID)
+              await this.promotionsService.release(order.promotionID, tx);
             data.cancelReason = opts.note ?? null;
             if (isPaid) data.paymentStatus = PaymentStatus.refunded;
             break;
@@ -386,7 +559,10 @@ export class OrdersService extends PrismaBaseService<'order'> {
             break;
           case OrderStatus.returned:
             await this.productsService.addSoldCount(
-              order.items.map((i) => ({ productID: i.productID, quantity: -i.quantity })),
+              order.items.map((i) => ({
+                productID: i.productID,
+                quantity: -i.quantity,
+              })),
               tx,
             );
             if (isPaid) data.paymentStatus = PaymentStatus.refunded;
