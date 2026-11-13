@@ -68,6 +68,11 @@ export class ExportOrdersDto extends createZodDto(
   adminOrderFilter.strict().default({}).refine(fromBeforeTo, FROM_TO_ERROR),
 ) {}
 
+/** POST /admin/orders/:id/mark-paid: admin xác nhận đã nhận tiền (SePay không tự khớp được). */
+export class MarkPaidDto extends createZodDto(
+  z.object({ note: note.optional() }).strict().default({}),
+) {}
+
 /** PATCH /admin/orders/:id/status. `note` lưu vào lịch sử; hủy đơn thì là lý do hủy. */
 export class UpdateOrderStatusDto extends createZodDto(
   z.object({ status: z.nativeEnum(OrderStatus), note: note.optional() }).strict(),

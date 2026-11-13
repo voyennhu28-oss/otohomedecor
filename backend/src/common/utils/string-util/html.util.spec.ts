@@ -1,4 +1,4 @@
-import { escapeHtml, safeHtml } from './html.util';
+import { escapeHtml, raw, safeHtml } from './html.util';
 
 describe('html.util', () => {
   it('escapeHtml: thay & < > " \'', () => {
@@ -22,5 +22,15 @@ describe('html.util', () => {
 
   it('safeHtml: template không có giá trị nào', () => {
     expect(safeHtml`<p>Xin chào</p>`).toBe('<p>Xin chào</p>');
+  });
+
+  it('raw: đoạn đã dựng bằng safeHtml không bị escape 2 lần; mảng được nối lại', () => {
+    const names = ['<b>Sofa</b>', 'Đèn & Gương'];
+    const rows = names.map((n) => raw(safeHtml`<li>${n}</li>`));
+    expect(safeHtml`<ul>${rows}</ul>`).toBe('<ul><li>&lt;b&gt;Sofa&lt;/b&gt;</li><li>Đèn &amp; Gương</li></ul>');
+  });
+
+  it('mảng chuỗi thường vẫn bị escape từng phần tử', () => {
+    expect(safeHtml`<p>${['<i>', 'a']}</p>`).toBe('<p>&lt;i&gt;a</p>');
   });
 });

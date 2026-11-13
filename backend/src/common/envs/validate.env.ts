@@ -33,6 +33,7 @@ const secret = z.preprocess(emptyToUndefined, z.string({ required_error: 'bắt 
 const SECRET_KEYS = ['JWT_SECRET', 'JWT_REFRESH_SECRET'] as const;
 
 const CLOUDINARY_KEYS = ['CLOUDINARY_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'] as const;
+const SEPAY_KEYS = ['SEPAY_WEBHOOK_API_KEY', 'SEPAY_BANK', 'SEPAY_ACCOUNT_NUMBER'] as const;
 
 const envSchema = z
   .object({
@@ -62,20 +63,30 @@ const envSchema = z
     CLOUDINARY_API_KEY: optionalWithWarning('CLOUDINARY_API_KEY'),
     CLOUDINARY_API_SECRET: optionalWithWarning('CLOUDINARY_API_SECRET'),
 
-    MAIL_HOST: optionalString, // bỏ trống: không gửi mail (dev in nội dung ra log)
+    // Brevo SMTP relay. Bỏ trống MAIL_HOST: không gửi mail (dev in nội dung ra log)
+    MAIL_HOST: optionalString,
     MAIL_PORT: positiveInt(587),
-    MAIL_USER: optionalString,
-    MAIL_PASS: optionalString,
-    MAIL_FROM: optionalString,
+    MAIL_USER: optionalString, // SMTP login do Brevo cấp, không phải email gửi đi
+    MAIL_PASS: optionalString, // SMTP key
+    MAIL_FROM: optionalString, // sender đã xác minh trên Brevo (bắt buộc khi có MAIL_HOST)
 
-    ORDER_UNPAID_TIMEOUT_MINUTES: positiveInt(30),
+    ORDER_UNPAID_TIMEOUT_MINUTES: positiveInt(30), // đơn chuyển khoản chưa nhận tiền quá hạn → cron hủy
+
+    // SePay (chuyển khoản). Thiếu thì không đặt được đơn bank_transfer; production bắt buộc
+    SEPAY_WEBHOOK_API_KEY: optionalWithWarning('SEPAY_WEBHOOK_API_KEY'),
+    SEPAY_BANK: optionalWithWarning('SEPAY_BANK'),
+    SEPAY_ACCOUNT_NUMBER: z.preprocess(
+      emptyToUndefined,
+      z.string().regex(/^[A-Za-z0-9]+$/, 'chỉ gồm chữ và số').optional(),
+    ),
+    SEPAY_ACCOUNT_NAME: optionalString,
 
     THROTTLE_TTL: positiveInt(60_000),
     THROTTLE_LIMIT: positiveInt(100),
     CACHE_INTERNAL_TTL: positiveInt(30_000),
     MULTER_DESTINATION_FILE: z.string().default('./uploads'),
   })
-  .passthrough() // giữ các biến chưa khai báo ở đây (VNPAY_*, MOMO_*, SEED_*...)
+  .passthrough() // giữ các biến chưa khai báo ở đây (SEED_*...)
   .superRefine((env, ctx) => {
     if (env.JWT_SECRET && env.JWT_SECRET === env.JWT_REFRESH_SECRET) {
       ctx.addIssue({
@@ -91,8 +102,14 @@ const envSchema = z
       if (isProduction) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message });
       else Logger.warn(`ENV [${key}] ${message} (bắt buộc khi production)`, 'Env');
     }
+    // Brevo chỉ gửi từ sender đã xác minh; thiếu MAIL_FROM thì nodemailer lấy MAIL_USER (SMTP login) → bị từ chối
+    if (env.MAIL_HOST && !env.MAIL_FROM) {
+      const message = 'bắt buộc khi có MAIL_HOST (sender đã xác minh trên Brevo)';
+      if (isProduction) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MAIL_FROM'], message });
+      else Logger.warn(`ENV [MAIL_FROM] ${message}`, 'Env');
+    }
     if (isProduction) {
-      for (const key of CLOUDINARY_KEYS) {
+      for (const key of [...CLOUDINARY_KEYS, ...SEPAY_KEYS]) {
         if (!env[key]) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: [key], message: 'bắt buộc khi production' });
         }

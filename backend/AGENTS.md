@@ -115,13 +115,17 @@ src/
 - Hủy (trong transaction): hoàn kho, giảm `usedCount` của mã, nếu đã trả tiền thì `paymentStatus = refunded`.
 - `delivered`: tăng `soldCount`. Đơn COD thì đặt `paymentStatus = paid`.
 - Customer chỉ tự hủy được khi đơn còn `pending`.
-- Cron mỗi 5 phút: hủy đơn `vnpay`/`momo` còn `pending` và chưa trả tiền quá `ORDER_UNPAID_TIMEOUT_MINUTES`, với `changedBy: 'system'`.
+- Cron mỗi 5 phút: hủy đơn `bank_transfer` còn `pending` và chưa trả tiền quá `ORDER_UNPAID_TIMEOUT_MINUTES`, với `changedBy: 'system'`.
 
-**Thanh toán** (plan mục 12)
-- Strategy pattern: interface `PaymentGateway`, với `VnpayGateway` và `MomoGateway`.
-- **Chỉ IPN được cập nhật đơn.** Trang `return` chỉ để hiển thị, vì người dùng sửa được URL.
-- IPN: kiểm tra chữ ký → đơn tồn tại → số tiền khớp `order.total` → **idempotent** (đã `paid` thì chỉ trả OK) → cập nhật. Trả response đúng format của cổng.
-- VNPay: HMAC-SHA512, số tiền **nhân 100**. MoMo: HMAC-SHA256.
+**Thanh toán: SePay** (plan mục 12, module `payments`). Enum `PaymentMethod` chỉ có `cod` và `bank_transfer` (chuyển khoản VietQR, SePay xác nhận). **Không** dùng VNPay / MoMo.
+- `Payment` = 1 giao dịch tiền vào SePay báo về, `transactionID` (= `id` của SePay) bắt buộc và `@unique`: database chặn xử lý trùng. `status: paid` = giao dịch này thanh toán đơn; `failed` = tiền đã vào nhưng không áp được vào đơn (admin đối soát ở `GET /admin/payments?status=failed`, xác nhận tay bằng `POST /admin/orders/:id/mark-paid`).
+- Checkout `bank_transfer`: gọi `PaymentsService.assertTransferAvailable()` TRƯỚC transaction (chưa cấu hình `SEPAY_*` thì không tạo đơn).
+- Nội dung chuyển khoản = mã đơn bỏ dấu `-` (`HD2611137K3M9Q`), dùng `toPaymentCode` / `findOrderNumberInText` trong `orders/order-number.ts`. Không đổi định dạng mã đơn khi chưa sửa hai hàm này và cấu hình mã thanh toán trên SePay (tiền tố `HD`, hậu tố 12 ký tự số và chữ).
+- **Chỉ webhook `POST /payments/sepay/webhook` được đánh dấu đơn đã trả tiền.** Không tin client báo "đã chuyển khoản".
+- Webhook: header `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>` (so bằng `timingSafeEqual`, sai → 401) → chỉ `transferType === 'in'` → **idempotent theo `id` của SePay** (lưu vào `Payment.transactionID`) → đơn `pending` và số tiền **khớp đúng** `order.total` thì mới `paid` + `confirmed`. Sai tiền / đơn đã hủy / đã trả rồi: lưu `Payment` + log để admin xử lý, không tự đổi đơn.
+- Response webhook: HTTP 200 + đúng body `{ "success": true }`, kể cả khi bỏ qua giao dịch (để SePay không gửi lại). Không bọc qua format response chung.
+
+**Mail: Brevo SMTP relay** qua `MailUtilService` (nodemailer). Email đơn hàng gửi qua `OrderNotificationService` (template trong `orders/order-mail.ts`, dựng bằng `safeHtml`), luôn gọi SAU khi transaction commit và chạy nền. `MAIL_HOST=smtp-relay.brevo.com`, `MAIL_USER` là SMTP login do Brevo cấp, `MAIL_PASS` là **SMTP key** (không phải API key), `MAIL_FROM` bắt buộc và phải là sender đã xác minh trên Brevo.
 
 **Lọc sản phẩm** (plan mục 8)
 - `count` phải dùng **cùng `where`** với `findMany`.
@@ -130,7 +134,7 @@ src/
 
 ### Biến môi trường
 
-Khai báo trong `.example.env` và validate trong `src/common/envs/validate.env.ts` (bật `validate` trong `ConfigModule`). Danh sách đầy đủ ở plan mục 2.4: `PORT`, `APP_PREFIX`, `APP_NAME`, `NODE_ENV`, `FE_URL`, `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_*`, `MAIL_*`, `VNPAY_*`, `MOMO_*`, `ORDER_UNPAID_TIMEOUT_MINUTES`, `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (tùy chọn, cho `db:seed`), cùng với `OBSERVE_APP_KEY`, `OBSERVE_APP_SECRET` (xem mục Observe bên dưới).
+Khai báo trong `.example.env` và validate trong `src/common/envs/validate.env.ts` (bật `validate` trong `ConfigModule`). Danh sách đầy đủ ở plan mục 2.4: `PORT`, `APP_PREFIX`, `APP_NAME`, `NODE_ENV`, `FE_URL`, `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_*`, `MAIL_*` (Brevo), `SEPAY_*`, `ORDER_UNPAID_TIMEOUT_MINUTES`, `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (tùy chọn, cho `db:seed`), cùng với `OBSERVE_APP_KEY`, `OBSERVE_APP_SECRET` (xem mục Observe bên dưới).
 
 ### Lộ trình
 

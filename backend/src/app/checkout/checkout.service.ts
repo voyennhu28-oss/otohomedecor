@@ -1,12 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PaymentMethod, Prisma } from '@prisma/client';
 import type { UserInfo } from '../../common/decorators/user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { withRetry } from '../../common/prisma/with-retry';
 import { AddressesService } from '../addresses/addresses.service';
 import { CartsService } from '../carts/carts.service';
 import { pickImageUrl } from '../carts/sale-status';
+import { OrderNotificationService } from '../orders/order-notification.service';
 import { OrdersService } from '../orders/orders.service';
+import { PaymentsService } from '../payments/payments.service';
 import { ProductVariantsService } from '../product-variants/product-variants.service';
 import { computeDiscount } from '../promotions/promotion.util';
 import { PromotionsService } from '../promotions/promotions.service';
@@ -43,6 +45,8 @@ export class CheckoutService {
     private readonly shippingZonesService: ShippingZonesService,
     private readonly promotionsService: PromotionsService,
     private readonly ordersService: OrdersService,
+    private readonly paymentsService: PaymentsService,
+    private readonly notifications: OrderNotificationService,
   ) {}
 
   /** POST /checkout/preview: bảng tính tiền giống hệt lúc đặt, không ghi DB. */
@@ -86,6 +90,10 @@ export class CheckoutService {
    * chạy lại, thấy giỏ trống và bị từ chối (không tạo 2 đơn, không vượt perUserLimit).
    */
   async checkout(user: UserInfo, dto: CheckoutDto) {
+    const isTransfer = dto.paymentMethod === PaymentMethod.bank_transfer;
+    // Kiểm tra trước khi tạo đơn: không để đơn chuyển khoản được tạo mà không có thông tin nhận tiền
+    if (isTransfer) this.paymentsService.assertTransferAvailable();
+
     const order = await withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
         const quote = await this.quote(user.userID, dto, tx);
@@ -135,8 +143,10 @@ export class CheckoutService {
       }, CHECKOUT_TX_OPTIONS),
     );
 
-    // Giai đoạn 4: tạo link VNPay / MoMo và gửi email xác nhận ở đây (ngoài transaction)
-    return { order, paymentUrl: null };
+    // Ngoài transaction (đơn đã commit): thông tin chuyển khoản + QR, email xác nhận chạy nền
+    const payment = isTransfer ? this.paymentsService.transferInfo(order) : null;
+    this.notifications.orderPlaced(order.id, payment);
+    return { order, payment };
   }
 
   /**

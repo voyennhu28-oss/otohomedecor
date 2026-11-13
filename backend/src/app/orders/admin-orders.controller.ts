@@ -14,7 +14,12 @@ import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
 import { IDDto } from '../../common/dto/param.dto';
 import { XLSX_MIME_TYPE } from '../products/excel/products-excel.const';
-import { AdminOrderListQueryDto, ExportOrdersDto, UpdateOrderStatusDto } from './dto/order.dto';
+import {
+  AdminOrderListQueryDto,
+  ExportOrdersDto,
+  MarkPaidDto,
+  UpdateOrderStatusDto,
+} from './dto/order.dto';
 import { OrdersService } from './orders.service';
 
 @ApiTags('Admin / Orders')
@@ -55,5 +60,15 @@ export class AdminOrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(admin, id, dto);
+  }
+
+  /**
+   * Xác nhận đã nhận chuyển khoản thủ công: khách ghi sai nội dung, chuyển nhiều lần...
+   * (đối soát ở GET /admin/payments?status=failed). Đơn chờ xác nhận → "Đã xác nhận".
+   */
+  @Post(':id/mark-paid')
+  @HttpCode(200)
+  markPaid(@User() admin: UserInfo, @Param() { id }: IDDto, @Body() { note }: MarkPaidDto) {
+    return this.ordersService.markPaidManually(admin, id, note);
   }
 }

@@ -16,7 +16,7 @@ describe('validate (env)', () => {
   afterAll(() => jest.restoreAllMocks());
 
   it('env tối thiểu hợp lệ: điền mặc định, ép kiểu số, giữ biến lạ', () => {
-    const env = validate(baseEnv({ MAIL_PORT: '', THROTTLE_LIMIT: '50', VNPAY_TMN_CODE: 'X' }));
+    const env = validate(baseEnv({ MAIL_PORT: '', THROTTLE_LIMIT: '50', SEPAY_BANK: 'X' }));
     expect(env).toMatchObject({
       NODE_ENV: 'development',
       PORT: 5000,
@@ -24,8 +24,32 @@ describe('validate (env)', () => {
       THROTTLE_LIMIT: 50,
       COOKIE_SAME_SITE: 'lax',
       FE_URL: 'http://localhost:3000',
-      VNPAY_TMN_CODE: 'X',
+      SEPAY_BANK: 'X',
     });
+  });
+
+  const prod = {
+    NODE_ENV: 'production',
+    CLOUDINARY_NAME: 'n', CLOUDINARY_API_KEY: 'k', CLOUDINARY_API_SECRET: 's',
+    SEPAY_WEBHOOK_API_KEY: 'sepay-key', SEPAY_BANK: 'VCB', SEPAY_ACCOUNT_NUMBER: '0123456789',
+  };
+
+  it('production đủ biến → hợp lệ; thiếu SEPAY_* → báo rõ tên biến', () => {
+    expect(() => validate(baseEnv(prod))).not.toThrow();
+    for (const key of ['SEPAY_WEBHOOK_API_KEY', 'SEPAY_BANK', 'SEPAY_ACCOUNT_NUMBER']) {
+      expect(() => validate(baseEnv({ ...prod, [key]: '' }))).toThrow(key);
+    }
+  });
+
+  it('SEPAY_ACCOUNT_NUMBER chỉ gồm chữ và số', () => {
+    expect(() => validate(baseEnv({ SEPAY_ACCOUNT_NUMBER: '0123-456' }))).toThrow('SEPAY_ACCOUNT_NUMBER');
+  });
+
+  it('Brevo: có MAIL_HOST mà thiếu MAIL_FROM → production lỗi, dev chỉ cảnh báo', () => {
+    const mail = { MAIL_HOST: 'smtp-relay.brevo.com', MAIL_USER: 'abc@smtp-brevo.com', MAIL_PASS: 'key' };
+    expect(() => validate(baseEnv(mail))).not.toThrow();
+    expect(() => validate(baseEnv({ ...mail, ...prod }))).toThrow('MAIL_FROM');
+    expect(() => validate(baseEnv({ ...mail, ...prod, MAIL_FROM: 'Shop <no-reply@shop.vn>' }))).not.toThrow();
   });
 
   it.each(['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET'])('thiếu %s → báo rõ tên biến', (key) => {

@@ -1,5 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  Order,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -21,10 +29,35 @@ import {
   UpdateOrderStatusDto,
 } from './dto/order.dto';
 import { ORDER_EXCEL_COLUMNS, toOrderExcelRows } from './order-excel';
+import { OrderNotificationService } from './order-notification.service';
 import { generateOrderNumber } from './order-number';
 import { assertTransition, CUSTOMER_CANCELLABLE, statusTimestamp } from './order-status';
 
 export const MAX_EXPORT_ORDERS = 5000;
+/** Số đơn quá hạn xử lý mỗi lần cron chạy (còn lại để lần sau). */
+const EXPIRE_BATCH_SIZE = 100;
+
+/** Field của đơn cần để đối chiếu 1 giao dịch chuyển khoản. */
+const PAYMENT_ORDER_SELECT = {
+  id: true,
+  orderNumber: true,
+  status: true,
+  paymentStatus: true,
+  paymentMethod: true,
+  total: true,
+  createdAt: true,
+} satisfies Prisma.OrderSelect;
+
+export type PaymentOrder = Prisma.OrderGetPayload<{ select: typeof PAYMENT_ORDER_SELECT }>;
+
+interface TransitionOptions {
+  changedBy: string;
+  note?: string;
+  /** Chỉ chuyển khi đơn đang ở các trạng thái này (vd khách tự hủy: chỉ pending). */
+  allowedFrom?: readonly OrderStatus[];
+  /** Chỉ chuyển khi đơn CHƯA trả tiền (cron hủy đơn quá hạn: tránh hủy đơn vừa nhận tiền). */
+  requireUnpaid?: boolean;
+}
 
 /** Thông tin hiển thị ở danh sách "Đơn của tôi". */
 const MY_ORDER_LIST_SELECT = {
@@ -60,14 +93,20 @@ export const buildAdminOrderWhere = (f: AdminOrderFilter): Prisma.OrderWhereInpu
 
 @Injectable()
 export class OrdersService extends PrismaBaseService<'order'> {
+  private readonly logger = new Logger(OrdersService.name);
+  private readonly unpaidTimeoutMinutes: number;
+
   constructor(
     prismaService: PrismaService,
     private readonly productVariantsService: ProductVariantsService,
     private readonly productsService: ProductsService,
     private readonly promotionsService: PromotionsService,
     private readonly excelUtilService: ExcelUtilService,
+    private readonly notifications: OrderNotificationService,
+    config: ConfigService,
   ) {
     super(prismaService, 'order');
+    this.unpaidTimeoutMinutes = Number(config.get('ORDER_UNPAID_TIMEOUT_MINUTES') ?? 30);
   }
 
   // ───────────── đơn của tôi ─────────────
@@ -132,6 +171,31 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return this.transition(id, status, { changedBy: admin.userEmail, note });
   }
 
+  /**
+   * Admin xác nhận đã nhận tiền thủ công: khách chuyển sai nội dung nên SePay không khớp được,
+   * hoặc chuyển thành nhiều lần. Đơn chờ xác nhận thì chuyển luôn sang "Đã xác nhận".
+   */
+  async markPaidManually(admin: UserInfo, id: string, note?: string) {
+    const { order, confirmed } = await withRetry(() =>
+      this.prismaService.$transaction(async (tx) => {
+        const current = await tx.order.findUnique({ where: { id }, select: PAYMENT_ORDER_SELECT });
+        if (!current) throw new NotFoundException('Không tìm thấy đơn hàng');
+        if (current.paymentStatus === PaymentStatus.paid) {
+          throw new BadRequestException('Đơn đã được thanh toán');
+        }
+        if (current.status === OrderStatus.cancelled || current.status === OrderStatus.returned) {
+          throw new BadRequestException('Đơn đã hủy / trả hàng, không thể xác nhận thanh toán');
+        }
+        return this.markPaid(current, tx, {
+          changedBy: admin.userEmail,
+          note: note ?? 'Admin xác nhận đã nhận tiền',
+        });
+      }),
+    );
+    if (confirmed) this.notifications.statusChanged(order.id);
+    return order;
+  }
+
   async exportExcel(filter: AdminOrderFilter) {
     const orders = await this.extended.findMany({
       where: buildAdminOrderWhere(filter),
@@ -181,6 +245,76 @@ export class OrdersService extends PrismaBaseService<'order'> {
     });
   }
 
+  /** Đơn để đối chiếu giao dịch chuyển khoản (payments dùng, trong transaction của webhook). */
+  findForPayment(orderNumber: string, db: Prisma.TransactionClient = this.prismaService) {
+    return db.order.findUnique({ where: { orderNumber }, select: PAYMENT_ORDER_SELECT });
+  }
+
+  /**
+   * Đánh dấu đã trả tiền TRONG transaction của bên gọi (webhook SePay / admin xác nhận tay).
+   * Đơn đang chờ xác nhận thì chuyển luôn sang "Đã xác nhận" và ghi lịch sử.
+   * Ghi vào document đơn → 2 lần xử lý đồng thời sẽ xung đột và được chạy lại tuần tự.
+   */
+  async markPaid(
+    order: Pick<Order, 'id' | 'status'>,
+    tx: Prisma.TransactionClient,
+    { changedBy, note }: { changedBy: string; note?: string },
+  ) {
+    const now = new Date();
+    const confirmed = order.status === OrderStatus.pending;
+    const updated = await tx.order.update({
+      where: { id: order.id },
+      data: {
+        paymentStatus: PaymentStatus.paid,
+        paidAt: now,
+        ...(confirmed && {
+          status: OrderStatus.confirmed,
+          statusHistory: { push: { status: OrderStatus.confirmed, note, changedBy, at: now } },
+        }),
+      },
+    });
+    return { order: updated, confirmed };
+  }
+
+  /**
+   * Cron: hủy đơn chuyển khoản chưa nhận tiền quá ORDER_UNPAID_TIMEOUT_MINUTES (hoàn kho, trả lượt mã).
+   * Mỗi đơn 1 transaction riêng; đơn vừa được thanh toán / đổi trạng thái giữa chừng thì bỏ qua.
+   * @returns số đơn đã hủy
+   */
+  async cancelExpiredUnpaid(now = new Date()) {
+    const deadline = new Date(now.getTime() - this.unpaidTimeoutMinutes * 60_000);
+    const expired = await this.extended.findMany({
+      where: {
+        paymentMethod: PaymentMethod.bank_transfer,
+        status: OrderStatus.pending,
+        paymentStatus: PaymentStatus.pending,
+        createdAt: { lt: deadline },
+      },
+      select: { id: true, orderNumber: true },
+      orderBy: { createdAt: 'asc' },
+      take: EXPIRE_BATCH_SIZE,
+    });
+
+    let cancelled = 0;
+    for (const { id, orderNumber } of expired) {
+      try {
+        await this.transition(id, OrderStatus.cancelled, {
+          changedBy: 'system',
+          note: `Quá ${this.unpaidTimeoutMinutes} phút chưa nhận được chuyển khoản`,
+          allowedFrom: [OrderStatus.pending],
+          requireUnpaid: true,
+        });
+        cancelled++;
+      } catch (error) {
+        // HttpException: đơn vừa được thanh toán / đổi trạng thái → bỏ qua là đúng
+        if (!(error instanceof HttpException)) {
+          this.logger.error(`Hủy đơn quá hạn ${orderNumber} thất bại`, (error as Error)?.stack);
+        }
+      }
+    }
+    return cancelled;
+  }
+
   /** Tổng chi tiêu: chỉ tính đơn đã giao (tiền đã thực sự trả). */
   async totalSpent(userID: string) {
     const result = await this.extended.aggregate({
@@ -201,13 +335,10 @@ export class OrdersService extends PrismaBaseService<'order'> {
    *
    * Đọc và ghi cùng document đơn trong transaction: 2 request đổi trạng thái cùng lúc thì
    * request sau xung đột, chạy lại, đọc trạng thái mới và bị từ chối (không hoàn kho 2 lần).
+   * Commit xong thì gửi email cho khách (chạy nền).
    */
-  private transition(
-    id: string,
-    to: OrderStatus,
-    opts: { changedBy: string; note?: string; allowedFrom?: readonly OrderStatus[] },
-  ) {
-    return withRetry(() =>
+  private async transition(id: string, to: OrderStatus, opts: TransitionOptions) {
+    const updated = await withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
         const order = await tx.order.findUnique({
           where: { id },
@@ -222,6 +353,9 @@ export class OrdersService extends PrismaBaseService<'order'> {
         if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
         if (opts.allowedFrom && !opts.allowedFrom.includes(order.status)) {
           throw new BadRequestException('Đơn đã được xác nhận, không thể tự hủy. Vui lòng liên hệ shop');
+        }
+        if (opts.requireUnpaid && order.paymentStatus === PaymentStatus.paid) {
+          throw new BadRequestException('Đơn đã được thanh toán');
         }
         assertTransition(order.status, to);
 
@@ -262,5 +396,7 @@ export class OrdersService extends PrismaBaseService<'order'> {
         return tx.order.update({ where: { id }, data });
       }),
     );
+    this.notifications.statusChanged(updated.id);
+    return updated;
   }
 }

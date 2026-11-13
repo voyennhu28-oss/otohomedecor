@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { objectId } from '../../../common/dto/param.dto';
 import { promotionCodeSchema } from '../../promotions/dto/promotion.dto';
 
-/** Phương thức đang hỗ trợ. VNPay / MoMo thêm ở giai đoạn 4 (plan mục 12). */
-export const SUPPORTED_PAYMENT_METHODS = [PaymentMethod.cod] as const;
+/** COD hoặc chuyển khoản VietQR, SePay xác nhận qua webhook (plan mục 12). */
+export const SUPPORTED_PAYMENT_METHODS = [PaymentMethod.cod, PaymentMethod.bank_transfer] as const;
 
 const fields = {
   addressID: objectId, // địa chỉ trong sổ địa chỉ của chính user

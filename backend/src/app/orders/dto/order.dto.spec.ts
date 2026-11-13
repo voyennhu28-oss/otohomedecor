@@ -33,11 +33,12 @@ describe('Checkout DTO', () => {
     expect(CheckoutPreviewDto.schema.parse({ ...base, promotionCode: 'welcome10' }).promotionCode).toBe('WELCOME10');
   });
 
-  it('checkout: giai đoạn 3 chỉ nhận COD', () => {
+  it('checkout: nhận COD và chuyển khoản (SePay); VNPay / MoMo đã bỏ', () => {
     expect(CheckoutDto.schema.safeParse({ ...base, paymentMethod: 'cod' }).success).toBe(true);
+    expect(CheckoutDto.schema.safeParse({ ...base, paymentMethod: 'bank_transfer' }).success).toBe(true);
     const vnpay = CheckoutDto.schema.safeParse({ ...base, paymentMethod: 'vnpay' });
     expect(vnpay.success).toBe(false);
-    expect(vnpay.error?.issues[0].message).toMatch(/chỉ hỗ trợ: cod/);
+    expect(vnpay.error?.issues[0].message).toMatch(/chỉ hỗ trợ: cod, bank_transfer/);
   });
 
   it('không nhận giá / tổng tiền từ client', () => {

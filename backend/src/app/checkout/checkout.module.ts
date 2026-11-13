@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AddressesModule } from '../addresses/addresses.module';
 import { CartsModule } from '../carts/carts.module';
 import { OrdersModule } from '../orders/orders.module';
+import { PaymentsModule } from '../payments/payments.module';
 import { ProductVariantsModule } from '../product-variants/product-variants.module';
 import { PromotionsModule } from '../promotions/promotions.module';
 import { ShippingZonesModule } from '../shipping-zones/shipping-zones.module';
@@ -16,7 +17,8 @@ import { CheckoutService } from './checkout.service';
     ProductVariantsModule,
     ShippingZonesModule,
     PromotionsModule,
-    OrdersModule,
+    OrdersModule, // tạo đơn + email đặt hàng
+    PaymentsModule, // thông tin chuyển khoản SePay
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],

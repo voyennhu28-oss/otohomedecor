@@ -17,7 +17,7 @@ export class CheckoutController {
     return this.checkoutService.preview(user, dto);
   }
 
-  /** Tạo đơn. Thanh toán online (giai đoạn 4) sẽ trả kèm `paymentUrl`. */
+  /** Tạo đơn. Chuyển khoản (bank_transfer) trả kèm `payment`: thông tin chuyển khoản + QR; COD thì null. */
   @Post()
   checkout(@User() user: UserInfo, @Body() dto: CheckoutDto) {
     return this.checkoutService.checkout(user, dto);

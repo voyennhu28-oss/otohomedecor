@@ -17,6 +17,9 @@ import { CheckoutService } from './checkout/checkout.service';
 import { AdminOrdersController } from './orders/admin-orders.controller';
 import { OrdersController } from './orders/orders.controller';
 import { OrdersService } from './orders/orders.service';
+import { AdminPaymentsController } from './payments/admin-payments.controller';
+import { PaymentsController } from './payments/payments.controller';
+import { PaymentsService } from './payments/payments.service';
 import { AdminPromotionsController } from './promotions/admin-promotions.controller';
 import { PromotionsService } from './promotions/promotions.service';
 import { AdminShippingZonesController } from './shipping-zones/admin-shipping-zones.controller';
@@ -36,7 +39,7 @@ const handlers = (controller: Ctor) =>
 
 describe('Controller giai đoạn 3', () => {
   describe('phân quyền', () => {
-    it.each([AddressesController, CartsController, CheckoutController, OrdersController])(
+    it.each([AddressesController, CartsController, CheckoutController, OrdersController, PaymentsController])(
       '%p: cần đăng nhập, không phải chỉ admin',
       (controller) => {
         expect(Reflect.getMetadata(IS_PUBLIC, controller)).toBeUndefined();
@@ -47,7 +50,7 @@ describe('Controller giai đoạn 3', () => {
       },
     );
 
-    it.each([AdminOrdersController, AdminPromotionsController, AdminShippingZonesController])(
+    it.each([AdminOrdersController, AdminPromotionsController, AdminShippingZonesController, AdminPaymentsController])(
       '%p: @AdminOnly ở cấp class',
       (controller) => {
         expect(Reflect.getMetadata(IS_ADMIN_ONLY, controller)).toBe(true);
@@ -130,6 +133,27 @@ describe('Controller giai đoạn 3', () => {
       await ctrl.findList({ page: 1, itemPerPage: 20 });
       await ctrl.findOne({ id: ID });
       expect(orders.findAdminByID).toHaveBeenCalledWith(ID);
+
+      await ctrl.markPaid(admin, { id: ID }, { note: 'Khách chuyển sai nội dung' });
+      expect(orders.markPaidManually).toHaveBeenCalledWith(admin, ID, 'Khách chuyển sai nội dung');
+    });
+
+    it('payments: thông tin chuyển khoản lấy userID từ token; admin xem danh sách giao dịch', async () => {
+      const meModule = await AutoMockingModule.createTestingModule({ controllers: [PaymentsController] });
+      const adminModule = await AutoMockingModule.createTestingModule({ controllers: [AdminPaymentsController] });
+
+      await meModule.get(PaymentsController).getTransferInfo(me, { orderNumber: ORDER_NUMBER });
+      expect((meModule.get(PaymentsService) as jest.Mocked<PaymentsService>).getMyTransferInfo).toHaveBeenCalledWith(
+        'u1',
+        ORDER_NUMBER,
+      );
+
+      await adminModule.get(AdminPaymentsController).findList({ status: 'failed', page: 1, itemPerPage: 20 });
+      expect((adminModule.get(PaymentsService) as jest.Mocked<PaymentsService>).findList).toHaveBeenCalledWith({
+        status: 'failed',
+        page: 1,
+        itemPerPage: 20,
+      });
     });
 
     it('promotions / shipping zones: chuyển tiếp đúng tham số', async () => {

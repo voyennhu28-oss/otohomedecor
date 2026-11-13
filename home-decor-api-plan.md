@@ -17,7 +17,8 @@
 | Upload ảnh | Cloudinary | như cũ |
 | Excel | exceljs | chỉ dùng cho admin: import/export sản phẩm, export đơn hàng |
 | Cron | `@nestjs/schedule` | **thêm mới**: tự hủy đơn chưa thanh toán |
-| Mail | `nodemailer` hoặc `@nestjs-modules/mailer` | **thêm mới**: email xác nhận đơn, quên mật khẩu |
+| Mail | `nodemailer` qua **Brevo SMTP relay** | **thêm mới**: email xác nhận đơn, đổi trạng thái, quên mật khẩu |
+| Thanh toán | **SePay** (chuyển khoản VietQR + webhook) | **thêm mới**: xác nhận chuyển khoản tự động (mục 12). Không dùng VNPay / MoMo |
 
 ---
 
@@ -104,20 +105,18 @@ CLOUDINARY_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-MAIL_HOST=
-MAIL_PORT=
-MAIL_USER=
-MAIL_PASS=
+# Brevo SMTP relay
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USER=                      # SMTP login do Brevo cấp (tab SMTP), KHÔNG phải email gửi
+MAIL_PASS=                      # SMTP key (không phải API key)
+MAIL_FROM="Home Decor <no-reply@yourdomain.vn>"   # bắt buộc, sender đã xác minh trên Brevo
 
-VNPAY_TMN_CODE=
-VNPAY_HASH_SECRET=
-VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-VNPAY_RETURN_URL=http://localhost:3000/payment/result
-
-MOMO_PARTNER_CODE=
-MOMO_ACCESS_KEY=
-MOMO_SECRET_KEY=
-MOMO_ENDPOINT=https://test-payment.momo.vn/v2/gateway/api/create
+# SePay (mục 12)
+SEPAY_WEBHOOK_API_KEY=          # header "Authorization: Apikey <key>" SePay gửi kèm webhook
+SEPAY_BANK=                     # mã / tên ngân hàng cho VietQR, vd "VCB" hoặc "Vietcombank"
+SEPAY_ACCOUNT_NUMBER=
+SEPAY_ACCOUNT_NAME=             # tên chủ tài khoản, hiện trên QR
 
 ORDER_UNPAID_TIMEOUT_MINUTES=30
 ```
@@ -580,7 +579,7 @@ home_decor_api/
 │     ├─ promotions/             # /admin/promotions + validate/tính tiền giảm
 │     ├─ checkout/               # preview + đặt hàng (transaction), không có collection riêng
 │     ├─ orders/                 # /me/orders, /admin/orders, cron hủy đơn (items, địa chỉ nhúng trong Order)
-│     ├─ payments/               # vnpay, momo, ipn
+│     ├─ payments/               # SePay: thông tin chuyển khoản / QR, webhook
 │     ├─ reviews/                # /products/:id/reviews, /reviews/:id, /admin/reviews
 │     └─ dashboard/              # /admin/dashboard, không có collection riêng
 └─ .env
@@ -812,18 +811,16 @@ Prefix `/api`. **Public** = không cần đăng nhập · **U** = đã đăng nh
 | Method | Path | Mô tả |
 |---|---|---|
 | POST | `/checkout/preview` | `{ addressID, promotionCode?, withAssembly? }`, trả bảng tính tiền, **không ghi DB** |
-| POST | `/checkout` | Tạo đơn (mục 10). Thanh toán online thì trả kèm `paymentUrl` |
+| POST | `/checkout` | Tạo đơn (mục 10). Chuyển khoản (SePay) thì trả kèm `payment`: thông tin chuyển khoản + QR |
 | GET | `/me/orders` | Lọc theo status, phân trang |
 | GET | `/me/orders/:orderNumber` | Chi tiết + lịch sử trạng thái |
 | POST | `/me/orders/:orderNumber/cancel` | Chỉ hủy được khi `pending` |
-| POST | `/me/orders/:orderNumber/pay` | Tạo lại link thanh toán cho đơn chưa trả tiền |
+| GET | `/me/orders/:orderNumber/payment` | Thông tin chuyển khoản + QR của đơn chưa trả tiền (SePay) |
 
 ### Thanh toán
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/payments/vnpay/return` | Public | VNPay redirect về; chỉ để hiển thị, **không** cập nhật đơn ở đây |
-| GET | `/payments/vnpay/ipn` | Public | VNPay gọi server-to-server; kiểm tra chữ ký rồi cập nhật đơn |
-| POST | `/payments/momo/ipn` | Public | Tương tự cho MoMo |
+| POST | `/payments/sepay/webhook` | Public (API key) | SePay báo có tiền vào; kiểm tra API key, mã đơn, số tiền rồi cập nhật đơn (mục 12) |
 
 ### Review
 | Method | Path | Quyền | Mô tả |
@@ -847,6 +844,8 @@ Prefix `/api`. **Public** = không cần đăng nhập · **U** = đã đăng nh
 | GET | `/admin/orders/:id` | A | |
 | PATCH | `/admin/orders/:id/status` | A | Kiểm tra bước chuyển trạng thái hợp lệ (mục 11) |
 | POST | `/admin/orders/export` | A | Excel |
+| POST | `/admin/orders/:id/mark-paid` | A | Xác nhận đã nhận chuyển khoản thủ công (SePay không tự khớp được) |
+| GET | `/admin/payments` | A | Giao dịch SePay đã nhận; `?status=failed` = tiền vào nhưng không áp được vào đơn, cần đối soát |
 | GET / PATCH | `/admin/reviews`, `/admin/reviews/:id/status` | A | Ẩn hoặc duyệt review |
 | CRUD | `/admin/promotions` | A | |
 | CRUD | `/admin/shipping-zones` | A | |
@@ -1011,11 +1010,10 @@ async checkout(user: UserInfo, dto: CheckoutDto) {
     }),
   );
 
-  // 10. Ngoài transaction: tạo link thanh toán, gửi email
-  const paymentUrl = order.paymentMethod === 'vnpay' ? await this.vnpay.createUrl(order)
-                   : order.paymentMethod === 'momo'  ? await this.momo.createUrl(order) : null;
+  // 10. Ngoài transaction: thông tin chuyển khoản SePay (mục 12), gửi email qua Brevo
+  const payment = order.paymentMethod === 'bank_transfer' ? this.payments.transferInfo(order) : null;
   this.mailService.sendOrderConfirmation(order).catch(() => {}); // không chặn response
-  return { order, paymentUrl };
+  return { order, payment };
 }
 
 // MongoDB có thể báo write conflict khi 2 đơn cùng trừ kho 1 variant: retry
@@ -1061,7 +1059,7 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 - **Khi `delivered`**: tăng `soldCount` của product; COD thì đặt `paymentStatus = paid`.
 - Customer chỉ tự hủy được khi đơn còn `pending`.
 
-**Cron** (`@nestjs/schedule`, chạy mỗi 5 phút): đơn `vnpay`/`momo` ở trạng thái `pending` + `paymentStatus = pending` mà quá `ORDER_UNPAID_TIMEOUT_MINUTES` thì hủy và hoàn kho, với `changedBy: 'system'`.
+**Cron** (`@nestjs/schedule`, chạy mỗi 5 phút): đơn `bank_transfer` (SePay) ở trạng thái `pending` + `paymentStatus = pending` mà quá `ORDER_UNPAID_TIMEOUT_MINUTES` thì hủy và hoàn kho, với `changedBy: 'system'`.
 
 ---
 
@@ -1069,19 +1067,29 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 
 **COD:** đơn ở `pending`, nhân viên gọi xác nhận rồi chuyển sang `confirmed`.
 
-**VNPay / MoMo:**
-1. `POST /checkout` tạo `Payment { status: pending }`, tạo URL có chữ ký (VNPay: HMAC-SHA512, số tiền **nhân 100**; MoMo: HMAC-SHA256) rồi trả `paymentUrl`.
-2. Người dùng thanh toán xong thì cổng gọi **IPN** về server:
-   - Kiểm tra chữ ký → kiểm tra đơn tồn tại → kiểm tra **số tiền khớp** `order.total`.
-   - **Idempotent**: nếu `paymentStatus` đã là `paid` thì chỉ trả OK, không xử lý lại.
-   - Thành công: `Payment.status = paid` và lưu `transactionID`; `Order.paymentStatus = paid`, `paidAt`, `status = confirmed`.
-   - Thất bại: `Payment.status = failed` (đơn vẫn `pending` để người dùng thanh toán lại).
-   - Trả response đúng format mà cổng yêu cầu (VNPay cần `{ RspCode: '00', Message: 'Confirm Success' }`).
-3. Trang `return` chỉ để frontend hiển thị kết quả. **Không cập nhật đơn ở `return`**, vì người dùng có thể sửa URL.
+**Chuyển khoản qua SePay** (`paymentMethod = bank_transfer`). SePay theo dõi tài khoản ngân hàng của shop và gọi webhook khi có tiền vào. Không dùng VNPay / MoMo: khi làm giai đoạn 4 thì bỏ `vnpay`, `momo` khỏi enum `PaymentMethod`.
 
-Viết theo strategy pattern giống `file-util` cũ: `PaymentGateway` interface, rồi `VnpayGateway` và `MomoGateway`.
+1. **Mã thanh toán** = mã đơn bỏ dấu `-`: `HD261113-7K3M9Q` → `HD2611137K3M9Q`. SePay chỉ nhận diện mã dạng *tiền tố + chữ/số*, còn VietQR và ngân hàng tự bỏ ký tự đặc biệt khỏi nội dung chuyển khoản (xem `toPaymentCode` / `findOrderNumberInText` trong `orders/order-number.ts`).
+2. `POST /checkout` với `bank_transfer` trả `payment`: ngân hàng, số tài khoản, chủ tài khoản, số tiền (`order.total`), nội dung chuyển khoản (mã thanh toán), hạn thanh toán (`ORDER_UNPAID_TIMEOUT_MINUTES`) và `qrUrl`:
+   `https://vietqr.app/img?acc=<SEPAY_ACCOUNT_NUMBER>&bank=<SEPAY_BANK>&amount=<total>&des=<mã thanh toán>&template=compact`
+   `GET /me/orders/:orderNumber/payment` trả lại thông tin này cho đơn chưa trả tiền.
+3. **Webhook** `POST /payments/sepay/webhook` (`@Public`, bỏ throttle). Body JSON gồm `id`, `gateway`, `transactionDate`, `accountNumber`, `code`, `content`, `transferType`, `transferAmount`, `referenceCode`...
+   - Header phải đúng `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>` (so bằng `timingSafeEqual`), sai thì 401.
+   - Chỉ xử lý `transferType === 'in'`. Lấy mã đơn từ `code` (SePay đã nhận diện; `null` = không khớp), không có thì tìm trong `content`.
+   - **Idempotent theo `id` của SePay** (cùng giao dịch có thể được gửi lại nhiều lần): lưu vào `Payment.transactionID`, đã có thì trả thành công luôn. Chạy trong transaction có ghi vào document đơn, để 2 lần gửi trùng cùng lúc không xử lý 2 lần.
+   - Đơn `pending` + **số tiền khớp đúng** `order.total` → `Payment { status: paid }`, `Order.paymentStatus = paid`, `paidAt`, `status = confirmed` (lịch sử: `changedBy: 'sepay'`).
+   - Sai số tiền, đơn đã hủy (tiền về sau khi cron hủy) hoặc đã trả rồi (khách chuyển 2 lần) → vẫn lưu `Payment` kèm `rawResponse`, không tự đổi đơn, ghi log để admin xử lý / hoàn tiền thủ công.
+   - Không tìm thấy đơn / không có mã → ghi log, vẫn trả thành công (để SePay không gửi lại).
+   - Response: HTTP 200 + đúng body `{ "success": true }`, trong 30 giây. Không bọc qua format response chung.
+4. Không có trang `return`: frontend hiển thị QR rồi poll `GET /me/orders/:orderNumber` tới khi `paymentStatus = paid`.
 
-> IPN cần URL public. Khi dev local, dùng `ngrok` hoặc `cloudflared tunnel` để cổng thanh toán gọi về được.
+**Cấu hình trên my.sepay.vn:**
+- Webhook: URL `https://<api>/api/payments/sepay/webhook`, kiểu chứng thực **API Key**, body **JSON** (middleware `rejectNonJsonBody` chặn form-urlencoded), bật "Tự động gửi lại khi server trả lỗi".
+- Cấu trúc mã thanh toán: tiền tố `HD`, hậu tố dài 12–12, loại ký tự **Số và chữ**.
+
+> Webhook cần URL public. Khi dev local, dùng `ngrok` hoặc `cloudflared tunnel` để SePay gọi về được.
+
+**Mail (Brevo):** `MailUtilService` (nodemailer) gửi qua SMTP relay `smtp-relay.brevo.com:587`. `MAIL_USER` là SMTP login do Brevo cấp, `MAIL_PASS` là **SMTP key** (không phải API key), `MAIL_FROM` bắt buộc và phải là sender đã xác minh trên Brevo.
 
 ---
 
@@ -1120,33 +1128,35 @@ Viết theo strategy pattern giống `file-util` cũ: `PaymentGateway` interface
 ## 15. Lộ trình
 
 ### Giai đoạn 1: Nền tảng
-- [ ] Tạo project, copy hạ tầng (mục 2), cài dependencies
-- [ ] Tạo cluster Atlas, viết `schema.prisma`, chạy `db:push` và `prisma:generate`
-- [ ] Viết lại `PrismaService` (6.1), map lỗi Prisma (6.3), `IDDto` (6.4)
-- [ ] Auth đã sửa lỗi (5.1), `AdminGuard` + `@AdminOnly()` (5.2), decorator `@Public()`
-- [ ] Seed admin và danh mục
-- [ ] Swagger chạy được tại `/api`
+- [x] Tạo project, copy hạ tầng (mục 2), cài dependencies
+- [x] Tạo cluster Atlas, viết `schema.prisma`, chạy `db:push` và `prisma:generate`
+- [x] Viết lại `PrismaService` (6.1), map lỗi Prisma (6.3), `IDDto` (6.4)
+- [x] Auth đã sửa lỗi (5.1), `AdminGuard` + `@AdminOnly()` (5.2), decorator `@Public()`
+- [x] Seed admin và danh mục
+- [x] Swagger chạy được tại `/api`
 
 ### Giai đoạn 2: Catalog
-- [ ] Admin: CRUD danh mục (tự sinh slug), CRUD sản phẩm + variant, upload ảnh Cloudinary
-- [ ] Tính lại `minPrice`, `maxPrice`, `colors` khi sửa variant
-- [ ] Public: cây danh mục, lọc sản phẩm (mục 8), chi tiết, sản phẩm liên quan, `/products/filters`
-- [ ] Seed sản phẩm mẫu
+- [x] Admin: CRUD danh mục (tự sinh slug), CRUD sản phẩm + variant, upload ảnh Cloudinary
+- [x] Tính lại `minPrice`, `maxPrice`, `colors` khi sửa variant
+- [x] Public: cây danh mục, lọc sản phẩm (mục 8), chi tiết, sản phẩm liên quan, `/products/filters`
+- [x] Seed sản phẩm mẫu
+- [x] Import / export sản phẩm bằng Excel
 
 ### Giai đoạn 3: Mua hàng
-- [ ] Sổ địa chỉ, wishlist
-- [ ] Giỏ hàng
-- [ ] Vùng giao hàng + tính phí ship
-- [ ] Mã giảm giá: validate và tính tiền giảm
-- [ ] `checkout/preview` và `checkout` với COD (mục 10)
-- [ ] Đơn của tôi, hủy đơn
-- [ ] Admin: quản lý đơn, đổi trạng thái (mục 11), export Excel
+- [x] Sổ địa chỉ, wishlist
+- [x] Giỏ hàng
+- [x] Vùng giao hàng + tính phí ship
+- [x] Mã giảm giá: validate và tính tiền giảm
+- [x] `checkout/preview` và `checkout` với COD (mục 10)
+- [x] Đơn của tôi, hủy đơn
+- [x] Admin: quản lý đơn, đổi trạng thái (mục 11), export Excel
 
 ### Giai đoạn 4: Thanh toán và thông báo
-- [ ] VNPay sandbox: tạo URL, IPN, trang return
-- [ ] MoMo sandbox
-- [ ] Cron hủy đơn chưa thanh toán
-- [ ] Email: xác nhận đơn, đổi trạng thái, quên mật khẩu
+- [x] SePay: thông tin chuyển khoản + QR khi checkout, webhook xác nhận thanh toán (mục 12); bỏ `vnpay`, `momo` khỏi enum
+- [x] Đối soát: `GET /admin/payments`, admin xác nhận đã nhận tiền thủ công (`POST /admin/orders/:id/mark-paid`)
+- [ ] Cấu hình môi trường thật: SePay (webhook + mã thanh toán trên my.sepay.vn, `SEPAY_*`), Brevo (SMTP key + sender đã xác minh, `MAIL_*`)
+- [x] Cron hủy đơn chưa thanh toán
+- [x] Email: xác nhận đơn, đổi trạng thái (gồm "đã nhận thanh toán"), quên mật khẩu
 
 ### Giai đoạn 5: Hoàn thiện
 - [ ] Review + cập nhật `ratingAvg`, `ratingCount`

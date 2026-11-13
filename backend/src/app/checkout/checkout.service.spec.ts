@@ -1,11 +1,18 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Prisma, PromotionType, Role } from '@prisma/client';
 import { makeSaleVariant } from '../../../test/factories/sale-variant.factory';
 import type { UserInfo } from '../../common/decorators/user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AddressesService } from '../addresses/addresses.service';
 import { CartsService } from '../carts/carts.service';
+import { OrderNotificationService } from '../orders/order-notification.service';
 import { OrdersService } from '../orders/orders.service';
+import { PaymentsService } from '../payments/payments.service';
 import { ProductVariantsService } from '../product-variants/product-variants.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { ShippingZonesService } from '../shipping-zones/shipping-zones.service';
@@ -72,6 +79,8 @@ describe('CheckoutService', () => {
     zones: { findForProvince: jest.fn() },
     promotions: { findApplicable: jest.fn(), consume: jest.fn() },
     orders: { createInTx: jest.fn(), countPromotionUsage: jest.fn() },
+    payments: { assertTransferAvailable: jest.fn(), transferInfo: jest.fn() },
+    notifications: { orderPlaced: jest.fn() },
   };
 
   beforeEach(() => {
@@ -92,6 +101,8 @@ describe('CheckoutService', () => {
       deps.zones as unknown as ShippingZonesService,
       deps.promotions as unknown as PromotionsService,
       deps.orders as unknown as OrdersService,
+      deps.payments as unknown as PaymentsService,
+      deps.notifications as unknown as OrderNotificationService,
     );
   });
 
@@ -208,9 +219,9 @@ describe('CheckoutService', () => {
     });
 
     it('đơn là snapshot: tên, sku, giá, ảnh, địa chỉ, tiền tại lúc đặt', async () => {
-      const { order, paymentUrl } = await service.checkout(user, dto);
+      const { order, payment } = await service.checkout(user, dto);
 
-      expect(paymentUrl).toBeNull();
+      expect(payment).toBeNull(); // COD: không cần thông tin chuyển khoản
       const [, data, changedBy] = deps.orders.createInTx.mock.calls[0];
       expect(changedBy).toBe('khach@x.com');
       expect(data).toMatchObject({
@@ -270,6 +281,45 @@ describe('CheckoutService', () => {
 
       await expect(service.checkout(user, dto)).rejects.toThrow('Giỏ hàng trống');
       expect(transaction).toHaveBeenCalledTimes(2);
+    });
+
+    it('COD: không cần thông tin chuyển khoản; gửi email đặt hàng SAU khi tạo đơn', async () => {
+      const { payment } = await service.checkout(user, dto);
+      expect(payment).toBeNull();
+      expect(deps.payments.assertTransferAvailable).not.toHaveBeenCalled();
+      expect(deps.notifications.orderPlaced).toHaveBeenCalledWith('o1', null);
+      expect(deps.notifications.orderPlaced.mock.invocationCallOrder[0]).toBeGreaterThan(
+        deps.carts.clear.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('chuyển khoản: trả thông tin chuyển khoản + QR, email kèm thông tin đó', async () => {
+      const transfer = { content: 'HD261113ABCDEF', qrUrl: 'https://vietqr.app/img?x' };
+      deps.payments.transferInfo.mockReturnValue(transfer);
+
+      const { order, payment } = await service.checkout(user, { ...dto, paymentMethod: 'bank_transfer' });
+
+      expect(deps.payments.transferInfo).toHaveBeenCalledWith(order);
+      expect(payment).toBe(transfer);
+      expect(deps.notifications.orderPlaced).toHaveBeenCalledWith('o1', transfer);
+      expect(deps.orders.createInTx.mock.calls[0][1]).toMatchObject({ paymentMethod: 'bank_transfer' });
+    });
+
+    it('chuyển khoản khi shop chưa cấu hình SePay → lỗi TRƯỚC khi tạo đơn', async () => {
+      deps.payments.assertTransferAvailable.mockImplementation(() => {
+        throw new ServiceUnavailableException('Shop chưa hỗ trợ chuyển khoản');
+      });
+      await expect(service.checkout(user, { ...dto, paymentMethod: 'bank_transfer' })).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(transaction).not.toHaveBeenCalled();
+      expectNoWrites();
+    });
+
+    it('đặt hàng lỗi thì không gửi email', async () => {
+      deps.variants.reserveStock.mockRejectedValue(new ConflictException('hết hàng'));
+      await expect(service.checkout(user, dto)).rejects.toBeInstanceOf(ConflictException);
+      expect(deps.notifications.orderPlaced).not.toHaveBeenCalled();
     });
 
     it('transaction được nới timeout (Atlas ở xa)', async () => {

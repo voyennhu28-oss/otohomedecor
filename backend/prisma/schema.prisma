@@ -52,9 +52,7 @@ enum OrderStatus {
 
 enum PaymentMethod {
   cod
-  vnpay
-  momo
-  bank_transfer
+  bank_transfer // chuyển khoản VietQR, SePay xác nhận qua webhook
 }
 
 enum PaymentStatus {
@@ -314,21 +312,24 @@ model Order {
   @@index([promotionID, userID]) // đếm lượt dùng mã của 1 user (perUserLimit)
 }
 
+/// 1 giao dịch tiền vào do SePay báo qua webhook (plan mục 12).
+/// status: paid = giao dịch này đã thanh toán đơn; failed = tiền đã vào nhưng KHÔNG dùng cho đơn
+/// (sai số tiền, đơn đã hủy / đã trả) → admin đối soát, hoàn tiền thủ công.
 model Payment {
   id            String        @id @default(auto()) @map("_id") @db.ObjectId
   orderID       String        @db.ObjectId
   method        PaymentMethod
-  amount        Int
-  status        PaymentStatus @default(pending)
-  transactionID String? // mã giao dịch từ cổng thanh toán
-  rawResponse   Json?
+  amount        Int // số tiền thực nhận
+  status        PaymentStatus
+  transactionID String        @unique // `id` giao dịch của SePay: chặn xử lý trùng khi webhook gửi lại
+  rawResponse   Json? // payload webhook gốc, để đối soát
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   order Order @relation(fields: [orderID], references: [id])
 
   @@index([orderID])
-  @@index([transactionID]) // KHÔNG dùng @unique vì field optional
+  @@index([status, createdAt])
 }
 
 model Promotion {

@@ -1,9 +1,11 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { OrderStatus, PaymentMethod, PaymentStatus, Prisma, Role } from '@prisma/client';
 import { createPrismaModelMock, PrismaModelMock } from '../../../test/mocks/prisma.mock';
 import type { UserInfo } from '../../common/decorators/user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ConfigService } from '@nestjs/config';
 import { ExcelUtilService } from '../../common/utils/excel-util/excel-util.service';
+import { OrderNotificationService } from './order-notification.service';
 import { ProductVariantsService } from '../product-variants/product-variants.service';
 import { ProductsService } from '../products/products.service';
 import { PromotionsService } from '../promotions/promotions.service';
@@ -35,6 +37,8 @@ describe('OrdersService', () => {
   const products = { addSoldCount: jest.fn() };
   const promotions = { release: jest.fn() };
   const excel = { generateExcel: jest.fn().mockReturnValue('workbook') };
+  const notifications = { statusChanged: jest.fn(), orderPlaced: jest.fn() };
+  const config = { get: (key: string) => (key === 'ORDER_UNPAID_TIMEOUT_MINUTES' ? 30 : undefined) };
 
   beforeEach(() => {
     jest.resetAllMocks(); // xóa cả implementation / hàng đợi "Once" của test trước
@@ -50,6 +54,8 @@ describe('OrdersService', () => {
       products as unknown as ProductsService,
       promotions as unknown as PromotionsService,
       excel as unknown as ExcelUtilService,
+      notifications as unknown as OrderNotificationService,
+      config as unknown as ConfigService,
     );
   });
 
@@ -117,7 +123,7 @@ describe('OrdersService', () => {
 
     it('delivered đơn online đã trả tiền: không đổi paymentStatus / paidAt', async () => {
       order.findUnique.mockResolvedValue(
-        storedOrder({ status: OrderStatus.shipping, paymentMethod: PaymentMethod.vnpay, paymentStatus: PaymentStatus.paid }),
+        storedOrder({ status: OrderStatus.shipping, paymentMethod: PaymentMethod.bank_transfer, paymentStatus: PaymentStatus.paid }),
       );
       await service.updateStatus(admin, 'o1', { status: OrderStatus.delivered });
       expect(updated().paymentStatus).toBeUndefined();
@@ -149,6 +155,148 @@ describe('OrdersService', () => {
       expect(transaction).toHaveBeenCalledTimes(2);
       // lần 1 bị rollback cùng transaction; lần 2 không chạy tới bước hoàn kho
       expect(variants.restoreStock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('email sau khi đổi trạng thái', () => {
+    it('gửi SAU khi transaction commit', async () => {
+      order.findUnique.mockResolvedValue(storedOrder());
+      order.update.mockImplementation(({ data }) => Promise.resolve({ id: 'o1', ...data }));
+      await service.updateStatus(admin, 'o1', { status: OrderStatus.confirmed });
+      expect(notifications.statusChanged).toHaveBeenCalledWith('o1');
+      expect(notifications.statusChanged.mock.invocationCallOrder[0]).toBeGreaterThan(order.update.mock.invocationCallOrder[0]);
+    });
+
+    it('chuyển trạng thái thất bại thì không gửi', async () => {
+      order.findUnique.mockResolvedValue(storedOrder({ status: OrderStatus.cancelled }));
+      await expect(service.updateStatus(admin, 'o1', { status: OrderStatus.confirmed })).rejects.toThrow();
+      expect(notifications.statusChanged).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('thanh toán chuyển khoản', () => {
+    const paymentOrder = (overrides: Record<string, unknown> = {}) => ({
+      id: 'o1',
+      orderNumber: ORDER_NUMBER,
+      status: OrderStatus.pending,
+      paymentStatus: PaymentStatus.pending,
+      paymentMethod: PaymentMethod.bank_transfer,
+      total: 1_000_000,
+      createdAt: new Date(),
+      ...overrides,
+    });
+
+    it('findForPayment: tìm theo mã đơn, trong tx được truyền vào', async () => {
+      const tx = { order: { findUnique: jest.fn().mockResolvedValue(paymentOrder()) } };
+      await service.findForPayment(ORDER_NUMBER, tx as never);
+      expect(tx.order.findUnique.mock.calls[0][0].where).toEqual({ orderNumber: ORDER_NUMBER });
+    });
+
+    it('markPaid: đơn chờ xác nhận → đã trả tiền + "Đã xác nhận" + ghi lịch sử', async () => {
+      const result = await service.markPaid({ id: 'o1', status: OrderStatus.pending }, { order } as never, {
+        changedBy: 'sepay',
+        note: 'Nhận chuyển khoản #1',
+      });
+      expect(result.confirmed).toBe(true);
+      expect(updated()).toEqual({
+        paymentStatus: 'paid',
+        paidAt: expect.any(Date),
+        status: 'confirmed',
+        statusHistory: { push: { status: 'confirmed', note: 'Nhận chuyển khoản #1', changedBy: 'sepay', at: expect.any(Date) } },
+      });
+    });
+
+    it('markPaid: đơn đã qua bước xác nhận → chỉ đổi trạng thái thanh toán', async () => {
+      const result = await service.markPaid({ id: 'o1', status: OrderStatus.processing }, { order } as never, {
+        changedBy: 'sepay',
+      });
+      expect(result.confirmed).toBe(false);
+      expect(updated()).toEqual({ paymentStatus: 'paid', paidAt: expect.any(Date) });
+    });
+
+    it('markPaidManually: admin xác nhận đã nhận tiền → gửi email "đã xác nhận"', async () => {
+      order.findUnique.mockResolvedValue(paymentOrder());
+      order.update.mockImplementation(({ data }) => Promise.resolve({ id: 'o1', ...data }));
+
+      await service.markPaidManually(admin, 'o1');
+
+      expect(updated()).toMatchObject({
+        paymentStatus: 'paid',
+        statusHistory: { push: expect.objectContaining({ changedBy: 'admin@x.com', note: 'Admin xác nhận đã nhận tiền' }) },
+      });
+      expect(notifications.statusChanged).toHaveBeenCalledWith('o1');
+    });
+
+    it.each([
+      ['đã trả tiền', { paymentStatus: PaymentStatus.paid }, /đã được thanh toán/],
+      ['đã hủy', { status: OrderStatus.cancelled }, /đã hủy/],
+    ])('markPaidManually: đơn %s → 400', async (_name, overrides, message) => {
+      order.findUnique.mockResolvedValue(paymentOrder(overrides));
+      await expect(service.markPaidManually(admin, 'o1')).rejects.toThrow(message);
+      expect(order.update).not.toHaveBeenCalled();
+    });
+
+    it('markPaidManually: không có đơn → 404', async () => {
+      order.findUnique.mockResolvedValue(null);
+      await expect(service.markPaidManually(admin, 'x')).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('cron: hủy đơn chuyển khoản quá hạn', () => {
+    const now = new Date('2026-11-13T10:00:00Z');
+
+    it('chỉ lấy đơn bank_transfer đang chờ, chưa trả tiền, tạo trước hạn 30 phút', async () => {
+      order.findMany.mockResolvedValue([]);
+      await expect(service.cancelExpiredUnpaid(now)).resolves.toBe(0);
+      expect(order.findMany.mock.calls[0][0]).toMatchObject({
+        where: {
+          paymentMethod: 'bank_transfer',
+          status: 'pending',
+          paymentStatus: 'pending',
+          createdAt: { lt: new Date('2026-11-13T09:30:00Z') },
+        },
+        take: 100,
+      });
+    });
+
+    it('hủy từng đơn: hoàn kho, ghi "system"; đơn vừa được thanh toán thì bỏ qua', async () => {
+      order.findMany.mockResolvedValue([
+        { id: 'o1', orderNumber: 'A' },
+        { id: 'o2', orderNumber: 'B' },
+      ]);
+      order.findUnique
+        .mockResolvedValueOnce(storedOrder()) // o1: vẫn chờ tiền
+        .mockResolvedValueOnce(storedOrder({ status: OrderStatus.confirmed, paymentStatus: PaymentStatus.paid })); // o2: tiền vừa về
+
+      await expect(service.cancelExpiredUnpaid(now)).resolves.toBe(1);
+
+      expect(order.update).toHaveBeenCalledTimes(1);
+      expect(updated()).toMatchObject({
+        status: 'cancelled',
+        cancelReason: expect.stringContaining('30 phút'),
+        statusHistory: { push: expect.objectContaining({ changedBy: 'system' }) },
+      });
+      expect(variants.restoreStock).toHaveBeenCalledTimes(1);
+    });
+
+    it('đơn đã trả tiền nhưng vẫn pending (hiếm) cũng không bị hủy', async () => {
+      order.findMany.mockResolvedValue([{ id: 'o1', orderNumber: 'A' }]);
+      order.findUnique.mockResolvedValue(storedOrder({ paymentStatus: PaymentStatus.paid }));
+      await expect(service.cancelExpiredUnpaid(now)).resolves.toBe(0);
+      expect(order.update).not.toHaveBeenCalled();
+    });
+
+    it('lỗi hệ thống ở 1 đơn: ghi log, vẫn xử lý các đơn khác', async () => {
+      const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      order.findMany.mockResolvedValue([
+        { id: 'o1', orderNumber: 'A' },
+        { id: 'o2', orderNumber: 'B' },
+      ]);
+      order.findUnique.mockRejectedValueOnce(new Error('db down')).mockResolvedValueOnce(storedOrder());
+
+      await expect(service.cancelExpiredUnpaid(now)).resolves.toBe(1);
+      expect(logError).toHaveBeenCalledWith(expect.stringContaining('A'), expect.anything());
+      logError.mockRestore();
     });
   });
 

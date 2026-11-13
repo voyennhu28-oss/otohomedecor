@@ -1,6 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
-import { generateOrderNumber, ORDER_NUMBER_REGEX } from './order-number';
+import {
+  findOrderNumberInText,
+  generateOrderNumber,
+  ORDER_NUMBER_REGEX,
+  toPaymentCode,
+} from './order-number';
 import { assertTransition, canTransition, ORDER_TRANSITIONS, statusTimestamp } from './order-status';
 
 const ALL = Object.values(OrderStatus);
@@ -68,5 +73,34 @@ describe('generateOrderNumber', () => {
   it('ngẫu nhiên giữa các lần gọi', () => {
     const numbers = new Set(Array.from({ length: 200 }, () => generateOrderNumber()));
     expect(numbers.size).toBe(200);
+  });
+});
+
+describe('mã thanh toán SePay', () => {
+  it('toPaymentCode: bỏ dấu "-" → khớp cấu hình SePay (tiền tố HD + 12 ký tự số và chữ)', () => {
+    const code = toPaymentCode('HD261113-7K3M9Q');
+    expect(code).toBe('HD2611137K3M9Q');
+    expect(code).toMatch(/^HD[0-9A-Z]{12}$/);
+  });
+
+  it('findOrderNumberInText: đọc lại mã đơn từ code / nội dung chuyển khoản', () => {
+    expect(findOrderNumberInText('HD2611137K3M9Q')).toBe('HD261113-7K3M9Q');
+    // ngân hàng thêm tiền tố, khách gõ thường / có khoảng trắng / còn giữ dấu "-"
+    expect(findOrderNumberInText('MBVCB.123456.hd2611137k3m9q thanh toan')).toBe('HD261113-7K3M9Q');
+    expect(findOrderNumberInText('CK HD261113-7K3M9Q')).toBe('HD261113-7K3M9Q');
+    expect(findOrderNumberInText('HD 261113 7K3M9Q')).toBe('HD261113-7K3M9Q');
+  });
+
+  it('findOrderNumberInText: không có mã hợp lệ → null', () => {
+    expect(findOrderNumberInText(null)).toBeNull();
+    expect(findOrderNumberInText('chuyen tien an trua')).toBeNull();
+    expect(findOrderNumberInText('HD2611137K3M90')).toBeNull(); // số 0 không có trong bảng ký tự
+  });
+
+  it('khứ hồi: mọi mã đơn sinh ra đều đọc lại đúng từ mã thanh toán', () => {
+    for (let i = 0; i < 100; i++) {
+      const orderNumber = generateOrderNumber();
+      expect(findOrderNumberInText(toPaymentCode(orderNumber))).toBe(orderNumber);
+    }
   });
 });
