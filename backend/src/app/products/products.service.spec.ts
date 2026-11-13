@@ -467,6 +467,21 @@ describe('ProductsService', () => {
       expect(product.findFirst.mock.calls[0][0].where).toEqual({ id: 'p1', status: 'active' });
     });
 
+    it('addSoldCount: gộp theo product, cộng (hoặc trừ khi trả hàng) soldCount', async () => {
+      const tx = { product: { updateMany: jest.fn() } };
+      await service.addSoldCount(
+        [
+          { productID: 'p1', quantity: 2 },
+          { productID: 'p2', quantity: 1 },
+          { productID: 'p1', quantity: 3 },
+        ],
+        tx as never,
+      );
+      expect(tx.product.updateMany).toHaveBeenCalledTimes(2);
+      expect(tx.product.updateMany).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { soldCount: { increment: 5 } } });
+      expect(tx.product.updateMany).toHaveBeenCalledWith({ where: { id: 'p2' }, data: { soldCount: { increment: 1 } } });
+    });
+
     it('findCardsByIDs: chỉ lấy sản phẩm đang bán trong danh sách', async () => {
       product.findMany.mockResolvedValue([]);
       await service.findCardsByIDs(['a', 'b']);

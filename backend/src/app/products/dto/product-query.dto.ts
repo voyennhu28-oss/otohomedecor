@@ -3,8 +3,11 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { MATERIALS, ROOMS, STYLES } from '../../../common/constants/catalog.const';
 import { objectId, slugSchema } from '../../../common/dto/param.dto';
-
-// Query string luôn là chuỗi, các helper dưới đây chuyển sang đúng kiểu.
+import {
+  booleanQuery,
+  itemPerPageQuery as itemPerPage,
+  pageQuery as page,
+} from '../../../common/dto/query.dto';
 
 /** "oak,rattan" → ["oak", "rattan"], mỗi giá trị phải nằm trong `values`. */
 const commaList = <T extends readonly [string, ...string[]]>(values: T) =>
@@ -13,13 +16,7 @@ const commaList = <T extends readonly [string, ...string[]]>(values: T) =>
     .transform((s) => s.split(',').map((v) => v.trim()).filter(Boolean))
     .pipe(z.array(z.enum(values)).min(1));
 
-/** "true" / "false" → boolean */
-const booleanQuery = z.enum(['true', 'false']).transform((v) => v === 'true');
-
 const price = z.coerce.number().int().min(0);
-const page = z.coerce.number().int().min(1).default(1);
-const itemPerPage = (max: number, fallback: number) =>
-  z.coerce.number().int().min(1).max(max).default(fallback);
 
 export const PRODUCT_SORTS = [
   'newest',

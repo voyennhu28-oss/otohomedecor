@@ -46,6 +46,50 @@ export const MATERIALS = [
  */
 export const COLOR_OPTION_NAMES = ['mau', 'mau-sac', 'color'];
 
+/**
+ * 34 tỉnh / thành phố từ 01/07/2025 (Nghị quyết 202/2025/QH15). Dùng chung cho validate
+ * địa chỉ, vùng giao hàng và seed. Địa chỉ lưu đúng chuỗi trong danh sách này.
+ */
+export const PROVINCES = [
+  // 6 thành phố trực thuộc trung ương
+  'Hà Nội',
+  'Hải Phòng',
+  'Huế',
+  'Đà Nẵng',
+  'Hồ Chí Minh',
+  'Cần Thơ',
+  // 28 tỉnh
+  'Lai Châu',
+  'Điện Biên',
+  'Sơn La',
+  'Lạng Sơn',
+  'Cao Bằng',
+  'Tuyên Quang',
+  'Lào Cai',
+  'Thái Nguyên',
+  'Phú Thọ',
+  'Bắc Ninh',
+  'Hưng Yên',
+  'Ninh Bình',
+  'Quảng Ninh',
+  'Thanh Hóa',
+  'Nghệ An',
+  'Hà Tĩnh',
+  'Quảng Trị',
+  'Quảng Ngãi',
+  'Gia Lai',
+  'Khánh Hòa',
+  'Lâm Đồng',
+  'Đắk Lắk',
+  'Đồng Nai',
+  'Tây Ninh',
+  'Vĩnh Long',
+  'Đồng Tháp',
+  'Cà Mau',
+  'An Giang',
+] as const;
+
+export type Province = (typeof PROVINCES)[number];
 export type Room = (typeof ROOMS)[number];
 export type Style = (typeof STYLES)[number];
 export type Material = (typeof MATERIALS)[number];

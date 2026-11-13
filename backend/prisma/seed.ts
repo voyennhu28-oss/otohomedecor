@@ -1,5 +1,6 @@
 /**
- * Seed dữ liệu ban đầu: admin, customer mẫu (chỉ ngoài production), cây danh mục, sản phẩm mẫu.
+ * Seed dữ liệu ban đầu: admin, customer mẫu (chỉ ngoài production), cây danh mục, sản phẩm mẫu,
+ * vùng giao hàng, mã giảm giá.
  * Chạy: npm run db:seed. Chạy lại nhiều lần vẫn an toàn (upsert theo email / slug,
  * không ghi đè mật khẩu của tài khoản đã có).
  *
@@ -7,10 +8,11 @@
  *   SEED_ADMIN_EMAIL     mặc định admin@homedecor.local
  *   SEED_ADMIN_PASSWORD  bỏ trống thì sinh ngẫu nhiên và in ra một lần
  */
-import { PrismaClient, ProductStatus, Role, UserStatus } from '@prisma/client';
+import { PrismaClient, ProductStatus, PromotionType, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'node:crypto';
 import { computeProductSummary } from '../src/app/products/product-summary';
+import { PROVINCES } from '../src/common/constants/catalog.const';
 import { SEED_PRODUCTS } from './seed-data/products';
 
 try {
@@ -168,11 +170,77 @@ async function seedProducts() {
   console.log(`• Sản phẩm: tạo mới ${created}, bỏ qua ${skipped} (đã có)`);
 }
 
+/** 5 vùng giao hàng (plan mục 13). Mỗi tỉnh thuộc đúng 1 vùng, kiểm tra trước khi ghi. */
+const SHIPPING_ZONES = [
+  {
+    name: 'Nội thành HCM',
+    provinces: ['Hồ Chí Minh'],
+    baseFee: 30_000, baseWeightKg: 5, feePerKg: 5_000, bulkySurcharge: 150_000, freeShipThreshold: 5_000_000, estimatedDays: 2,
+  },
+  {
+    name: 'Nội thành HN',
+    provinces: ['Hà Nội'],
+    baseFee: 30_000, baseWeightKg: 5, feePerKg: 5_000, bulkySurcharge: 150_000, freeShipThreshold: 5_000_000, estimatedDays: 2,
+  },
+  {
+    name: 'Miền Nam',
+    provinces: ['Đồng Nai', 'Tây Ninh', 'Vĩnh Long', 'Đồng Tháp', 'Cần Thơ', 'An Giang', 'Cà Mau'],
+    baseFee: 40_000, baseWeightKg: 5, feePerKg: 6_000, bulkySurcharge: 250_000, freeShipThreshold: 10_000_000, estimatedDays: 3,
+  },
+  {
+    name: 'Miền Trung',
+    provinces: ['Thanh Hóa', 'Nghệ An', 'Hà Tĩnh', 'Quảng Trị', 'Huế', 'Đà Nẵng', 'Quảng Ngãi', 'Gia Lai', 'Khánh Hòa', 'Đắk Lắk', 'Lâm Đồng'],
+    baseFee: 50_000, baseWeightKg: 5, feePerKg: 8_000, bulkySurcharge: 350_000, freeShipThreshold: 15_000_000, estimatedDays: 5,
+  },
+  {
+    name: 'Miền Bắc',
+    provinces: ['Hải Phòng', 'Quảng Ninh', 'Bắc Ninh', 'Hưng Yên', 'Ninh Bình', 'Phú Thọ', 'Thái Nguyên', 'Tuyên Quang', 'Lào Cai', 'Lạng Sơn', 'Cao Bằng', 'Điện Biên', 'Lai Châu', 'Sơn La'],
+    baseFee: 50_000, baseWeightKg: 5, feePerKg: 8_000, bulkySurcharge: 350_000, freeShipThreshold: 15_000_000, estimatedDays: 5,
+  },
+];
+
+/** Vùng chưa có (theo tên) thì tạo, đã có thì giữ nguyên (admin có thể đã sửa phí). */
+async function seedShippingZones() {
+  const all = SHIPPING_ZONES.flatMap((z) => z.provinces);
+  const missing = PROVINCES.filter((p) => !all.includes(p));
+  const unknown = all.filter((p) => !(PROVINCES as readonly string[]).includes(p));
+  if (missing.length || unknown.length || new Set(all).size !== all.length) {
+    throw new Error(`Seed vùng giao hàng sai: thiếu [${missing}], tỉnh lạ [${unknown}], hoặc tỉnh bị trùng`);
+  }
+
+  let created = 0;
+  for (const zone of SHIPPING_ZONES) {
+    const existed = await prisma.shippingZone.findFirst({ where: { name: zone.name }, select: { id: true } });
+    if (existed) continue;
+    await prisma.shippingZone.create({ data: zone });
+    created++;
+  }
+  console.log(`• Vùng giao hàng: tạo mới ${created}/${SHIPPING_ZONES.length}`);
+}
+
+async function seedPromotions() {
+  const promotions = [
+    { code: 'WELCOME10', name: 'Giảm 10% cho khách mới', type: PromotionType.percentage, value: 10, maxDiscount: 500_000, perUserLimit: 1 },
+    { code: 'FREESHIP', name: 'Miễn phí vận chuyển đơn từ 2 triệu', type: PromotionType.free_shipping, value: 0, minOrderValue: 2_000_000 },
+    { code: 'GIAM200K', name: 'Giảm 200.000đ đơn từ 3 triệu', type: PromotionType.fixed_amount, value: 200_000, minOrderValue: 3_000_000, usageLimit: 100 },
+  ];
+  let created = 0;
+  for (const promotion of promotions) {
+    const existed = await prisma.promotion.findUnique({ where: { code: promotion.code }, select: { id: true } });
+    if (existed) continue;
+    await prisma.promotion.create({ data: { ...promotion, startsAt: new Date() } });
+    created++;
+  }
+  console.log(`• Mã giảm giá: tạo mới ${created}/${promotions.length}`);
+}
+
 async function main() {
   console.log('Seeding...');
   await seedUsers();
   await seedCategories();
   await seedProducts();
+  await seedShippingZones();
+  await seedPromotions();
   console.log('Xong.');
 }
 

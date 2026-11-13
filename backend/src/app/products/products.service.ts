@@ -408,6 +408,20 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
   }
 
+  /**
+   * Cộng (hoặc trừ khi quantity âm) lượt bán `soldCount` theo các dòng đơn hàng.
+   * Dùng client gốc trong tx: product đã xóa vẫn được cập nhật cho đúng thống kê.
+   */
+  async addSoldCount(items: { productID: string; quantity: number }[], tx: Prisma.TransactionClient) {
+    const byProduct = new Map<string, number>();
+    for (const { productID, quantity } of items) {
+      byProduct.set(productID, (byProduct.get(productID) ?? 0) + quantity);
+    }
+    for (const [id, quantity] of byProduct) {
+      await tx.product.updateMany({ where: { id }, data: { soldCount: { increment: quantity } } });
+    }
+  }
+
   /** Thêm ảnh vào cuối danh sách ảnh của product. Trả về danh sách ảnh mới. */
   appendImages(productID: string, images: { url: string; publicID: string }[]) {
     // Transaction: 2 lần upload song song không bị trùng sortOrder (lần sau xung đột và chạy lại)

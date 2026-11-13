@@ -11,13 +11,19 @@ import { AuthGuard } from '../common/guards/auth.guard';
 import { PrismaModule } from '../common/prisma/prisma.module';
 import { RateLimitModule } from '../common/security/rate-limit/rate-limit.module';
 import { ApiUtilModule } from '../common/utils/api-util/api-util.module';
+import { AddressesModule } from './addresses/addresses.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { CartsModule } from './carts/carts.module';
 import { CategoriesModule } from './categories/categories.module';
+import { CheckoutModule } from './checkout/checkout.module';
+import { OrdersModule } from './orders/orders.module';
 import { ProductImagesModule } from './product-images/product-images.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
 import { ProductsModule } from './products/products.module';
+import { PromotionsModule } from './promotions/promotions.module';
+import { ShippingZonesModule } from './shipping-zones/shipping-zones.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -33,6 +39,13 @@ import { UsersModule } from './users/users.module';
     ProductsModule,
     ProductVariantsModule,
     ProductImagesModule,
+    // Giai đoạn 3: mua hàng
+    AddressesModule,
+    CartsModule,
+    ShippingZonesModule,
+    PromotionsModule,
+    OrdersModule,
+    CheckoutModule,
   ],
   controllers: [AppController],
   providers: [

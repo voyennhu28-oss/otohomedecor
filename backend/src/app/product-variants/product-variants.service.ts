@@ -20,6 +20,43 @@ import {
   UpdateVariantDto,
 } from './dto/variant.dto';
 
+/** Field của variant + product cần cho giỏ hàng, checkout và snapshot đơn hàng. */
+export const SALE_VARIANT_SELECT = {
+  id: true,
+  productID: true,
+  sku: true,
+  name: true,
+  options: true,
+  price: true,
+  compareAtPrice: true,
+  stock: true,
+  weightKg: true,
+  dimensions: true,
+  images: true,
+  isActive: true,
+  product: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      images: true,
+      status: true,
+      allowBackorder: true,
+      requiresAssembly: true,
+      assemblyFee: true,
+      leadTimeDays: true,
+    },
+  },
+} satisfies Prisma.ProductVariantSelect;
+
+export type SaleVariant = Prisma.ProductVariantGetPayload<{ select: typeof SALE_VARIANT_SELECT }>;
+
+export interface StockLine {
+  variantID: string;
+  quantity: number;
+  name: string; // để báo lỗi "... không đủ hàng"
+}
+
 /**
  * Quy tắc:
  *  - Sau mỗi lần tạo / sửa / xóa variant → tính lại minPrice, maxPrice, colors của product
@@ -124,6 +161,44 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
       where: { id: variantID },
       select: { id: true, sku: true, stock: true },
     });
+  }
+
+  // ───────────── dùng cho giỏ hàng / checkout / đơn hàng (nhận tx) ─────────────
+
+  /**
+   * Variant chưa xóa (cả variant đang tắt) kèm thông tin product cần để bán.
+   * Bên gọi tự quyết định variant có mua được không (xem `getSaleStatus` trong carts).
+   */
+  findForSale(ids: string[], db: Prisma.TransactionClient = this.prismaService) {
+    if (!ids.length) return Promise.resolve([] as SaleVariant[]);
+    return db.productVariant.findMany({
+      where: { id: { in: ids }, ...NOT_DELETED },
+      select: SALE_VARIANT_SELECT,
+    });
+  }
+
+  /**
+   * Trừ kho ATOMIC từng dòng: chỉ trừ khi còn đủ (2 đơn cùng lúc không làm âm kho).
+   * Không đủ hàng thì 409, transaction của checkout rollback toàn bộ.
+   */
+  async reserveStock(lines: StockLine[], tx: Prisma.TransactionClient) {
+    for (const { variantID, quantity, name } of lines) {
+      const { count } = await tx.productVariant.updateMany({
+        where: { id: variantID, ...NOT_DELETED, stock: { gte: quantity } },
+        data: { stock: { decrement: quantity } },
+      });
+      if (count === 0) throw new ConflictException(`"${name}" không đủ hàng`);
+    }
+  }
+
+  /** Hoàn kho khi hủy đơn (kể cả variant đã bị xóa sau khi đặt). */
+  async restoreStock(lines: Omit<StockLine, 'name'>[], tx: Prisma.TransactionClient) {
+    for (const { variantID, quantity } of lines) {
+      await tx.productVariant.updateMany({
+        where: { id: variantID },
+        data: { stock: { increment: quantity } },
+      });
+    }
   }
 
   // ───────────── helpers ─────────────

@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { createPrismaModelMock, PrismaModelMock } from '../../../test/mocks/prisma.mock';
 import type { UserInfo } from '../../common/decorators/user.decorator';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
+import { OrdersService } from '../orders/orders.service';
 import { ProductsService } from '../products/products.service';
 import { UsersService } from './users.service';
 
@@ -28,18 +29,22 @@ const expectOmitSensitive = (args: { omit?: Record<string, boolean> }) => {
 describe('UsersService', () => {
   let service: UsersService;
   let user: PrismaModelMock;
-  let order: { aggregate: jest.Mock };
+  let orders: { totalSpent: jest.Mock };
   let transaction: jest.Mock;
   let products: { findCardsByIDs: jest.Mock; ensureActive: jest.Mock };
 
   beforeEach(() => {
     user = createPrismaModelMock();
-    order = { aggregate: jest.fn() };
-    const prisma = { user, order, extended: { user } } as unknown as PrismaService;
+    orders = { totalSpent: jest.fn() };
+    const prisma = { user, extended: { user } } as unknown as PrismaService;
     transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
     Object.assign(prisma, { $transaction: transaction });
     products = { findCardsByIDs: jest.fn(), ensureActive: jest.fn() };
-    service = new UsersService(prisma, products as unknown as ProductsService);
+    service = new UsersService(
+      prisma,
+      products as unknown as ProductsService,
+      orders as unknown as OrdersService,
+    );
   });
 
   // ───────────── /me ─────────────
@@ -185,23 +190,19 @@ describe('UsersService', () => {
   });
 
   describe('findOne', () => {
-    it('kèm địa chỉ, số đơn và tổng chi tiêu (chỉ đơn đã giao)', async () => {
+    it('kèm địa chỉ, số đơn và tổng chi tiêu (lấy từ OrdersService)', async () => {
       user.findUnique.mockResolvedValue({ id: USER_ID });
-      order.aggregate.mockResolvedValue({ _sum: { total: 5_000_000 } });
+      orders.totalSpent.mockResolvedValue(5_000_000);
 
       await expect(service.findOne(USER_ID)).resolves.toEqual({ id: USER_ID, totalSpent: 5_000_000 });
       expectOmitSensitive(user.findUnique.mock.calls[0][0]);
-      expect(order.aggregate).toHaveBeenCalledWith({
-        where: { userID: USER_ID, status: 'delivered' },
-        _sum: { total: true },
-      });
+      expect(orders.totalSpent).toHaveBeenCalledWith(USER_ID);
     });
 
-    it('chưa có đơn → totalSpent 0; không có user → 404', async () => {
-      user.findUnique.mockResolvedValueOnce({ id: USER_ID }).mockResolvedValueOnce(null);
-      order.aggregate.mockResolvedValue({ _sum: { total: null } });
-      await expect(service.findOne(USER_ID)).resolves.toMatchObject({ totalSpent: 0 });
+    it('không có user → 404, không tính chi tiêu', async () => {
+      user.findUnique.mockResolvedValue(null);
       await expect(service.findOne(USER_ID)).rejects.toBeInstanceOf(NotFoundException);
+      expect(orders.totalSpent).not.toHaveBeenCalled();
     });
   });
 

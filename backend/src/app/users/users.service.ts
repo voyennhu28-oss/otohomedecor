@@ -4,12 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderStatus, Prisma, Role, UserStatus } from '@prisma/client';
+import { Prisma, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { UserInfo } from '../../common/decorators/user.decorator';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
 import { withRetry } from '../../common/prisma/with-retry';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
+import { OrdersService } from '../orders/orders.service';
 import { ProductsService } from '../products/products.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
@@ -34,6 +35,7 @@ export class UsersService extends PrismaBaseService<'user'> {
   constructor(
     prismaService: PrismaService,
     private readonly productsService: ProductsService,
+    private readonly ordersService: OrdersService,
   ) {
     super(prismaService, 'user');
   }
@@ -157,14 +159,7 @@ export class UsersService extends PrismaBaseService<'user'> {
     });
     if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
 
-    // Tổng chi tiêu chỉ tính đơn đã giao (tiền đã thực sự trả)
-    // TODO: chuyển sang OrdersService khi có module orders
-    const spent = await this.prismaService.order.aggregate({
-      where: { userID: id, status: OrderStatus.delivered },
-      _sum: { total: true },
-    });
-
-    return { ...user, totalSpent: spent._sum.total ?? 0 };
+    return { ...user, totalSpent: await this.ordersService.totalSpent(id) };
   }
 
   async create(dto: CreateUserDto) {

@@ -170,6 +170,43 @@ describe('ProductVariantsService', () => {
     });
   });
 
+  describe('dùng cho giỏ hàng / checkout / đơn hàng', () => {
+    it('findForSale: variant chưa xóa kèm product; danh sách rỗng thì không truy vấn', async () => {
+      variant.findMany.mockResolvedValue([{ id: V }]);
+      await expect(service.findForSale([V])).resolves.toEqual([{ id: V }]);
+      const args = variant.findMany.mock.calls[0][0];
+      expect(args.where).toMatchObject({ id: { in: [V] }, OR: expect.any(Array) });
+      expect(args.select.product.select).toMatchObject({ status: true, allowBackorder: true, leadTimeDays: true });
+
+      variant.findMany.mockClear();
+      await expect(service.findForSale([])).resolves.toEqual([]);
+      expect(variant.findMany).not.toHaveBeenCalled();
+    });
+
+    it('reserveStock: trừ ATOMIC chỉ khi còn đủ; không đủ → 409 nêu tên sản phẩm', async () => {
+      const tx = { productVariant: { updateMany: jest.fn().mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 }) } };
+      await expect(
+        service.reserveStock(
+          [
+            { variantID: 'v1', quantity: 2, name: 'Đèn' },
+            { variantID: 'v2', quantity: 1, name: 'Ghế' },
+          ],
+          tx as never,
+        ),
+      ).rejects.toThrow(new ConflictException('"Ghế" không đủ hàng'));
+      expect(tx.productVariant.updateMany.mock.calls[0][0]).toMatchObject({
+        where: { id: 'v1', stock: { gte: 2 } },
+        data: { stock: { decrement: 2 } },
+      });
+    });
+
+    it('restoreStock: cộng lại kho (kể cả variant đã xóa)', async () => {
+      const tx = { productVariant: { updateMany: jest.fn() } };
+      await service.restoreStock([{ variantID: 'v1', quantity: 3 }], tx as never);
+      expect(tx.productVariant.updateMany).toHaveBeenCalledWith({ where: { id: 'v1' }, data: { stock: { increment: 3 } } });
+    });
+  });
+
   describe('findByProduct', () => {
     it('kiểm tra product tồn tại rồi lấy mọi variant chưa xóa', async () => {
       variant.findMany.mockResolvedValue([{ id: V }]);
