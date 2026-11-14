@@ -4,10 +4,10 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
 import { SepayWebhookDto } from './dto/payment.dto';
 import { PaymentsService } from './payments.service';
-import { SepayApiKeyGuard } from './sepay-api-key.guard';
+import { SepayWebhookGuard } from './sepay-webhook.guard';
 
 /**
- * SePay gọi khi tài khoản nhận tiền có biến động. Không đăng nhập (xác thực bằng API key),
+ * SePay gọi khi tài khoản nhận tiền có biến động. Không đăng nhập (xác thực bằng chữ ký HMAC hoặc API key),
  * không giới hạn tần suất (SePay gửi lại tối đa 7 lần khi lỗi).
  */
 @ApiTags('Payments')
@@ -23,7 +23,7 @@ export class SepayWebhookController {
    */
   @Post('webhook')
   @HttpCode(200)
-  @UseGuards(SepayApiKeyGuard)
+  @UseGuards(SepayWebhookGuard)
   async webhook(@Body() payload: SepayWebhookDto) {
     await this.paymentsService.handleSepayWebhook(payload);
     return { success: true };

@@ -113,7 +113,8 @@ MAIL_PASS=                      # SMTP key (không phải API key)
 MAIL_FROM="Home Decor <no-reply@yourdomain.vn>"   # bắt buộc, sender đã xác minh trên Brevo
 
 # SePay (mục 12)
-SEPAY_WEBHOOK_API_KEY=          # header "Authorization: Apikey <key>" SePay gửi kèm webhook
+SEPAY_WEBHOOK_SECRET=           # kiểu HMAC-SHA256 (khuyến nghị): Secret Key của webhook
+SEPAY_WEBHOOK_API_KEY=          # hoặc kiểu API Key: header "Authorization: Apikey <key>"
 SEPAY_BANK=                     # mã / tên ngân hàng cho VietQR, vd "VCB" hoặc "Vietcombank"
 SEPAY_ACCOUNT_NUMBER=
 SEPAY_ACCOUNT_NAME=             # tên chủ tài khoản, hiện trên QR
@@ -827,7 +828,10 @@ Prefix `/api`. **Public** = không cần đăng nhập · **U** = đã đăng nh
 |---|---|---|---|
 | POST | `/products/:id/reviews` | U | Chỉ khi có đơn `delivered` chứa sản phẩm này; mỗi đơn 1 review |
 | PATCH | `/reviews/:id` | U (chủ review) | |
-| DELETE | `/reviews/:id` | U (chủ review) | |
+| DELETE | `/reviews/:id` | U (chủ review) | Xóa luôn ảnh trên Cloudinary |
+| POST | `/reviews/:id/images` | U (chủ review) | Multipart, field `files`: jpg / png / webp, 5MB mỗi ảnh, tối đa 5 ảnh mỗi review |
+| DELETE | `/reviews/:id/images/:publicID` | U (chủ review) | |
+| DELETE | `/admin/reviews/:id/images/:publicID` | A | Gỡ ảnh không phù hợp |
 
 ### Admin (`/admin/...`)
 | Method | Path | Quyền | Mô tả |
@@ -1074,7 +1078,7 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
    `https://vietqr.app/img?acc=<SEPAY_ACCOUNT_NUMBER>&bank=<SEPAY_BANK>&amount=<total>&des=<mã thanh toán>&template=compact`
    `GET /me/orders/:orderNumber/payment` trả lại thông tin này cho đơn chưa trả tiền.
 3. **Webhook** `POST /payments/sepay/webhook` (`@Public`, bỏ throttle). Body JSON gồm `id`, `gateway`, `transactionDate`, `accountNumber`, `code`, `content`, `transferType`, `transferAmount`, `referenceCode`...
-   - Header phải đúng `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>` (so bằng `timingSafeEqual`), sai thì 401.
+   - Xác thực (sai thì 401): HMAC-SHA256 (khuyến nghị), header `X-SePay-Signature: sha256=<hex>` = HMAC(`SEPAY_WEBHOOK_SECRET`, `<X-SePay-Timestamp>.<raw body>`), timestamp lệch quá 5 phút bị từ chối; hoặc API Key `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`.
    - Chỉ xử lý `transferType === 'in'`. Lấy mã đơn từ `code` (SePay đã nhận diện; `null` = không khớp), không có thì tìm trong `content`.
    - **Idempotent theo `id` của SePay** (cùng giao dịch có thể được gửi lại nhiều lần): lưu vào `Payment.transactionID`, đã có thì trả thành công luôn. Chạy trong transaction có ghi vào document đơn, để 2 lần gửi trùng cùng lúc không xử lý 2 lần.
    - Đơn `pending` + **số tiền khớp đúng** `order.total` → `Payment { status: paid }`, `Order.paymentStatus = paid`, `paidAt`, `status = confirmed` (lịch sử: `changedBy: 'sepay'`).
@@ -1084,7 +1088,7 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 4. Không có trang `return`: frontend hiển thị QR rồi poll `GET /me/orders/:orderNumber` tới khi `paymentStatus = paid`.
 
 **Cấu hình trên my.sepay.vn:**
-- Webhook: URL `https://<api>/api/payments/sepay/webhook`, kiểu chứng thực **API Key**, body **JSON** (middleware `rejectNonJsonBody` chặn form-urlencoded), bật "Tự động gửi lại khi server trả lỗi".
+- Webhook: URL `https://<api>/api/payments/sepay/webhook`, kiểu chứng thực **HMAC-SHA256** (hoặc API Key), body **JSON** (middleware `rejectNonJsonBody` chặn form-urlencoded), bật "Tự động gửi lại khi server trả lỗi".
 - Cấu trúc mã thanh toán: tiền tố `HD`, hậu tố dài 12–12, loại ký tự **Số và chữ**.
 
 > Webhook cần URL public. Khi dev local, dùng `ngrok` hoặc `cloudflared tunnel` để SePay gọi về được.
@@ -1159,7 +1163,8 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 - [x] Email: xác nhận đơn, đổi trạng thái (gồm "đã nhận thanh toán"), quên mật khẩu
 
 ### Giai đoạn 5: Hoàn thiện
-- [ ] Review + cập nhật `ratingAvg`, `ratingCount`
-- [ ] Dashboard admin (dùng `aggregateRaw` cho doanh thu theo ngày)
-- [ ] Unit test cho checkout, promotion, shipping, chuyển trạng thái đơn (phần dễ sai nhất)
-- [ ] Deploy (Render, Railway hoặc VPS) + thêm IP server vào Atlas Network Access
+- [x] Review + cập nhật `ratingAvg`, `ratingCount`
+- [x] Dashboard admin (dùng `aggregateRaw` cho doanh thu theo ngày)
+- [x] Unit test cho checkout, promotion, shipping, chuyển trạng thái đơn (phần dễ sai nhất)
+- [x] Chuẩn bị deploy Render: `GET /api/health`, `TRUST_PROXY`, hướng dẫn `backend/DEPLOY.md`
+- [ ] Deploy lên Render + thêm Outbound IP của Render vào Atlas Network Access (làm theo `backend/DEPLOY.md`)

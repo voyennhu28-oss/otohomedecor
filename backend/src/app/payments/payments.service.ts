@@ -93,7 +93,7 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
   // ───────────── webhook SePay ─────────────
 
   /**
-   * Xử lý 1 giao dịch SePay báo về (API key đã được SepayApiKeyGuard kiểm tra).
+   * Xử lý 1 giao dịch SePay báo về (chữ ký / API key đã được SepayWebhookGuard kiểm tra).
    * Trong 1 transaction: tìm đơn → đối chiếu → lưu Payment (transactionID @unique chặn trùng)
    * → khớp thì đánh dấu đơn đã trả tiền. Chỉ ném lỗi khi lỗi hệ thống (để SePay gửi lại).
    */

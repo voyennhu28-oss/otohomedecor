@@ -36,9 +36,16 @@ describe('validate (env)', () => {
 
   it('production đủ biến → hợp lệ; thiếu SEPAY_* → báo rõ tên biến', () => {
     expect(() => validate(baseEnv(prod))).not.toThrow();
-    for (const key of ['SEPAY_WEBHOOK_API_KEY', 'SEPAY_BANK', 'SEPAY_ACCOUNT_NUMBER']) {
+    for (const key of ['SEPAY_BANK', 'SEPAY_ACCOUNT_NUMBER']) {
       expect(() => validate(baseEnv({ ...prod, [key]: '' }))).toThrow(key);
     }
+  });
+
+  it('production: xác thực webhook SePay bằng HMAC (SECRET) hoặc API key, phải có ít nhất 1', () => {
+    const { SEPAY_WEBHOOK_API_KEY: _apiKey, ...noAuth } = prod;
+    expect(() => validate(baseEnv({ ...noAuth, SEPAY_WEBHOOK_SECRET: 'hmac-secret' }))).not.toThrow();
+    expect(() => validate(baseEnv(noAuth))).toThrow('SEPAY_WEBHOOK_SECRET');
+    expect(() => validate(baseEnv({ ...noAuth, NODE_ENV: 'development' }))).not.toThrow(); // dev chỉ cảnh báo
   });
 
   it('SEPAY_ACCOUNT_NUMBER chỉ gồm chữ và số', () => {

@@ -34,7 +34,8 @@ Khai báo ở tab **Environment** của service. Có thể xem `.example.env` đ
 | `DATABASE_URL` | `mongodb+srv://.../home_decor?retryWrites=true&w=majority` | **Phải có tên database** sau dấu `/` |
 | `JWT_SECRET`, `JWT_REFRESH_SECRET` | 2 chuỗi ngẫu nhiên **khác nhau**, ≥ 32 ký tự | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `CLOUDINARY_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | | Bắt buộc |
-| `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK`, `SEPAY_ACCOUNT_NUMBER` | | Bắt buộc. `SEPAY_ACCOUNT_NAME` tùy chọn |
+| `SEPAY_WEBHOOK_SECRET` | Secret Key của webhook (kiểu HMAC-SHA256) | Khuyến nghị. Có thể dùng `SEPAY_WEBHOOK_API_KEY` thay thế, nhưng phải có 1 trong 2 |
+| `SEPAY_BANK`, `SEPAY_ACCOUNT_NUMBER` | | Bắt buộc. `SEPAY_ACCOUNT_NAME` tùy chọn |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` | `smtp-relay.brevo.com`, `587`, SMTP login, **SMTP key**, sender đã xác minh | Có `MAIL_HOST` thì bắt buộc có `MAIL_FROM` |
 | `ORDER_UNPAID_TIMEOUT_MINUTES` | `30` | Sau thời gian này, đơn chuyển khoản chưa nhận được tiền sẽ bị tự hủy |
 
@@ -74,7 +75,9 @@ Production nên dùng gói trả phí (Starter trở lên). Chạy nhiều insta
    Seed tạo admin, cây danh mục, vùng giao hàng, mã giảm giá **và 25 sản phẩm mẫu**. Nếu shop thật không muốn có sản phẩm mẫu, hãy tạo admin xong rồi xóa sản phẩm mẫu trong trang admin, hoặc nhập vùng giao hàng và mã giảm giá bằng tay.
 3. **SePay** (my.sepay.vn):
    - Webhook URL: `https://<service>.onrender.com/api/payments/sepay/webhook`. Gắn custom domain thì dùng domain đó.
-   - Chứng thực **API Key** (đúng bằng `SEPAY_WEBHOOK_API_KEY`), body **JSON**, bật "Tự động gửi lại khi server trả lỗi".
+   - Chứng thực **HMAC-SHA256**: chép Secret Key (chỉ hiện 1 lần) vào `SEPAY_WEBHOOK_SECRET`. Nếu chọn **API Key** thì chép vào `SEPAY_WEBHOOK_API_KEY`.
+   - Body **JSON**, bật "Tự động gửi lại khi server trả lỗi".
+   - HMAC kiểm tra cả thời điểm gửi: request lệch quá 5 phút bị từ chối. Render đồng bộ giờ sẵn nên không cần cấu hình gì thêm.
    - Cấu trúc mã thanh toán: tiền tố `HD`, hậu tố dài 12–12, loại ký tự **Số và chữ**.
 4. **Brevo**: xác minh sender và domain dùng cho `MAIL_FROM`.
 

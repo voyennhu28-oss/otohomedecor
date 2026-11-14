@@ -33,7 +33,7 @@ const secret = z.preprocess(emptyToUndefined, z.string({ required_error: 'bắt 
 const SECRET_KEYS = ['JWT_SECRET', 'JWT_REFRESH_SECRET'] as const;
 
 const CLOUDINARY_KEYS = ['CLOUDINARY_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'] as const;
-const SEPAY_KEYS = ['SEPAY_WEBHOOK_API_KEY', 'SEPAY_BANK', 'SEPAY_ACCOUNT_NUMBER'] as const;
+const SEPAY_KEYS = ['SEPAY_BANK', 'SEPAY_ACCOUNT_NUMBER'] as const;
 
 const envSchema = z
   .object({
@@ -75,7 +75,9 @@ const envSchema = z
     ORDER_UNPAID_TIMEOUT_MINUTES: positiveInt(30), // đơn chuyển khoản chưa nhận tiền quá hạn → cron hủy
 
     // SePay (chuyển khoản). Thiếu thì không đặt được đơn bank_transfer; production bắt buộc
-    SEPAY_WEBHOOK_API_KEY: optionalWithWarning('SEPAY_WEBHOOK_API_KEY'),
+    // Xác thực webhook: SEPAY_WEBHOOK_SECRET (HMAC-SHA256, khuyến nghị) hoặc SEPAY_WEBHOOK_API_KEY
+    SEPAY_WEBHOOK_SECRET: optionalString,
+    SEPAY_WEBHOOK_API_KEY: optionalString,
     SEPAY_BANK: optionalWithWarning('SEPAY_BANK'),
     SEPAY_ACCOUNT_NUMBER: z.preprocess(
       emptyToUndefined,
@@ -109,6 +111,12 @@ const envSchema = z
       const message = 'bắt buộc khi có MAIL_HOST (sender đã xác minh trên Brevo)';
       if (isProduction) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['MAIL_FROM'], message });
       else Logger.warn(`ENV [MAIL_FROM] ${message}`, 'Env');
+    }
+    // Webhook SePay phải có 1 cách xác thực, không thì ai cũng gọi được để đánh dấu đơn đã trả tiền
+    if (!env.SEPAY_WEBHOOK_SECRET && !env.SEPAY_WEBHOOK_API_KEY) {
+      const message = 'cần SEPAY_WEBHOOK_SECRET (HMAC-SHA256) hoặc SEPAY_WEBHOOK_API_KEY để xác thực webhook SePay';
+      if (isProduction) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['SEPAY_WEBHOOK_SECRET'], message });
+      else Logger.warn(`ENV ${message}`, 'Env');
     }
     if (isProduction) {
       for (const key of [...CLOUDINARY_KEYS, ...SEPAY_KEYS]) {

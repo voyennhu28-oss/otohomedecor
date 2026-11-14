@@ -1,5 +1,5 @@
 import { OrderStatus, PaymentStatus, type Order } from '@prisma/client';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { toPaymentCode } from '../orders/order-number';
 
 /** Ảnh QR VietQR nhúng được (docs.sepay.vn/tao-qr-code-vietqr-dong.html). */
@@ -66,3 +66,33 @@ export const evaluateTransfer = (
 /** So sánh chuỗi bí mật không lộ thông tin qua thời gian chạy (băm trước để 2 buffer cùng độ dài). */
 export const safeEqual = (a: string, b: string) =>
   timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest());
+
+/** SePay: timestamp lệch quá 5 phút thì từ chối (chống gửi lại request cũ bị bắt được). */
+export const SIGNATURE_TOLERANCE_SECONDS = 300;
+
+export type SignatureCheck = 'ok' | 'missing' | 'expired' | 'invalid';
+
+/**
+ * Chữ ký HMAC-SHA256 của webhook SePay (developer.sepay.vn/vi/sepay-webhooks/xac-thuc):
+ * header `X-SePay-Signature: sha256=<hex>` = HMAC-SHA256(secret, "<X-SePay-Timestamp>.<raw body>").
+ * Phải ký trên BODY GỐC (bytes nhận được), không phải JSON đã parse rồi stringify lại.
+ */
+export const verifySepaySignature = ({
+  rawBody,
+  timestamp,
+  signature,
+  secret,
+  now = Date.now(),
+}: {
+  rawBody: Buffer | undefined;
+  timestamp: string | undefined;
+  signature: string | undefined;
+  secret: string;
+  now?: number;
+}): SignatureCheck => {
+  if (!rawBody || !signature || !timestamp || !/^\d+$/.test(timestamp)) return 'missing';
+  if (Math.abs(now / 1000 - Number(timestamp)) > SIGNATURE_TOLERANCE_SECONDS) return 'expired';
+
+  const expected = `sha256=${createHmac('sha256', secret).update(`${timestamp}.`).update(rawBody).digest('hex')}`;
+  return safeEqual(signature.trim(), expected) ? 'ok' : 'invalid';
+};

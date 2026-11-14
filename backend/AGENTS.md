@@ -122,7 +122,8 @@ src/
 - Checkout `bank_transfer`: gọi `PaymentsService.assertTransferAvailable()` TRƯỚC transaction (chưa cấu hình `SEPAY_*` thì không tạo đơn).
 - Nội dung chuyển khoản = mã đơn bỏ dấu `-` (`HD2611137K3M9Q`), dùng `toPaymentCode` / `findOrderNumberInText` trong `orders/order-number.ts`. Không đổi định dạng mã đơn khi chưa sửa hai hàm này và cấu hình mã thanh toán trên SePay (tiền tố `HD`, hậu tố 12 ký tự số và chữ).
 - **Chỉ webhook `POST /payments/sepay/webhook` được đánh dấu đơn đã trả tiền.** Không tin client báo "đã chuyển khoản".
-- Webhook: header `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>` (so bằng `timingSafeEqual`, sai → 401) → chỉ `transferType === 'in'` → **idempotent theo `id` của SePay** (lưu vào `Payment.transactionID`) → đơn `pending` và số tiền **khớp đúng** `order.total` thì mới `paid` + `confirmed`. Sai tiền / đơn đã hủy / đã trả rồi: lưu `Payment` + log để admin xử lý, không tự đổi đơn.
+- Xác thực webhook (`SepayWebhookGuard`): `SEPAY_WEBHOOK_SECRET` → HMAC-SHA256, header `X-SePay-Signature: sha256=<hex>` = HMAC(secret, `<X-SePay-Timestamp>.<raw body>`), timestamp lệch > 5 phút bị từ chối; hoặc `SEPAY_WEBHOOK_API_KEY` → header `Authorization: Apikey <key>`. Có cả hai thì dùng HMAC. HMAC ký trên **body gốc** (`req.rawBody`, nhờ `rawBody: true` trong `NEST_APP_OPTIONS`): không bỏ option này, không ký lại từ JSON đã parse.
+- Xử lý webhook: chỉ `transferType === 'in'` → **idempotent theo `id` của SePay** (lưu vào `Payment.transactionID`) → đơn `pending` và số tiền **khớp đúng** `order.total` thì mới `paid` + `confirmed`. Sai tiền / đơn đã hủy / đã trả rồi: lưu `Payment` + log để admin xử lý, không tự đổi đơn.
 - Response webhook: HTTP 200 + đúng body `{ "success": true }`, kể cả khi bỏ qua giao dịch (để SePay không gửi lại). Không bọc qua format response chung.
 
 **Review** (module `reviews`)

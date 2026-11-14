@@ -67,8 +67,11 @@ const initOpenAPI = (app: INestApplication) => {
   SwaggerModule.setup(APP_PREFIX, app, cleanupOpenApiDoc(openApiDoc));
 };
 
-/** Tắt body parser mặc định (có urlencoded); `applyMiddlewares` chỉ bật lại parser JSON. */
-const NEST_APP_OPTIONS = { bodyParser: false } satisfies NestApplicationOptions;
+/**
+ * - bodyParser: false → tắt parser mặc định (có urlencoded); `applyMiddlewares` chỉ bật lại parser JSON
+ * - rawBody: true → giữ body gốc ở `req.rawBody` để kiểm tra chữ ký HMAC của webhook SePay
+ */
+const NEST_APP_OPTIONS = { bodyParser: false, rawBody: true } satisfies NestApplicationOptions;
 
 const initApp = (app: NestExpressApplication) => {
   const { APP_PREFIX = '/api', FE_URL = 'http://localhost:3000', TRUST_PROXY = '0' } = process.env;
