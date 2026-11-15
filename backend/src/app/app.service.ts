@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 @Injectable()
@@ -16,9 +20,16 @@ export class AppService {
     try {
       await this.prismaService.$runCommandRaw({ ping: 1 });
     } catch (error) {
-      this.logger.error('Health check: không kết nối được database', (error as Error)?.stack);
+      this.logger.error(
+        'Health check: không kết nối được database',
+        (error as Error)?.stack,
+      );
       throw new ServiceUnavailableException('Database không phản hồi');
     }
-    return { status: 'ok', database: 'up', uptimeSeconds: Math.round(process.uptime()) };
+    return {
+      status: 'ok',
+      database: 'up',
+      uptimeSeconds: Math.round(process.uptime()),
+    };
   }
 }

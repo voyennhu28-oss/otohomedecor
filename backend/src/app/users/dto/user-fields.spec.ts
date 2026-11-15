@@ -1,4 +1,7 @@
-import { ChangePasswordDto, ResetPasswordDto } from '../../auth/dto/password.dto';
+import {
+  ChangePasswordDto,
+  ResetPasswordDto,
+} from '../../auth/dto/password.dto';
 import { SignUpDto } from '../../auth/dto/sign.dto';
 import { CreateUserDto } from './create-user.dto';
 import { UpdateMeDto } from './update-me.dto';
@@ -23,10 +26,40 @@ describe('passwordSchema (BUG-05: bcrypt chỉ dùng 72 byte đầu)', () => {
   });
 
   it.each([
-    ['sign-up', () => SignUpDto.schema.safeParse({ email: 'a@b.com', password: TOO_LONG_BYTES, fullName: 'A' })],
-    ['reset-password', () => ResetPasswordDto.schema.safeParse({ token: 'a'.repeat(64), newPassword: TOO_LONG_BYTES })],
-    ['change-password', () => ChangePasswordDto.schema.safeParse({ oldPassword: 'old12345', newPassword: TOO_LONG_BYTES })],
-    ['POST /admin/users', () => CreateUserDto.schema.safeParse({ email: 'a@b.com', password: TOO_LONG_BYTES, fullName: 'A' })],
+    [
+      'sign-up',
+      () =>
+        SignUpDto.schema.safeParse({
+          email: 'a@b.com',
+          password: TOO_LONG_BYTES,
+          fullName: 'A',
+        }),
+    ],
+    [
+      'reset-password',
+      () =>
+        ResetPasswordDto.schema.safeParse({
+          token: 'a'.repeat(64),
+          newPassword: TOO_LONG_BYTES,
+        }),
+    ],
+    [
+      'change-password',
+      () =>
+        ChangePasswordDto.schema.safeParse({
+          oldPassword: 'old12345',
+          newPassword: TOO_LONG_BYTES,
+        }),
+    ],
+    [
+      'POST /admin/users',
+      () =>
+        CreateUserDto.schema.safeParse({
+          email: 'a@b.com',
+          password: TOO_LONG_BYTES,
+          fullName: 'A',
+        }),
+    ],
   ])('%s từ chối mật khẩu quá 72 byte', (_name, parse) => {
     expect(parse().success).toBe(false);
   });
@@ -34,8 +67,18 @@ describe('passwordSchema (BUG-05: bcrypt chỉ dùng 72 byte đầu)', () => {
 
 describe('UpdateMeDto.avatarUrl (BUG-06)', () => {
   it('chỉ nhận http(s), cho phép null để xóa ảnh', () => {
-    expect(UpdateMeDto.schema.safeParse({ avatarUrl: 'https://cdn.example.com/a.jpg' }).success).toBe(true);
-    expect(UpdateMeDto.schema.safeParse({ avatarUrl: null }).success).toBe(true);
-    expect(UpdateMeDto.schema.safeParse({ avatarUrl: 'javascript:alert(document.cookie)' }).success).toBe(false);
+    expect(
+      UpdateMeDto.schema.safeParse({
+        avatarUrl: 'https://cdn.example.com/a.jpg',
+      }).success,
+    ).toBe(true);
+    expect(UpdateMeDto.schema.safeParse({ avatarUrl: null }).success).toBe(
+      true,
+    );
+    expect(
+      UpdateMeDto.schema.safeParse({
+        avatarUrl: 'javascript:alert(document.cookie)',
+      }).success,
+    ).toBe(false);
   });
 });

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Address, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { withRetry } from '../../common/prisma/with-retry';
@@ -24,7 +28,10 @@ export class AddressesService extends PrismaBaseService<'address'> {
   }
 
   findMine(userID: string) {
-    return this.extended.findMany({ where: { userID }, orderBy: ADDRESS_ORDER });
+    return this.extended.findMany({
+      where: { userID },
+      orderBy: ADDRESS_ORDER,
+    });
   }
 
   create(userID: string, dto: CreateAddressDto) {
@@ -32,11 +39,15 @@ export class AddressesService extends PrismaBaseService<'address'> {
     return this.inTransaction(async (tx) => {
       const count = await tx.address.count({ where: { userID } });
       if (count >= MAX_ADDRESSES_PER_USER) {
-        throw new BadRequestException(`Tối đa ${MAX_ADDRESSES_PER_USER} địa chỉ`);
+        throw new BadRequestException(
+          `Tối đa ${MAX_ADDRESSES_PER_USER} địa chỉ`,
+        );
       }
       const makeDefault = isDefault || count === 0;
       if (makeDefault) await this.unsetDefault(tx, userID);
-      return tx.address.create({ data: { ...data, userID, isDefault: makeDefault } });
+      return tx.address.create({
+        data: { ...data, userID, isDefault: makeDefault },
+      });
     });
   }
 
@@ -66,14 +77,22 @@ export class AddressesService extends PrismaBaseService<'address'> {
           orderBy: { createdAt: 'desc' },
           select: { id: true },
         });
-        if (next) await tx.address.update({ where: { id: next.id }, data: { isDefault: true } });
+        if (next)
+          await tx.address.update({
+            where: { id: next.id },
+            data: { isDefault: true },
+          });
       }
       return { id };
     });
   }
 
   /** Địa chỉ thuộc user, hoặc null. Checkout dùng (truyền tx). */
-  findOwned(userID: string, id: string, db: Prisma.TransactionClient = this.prismaService) {
+  findOwned(
+    userID: string,
+    id: string,
+    db: Prisma.TransactionClient = this.prismaService,
+  ) {
     return db.address.findFirst({ where: { id, userID } });
   }
 
@@ -89,9 +108,17 @@ export class AddressesService extends PrismaBaseService<'address'> {
     return address;
   }
 
-  private unsetDefault(tx: Prisma.TransactionClient, userID: string, exceptID?: string) {
+  private unsetDefault(
+    tx: Prisma.TransactionClient,
+    userID: string,
+    exceptID?: string,
+  ) {
     return tx.address.updateMany({
-      where: { userID, isDefault: true, ...(exceptID && { id: { not: exceptID } }) },
+      where: {
+        userID,
+        isDefault: true,
+        ...(exceptID && { id: { not: exceptID } }),
+      },
       data: { isDefault: false },
     });
   }

@@ -17,7 +17,12 @@ import {
   MAX_ITEMS_PER_CART,
   MAX_QUANTITY_PER_ITEM,
 } from './dto/cart.dto';
-import { getSaleStatus, isPurchasable, pickImageUrl, SaleStatus } from './sale-status';
+import {
+  getSaleStatus,
+  isPurchasable,
+  pickImageUrl,
+  SaleStatus,
+} from './sale-status';
 
 /**
  * Giỏ hàng: 1 document / user, chỉ lưu variantID + số lượng. Giá, tồn kho, trạng thái
@@ -35,7 +40,9 @@ export class CartsService extends PrismaBaseService<'cart'> {
   /** GET /me/cart: kèm giá, tồn kho hiện tại và trạng thái từng dòng. Mới thêm hiện trước. */
   async getCart(userID: string) {
     const items = await this.getItems(userID);
-    const variants = await this.productVariantsService.findForSale(items.map((i) => i.variantID));
+    const variants = await this.productVariantsService.findForSale(
+      items.map((i) => i.variantID),
+    );
     const byID = new Map(variants.map((v) => [v.id, v]));
 
     const lines = [...items]
@@ -56,13 +63,17 @@ export class CartsService extends PrismaBaseService<'cart'> {
     await this.mutateItems(userID, (items) => {
       const existing = items.find((i) => i.variantID === variantID);
       if (!existing && items.length >= MAX_ITEMS_PER_CART) {
-        throw new BadRequestException(`Giỏ hàng tối đa ${MAX_ITEMS_PER_CART} sản phẩm khác nhau`);
+        throw new BadRequestException(
+          `Giỏ hàng tối đa ${MAX_ITEMS_PER_CART} sản phẩm khác nhau`,
+        );
       }
       const nextQuantity = (existing?.quantity ?? 0) + quantity;
       assertQuantity(variant, nextQuantity);
 
       return existing
-        ? items.map((i) => (i === existing ? { ...i, quantity: nextQuantity } : i))
+        ? items.map((i) =>
+            i === existing ? { ...i, quantity: nextQuantity } : i,
+          )
         : [...items, { variantID, quantity, addedAt: new Date() }];
     });
     return this.getCart(userID);
@@ -75,14 +86,18 @@ export class CartsService extends PrismaBaseService<'cart'> {
       if (!items.some((i) => i.variantID === variantID)) {
         throw new NotFoundException('Sản phẩm không có trong giỏ hàng');
       }
-      return items.map((i) => (i.variantID === variantID ? { ...i, quantity } : i));
+      return items.map((i) =>
+        i.variantID === variantID ? { ...i, quantity } : i,
+      );
     });
     return this.getCart(userID);
   }
 
   /** Xóa 1 dòng (không có trong giỏ cũng trả về giỏ hiện tại). */
   async removeItem(userID: string, variantID: string) {
-    await this.mutateItems(userID, (items) => items.filter((i) => i.variantID !== variantID));
+    await this.mutateItems(userID, (items) =>
+      items.filter((i) => i.variantID !== variantID),
+    );
     return this.getCart(userID);
   }
 
@@ -93,19 +108,33 @@ export class CartsService extends PrismaBaseService<'cart'> {
 
   // ───────────── dùng cho checkout (nhận tx) ─────────────
 
-  async getItems(userID: string, db: Prisma.TransactionClient = this.prismaService) {
-    const cart = await db.cart.findUnique({ where: { userID }, select: { items: true } });
+  async getItems(
+    userID: string,
+    db: Prisma.TransactionClient = this.prismaService,
+  ) {
+    const cart = await db.cart.findUnique({
+      where: { userID },
+      select: { items: true },
+    });
     return cart?.items ?? [];
   }
 
-  async clear(userID: string, db: Prisma.TransactionClient = this.prismaService) {
-    await db.cart.updateMany({ where: { userID }, data: { items: { set: [] } } });
+  async clear(
+    userID: string,
+    db: Prisma.TransactionClient = this.prismaService,
+  ) {
+    await db.cart.updateMany({
+      where: { userID },
+      data: { items: { set: [] } },
+    });
   }
 
   // ───────────── helpers ─────────────
 
   private async findPurchasableVariant(variantID: string) {
-    const [variant] = await this.productVariantsService.findForSale([variantID]);
+    const [variant] = await this.productVariantsService.findForSale([
+      variantID,
+    ]);
     if (getSaleStatus(variant, 1) === 'unavailable') {
       throw new NotFoundException('Sản phẩm không tồn tại hoặc đã ngừng bán');
     }
@@ -116,7 +145,10 @@ export class CartsService extends PrismaBaseService<'cart'> {
    * Đọc - sửa - ghi lại cả mảng items trong transaction (Prisma không có `pull` cho composite list).
    * 2 request sửa giỏ cùng lúc → xung đột P2034 → chạy lại, không ghi đè mất thay đổi.
    */
-  private mutateItems(userID: string, change: (items: CartItem[]) => CartItem[]) {
+  private mutateItems(
+    userID: string,
+    change: (items: CartItem[]) => CartItem[],
+  ) {
     return withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
         const items = change(await this.getItems(userID, tx));
@@ -133,11 +165,15 @@ export class CartsService extends PrismaBaseService<'cart'> {
 /** Không cho vượt tồn kho (trừ hàng đặt làm) và giới hạn số lượng mỗi dòng. */
 const assertQuantity = (variant: SaleVariant, quantity: number) => {
   if (quantity > MAX_QUANTITY_PER_ITEM) {
-    throw new BadRequestException(`Mỗi sản phẩm tối đa ${MAX_QUANTITY_PER_ITEM} cái`);
+    throw new BadRequestException(
+      `Mỗi sản phẩm tối đa ${MAX_QUANTITY_PER_ITEM} cái`,
+    );
   }
   if (!isPurchasable(getSaleStatus(variant, quantity))) {
     throw new ConflictException(
-      variant.stock > 0 ? `"${variant.name}" chỉ còn ${variant.stock} sản phẩm` : `"${variant.name}" đã hết hàng`,
+      variant.stock > 0
+        ? `"${variant.name}" chỉ còn ${variant.stock} sản phẩm`
+        : `"${variant.name}" đã hết hàng`,
     );
   }
 };
@@ -151,7 +187,12 @@ const toCartLine = (item: CartItem, variant: SaleVariant | undefined) => {
   return {
     ...item,
     status,
-    product: { id: product.id, name: product.name, slug: product.slug, imageUrl: pickImageUrl(variant) },
+    product: {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      imageUrl: pickImageUrl(variant),
+    },
     variant: {
       name: variant.name,
       sku: variant.sku,

@@ -33,7 +33,9 @@ export class MailUtilService implements OnModuleDestroy {
         host,
         port,
         secure: port === 465,
-        auth: user ? { user, pass: config.get<string>('MAIL_PASS') } : undefined,
+        auth: user
+          ? { user, pass: config.get<string>('MAIL_PASS') }
+          : undefined,
       });
     } else {
       this.logger.warn('MAIL_HOST chưa cấu hình: email sẽ không được gửi đi');
@@ -51,7 +53,13 @@ export class MailUtilService implements OnModuleDestroy {
       );
       return;
     }
-    await this.transporter.sendMail({ from: this.from, to, subject, html, text });
+    await this.transporter.sendMail({
+      from: this.from,
+      to,
+      subject,
+      html,
+      text,
+    });
   }
 
   onModuleDestroy() {

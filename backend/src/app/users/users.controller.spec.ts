@@ -29,7 +29,9 @@ describe('UsersController (/me)', () => {
   it('cần đăng nhập, không cần admin (không @Public, không @AdminOnly)', () => {
     expect(Reflect.getMetadata(IS_PUBLIC, UsersController)).toBeUndefined();
     expect(Reflect.getMetadata(IS_ADMIN_ONLY, UsersController)).toBeUndefined();
-    for (const method of Object.getOwnPropertyNames(UsersController.prototype)) {
+    for (const method of Object.getOwnPropertyNames(
+      UsersController.prototype,
+    )) {
       const handler = (UsersController.prototype as any)[method];
       expect(Reflect.getMetadata(IS_PUBLIC, handler)).toBeUndefined();
     }
@@ -45,7 +47,9 @@ describe('UsersController (/me)', () => {
 
     it('chuyển tiếp lỗi 404 từ service', async () => {
       usersService.getMe.mockRejectedValue(new NotFoundException());
-      await expect(controller.getMe(me)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(controller.getMe(me)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -69,13 +73,21 @@ describe('UsersController (/me)', () => {
       await expect(
         controller.addToWishlist(me, { productID: PRODUCT_ID }),
       ).resolves.toBe(response);
-      expect(usersService.addToWishlist).toHaveBeenCalledWith(me.userID, PRODUCT_ID);
+      expect(usersService.addToWishlist).toHaveBeenCalledWith(
+        me.userID,
+        PRODUCT_ID,
+      );
     });
 
     it('removeFromWishlist', async () => {
-      usersService.removeFromWishlist.mockResolvedValue({ wishlistProductIDs: [] });
+      usersService.removeFromWishlist.mockResolvedValue({
+        wishlistProductIDs: [],
+      });
       await controller.removeFromWishlist(me, { productID: PRODUCT_ID });
-      expect(usersService.removeFromWishlist).toHaveBeenCalledWith(me.userID, PRODUCT_ID);
+      expect(usersService.removeFromWishlist).toHaveBeenCalledWith(
+        me.userID,
+        PRODUCT_ID,
+      );
     });
   });
 });

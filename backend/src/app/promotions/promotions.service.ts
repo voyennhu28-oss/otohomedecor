@@ -13,7 +13,11 @@ import {
   PromotionListQueryDto,
   UpdatePromotionDto,
 } from './dto/promotion.dto';
-import { getRuleViolation, getUnusableReason, normalizeRules } from './promotion.util';
+import {
+  getRuleViolation,
+  getUnusableReason,
+  normalizeRules,
+} from './promotion.util';
 
 export interface ApplyContext {
   subtotal: number;
@@ -40,7 +44,11 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
       }),
     };
     const [list, totalItems] = await Promise.all([
-      this.extended.findMany({ where, orderBy: { createdAt: 'desc' }, ...paginate(pagination) }),
+      this.extended.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        ...paginate(pagination),
+      }),
       this.extended.count({ where }),
     ]);
     return toPage(list, totalItems, pagination.itemPerPage);
@@ -59,7 +67,8 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
 
   async update(id: string, dto: UpdatePromotionDto) {
     const current = await this.findOne(id);
-    if (dto.code && dto.code !== current.code) await this.assertCodeAvailable(dto.code);
+    if (dto.code && dto.code !== current.code)
+      await this.assertCodeAvailable(dto.code);
 
     const type = dto.type ?? current.type;
     const data = normalizeRules(dto, type);
@@ -95,22 +104,29 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
     });
     if (!promotion) throw new BadRequestException('Mã giảm giá không tồn tại');
 
-    const usedByUser = promotion.perUserLimit != null ? await countUserUsage(promotion.id) : 0;
+    const usedByUser =
+      promotion.perUserLimit != null ? await countUserUsage(promotion.id) : 0;
     const reason = getUnusableReason(promotion, { subtotal, usedByUser });
     if (reason) throw new BadRequestException(reason);
     return promotion;
   }
 
   /** Tăng usedCount ATOMIC: chỉ tăng khi còn lượt (2 đơn cùng lúc không vượt usageLimit). */
-  async consume(promotion: Pick<Promotion, 'id' | 'usageLimit'>, tx: Prisma.TransactionClient) {
+  async consume(
+    promotion: Pick<Promotion, 'id' | 'usageLimit'>,
+    tx: Prisma.TransactionClient,
+  ) {
     const { count } = await tx.promotion.updateMany({
       where: {
         id: promotion.id,
-        ...(promotion.usageLimit != null && { usedCount: { lt: promotion.usageLimit } }),
+        ...(promotion.usageLimit != null && {
+          usedCount: { lt: promotion.usageLimit },
+        }),
       },
       data: { usedCount: { increment: 1 } },
     });
-    if (count === 0) throw new ConflictException('Mã giảm giá vừa hết lượt sử dụng');
+    if (count === 0)
+      throw new ConflictException('Mã giảm giá vừa hết lượt sử dụng');
   }
 
   /** Trả lại 1 lượt khi hủy đơn (không xuống dưới 0, kể cả mã đã bị xóa). */
@@ -125,7 +141,10 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
 
   /** Dùng client gốc: index @unique của code tính cả mã đã xóa. */
   private async assertCodeAvailable(code: string) {
-    const existed = await this.client.findUnique({ where: { code }, select: { id: true } });
+    const existed = await this.client.findUnique({
+      where: { code },
+      select: { id: true },
+    });
     if (existed) throw new ConflictException(`Mã "${code}" đã tồn tại`);
   }
 }

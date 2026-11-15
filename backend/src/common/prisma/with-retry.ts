@@ -2,7 +2,8 @@ import { Prisma } from '@prisma/client';
 
 /** Transaction bị xung đột ghi / deadlock (MongoDB: WriteConflict). Chạy lại là an toàn. */
 export const isTransactionConflict = (error: unknown) =>
-  error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+  error instanceof Prisma.PrismaClientKnownRequestError &&
+  error.code === 'P2034';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -14,7 +15,10 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * Lưu ý: transaction MongoDB (snapshot isolation) KHÔNG chặn write skew. Muốn 2 transaction
  * "đọc rồi kiểm tra" loại trừ nhau thì cả hai phải GHI vào cùng 1 document.
  */
-export async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await fn();

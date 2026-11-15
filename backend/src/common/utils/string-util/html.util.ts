@@ -28,5 +28,8 @@ export const escapeHtml = (value: unknown): string => {
  *   safeHtml`<p>Chào ${user.fullName}</p>`
  *   safeHtml`<table>${items.map((i) => raw(safeHtml`<tr><td>${i.name}</td></tr>`))}</table>`
  */
-export const safeHtml = (strings: TemplateStringsArray, ...values: unknown[]): string =>
+export const safeHtml = (
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): string =>
   strings.reduce((html, part, i) => html + escapeHtml(values[i - 1]) + part);

@@ -37,7 +37,10 @@ export class ImageUploadService {
    * Tất cả hoặc không: 1 ảnh upload lỗi hoặc `save` lỗi thì xóa các ảnh đã lên Cloudinary
    * (không để ảnh mồ côi). File tạm trên đĩa luôn bị xóa sau khi xong (kể cả khi lỗi).
    */
-  async upload<T>(files: UploadedImage[] | undefined, { publicIDPrefix, before, save }: UploadPlan<T>) {
+  async upload<T>(
+    files: UploadedImage[] | undefined,
+    { publicIDPrefix, before, save }: UploadPlan<T>,
+  ) {
     try {
       if (!files?.length) throw new BadRequestException('Chưa chọn ảnh nào');
       await before?.();
@@ -50,7 +53,9 @@ export class ImageUploadService {
         throw error;
       }
     } finally {
-      await Promise.all((files ?? []).map((file) => unlink(file.path).catch(() => undefined)));
+      await Promise.all(
+        (files ?? []).map((file) => unlink(file.path).catch(() => undefined)),
+      );
     }
   }
 
@@ -58,13 +63,20 @@ export class ImageUploadService {
   destroyQuietly(publicIDs: (string | null | undefined)[]) {
     for (const publicID of publicIDs) {
       if (!publicID) continue;
-      Promise.resolve(this.fileStrategy.remove(publicID)).catch((error: unknown) => {
-        this.logger.warn(`Xóa ảnh ${publicID} trên Cloudinary thất bại: ${String(error)}`);
-      });
+      Promise.resolve(this.fileStrategy.remove(publicID)).catch(
+        (error: unknown) => {
+          this.logger.warn(
+            `Xóa ảnh ${publicID} trên Cloudinary thất bại: ${String(error)}`,
+          );
+        },
+      );
     }
   }
 
-  private async uploadAll(files: UploadedImage[], prefix: string): Promise<StoredImage[]> {
+  private async uploadAll(
+    files: UploadedImage[],
+    prefix: string,
+  ): Promise<StoredImage[]> {
     const results = await Promise.allSettled(
       files.map(
         (file) =>

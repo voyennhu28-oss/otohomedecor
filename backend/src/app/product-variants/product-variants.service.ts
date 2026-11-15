@@ -49,7 +49,9 @@ export const SALE_VARIANT_SELECT = {
   },
 } satisfies Prisma.ProductVariantSelect;
 
-export type SaleVariant = Prisma.ProductVariantGetPayload<{ select: typeof SALE_VARIANT_SELECT }>;
+export type SaleVariant = Prisma.ProductVariantGetPayload<{
+  select: typeof SALE_VARIANT_SELECT;
+}>;
 
 export interface StockLine {
   variantID: string;
@@ -96,7 +98,9 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
 
     const price = dto.price ?? current.price;
     const compareAtPrice =
-      dto.compareAtPrice !== undefined ? dto.compareAtPrice : current.compareAtPrice;
+      dto.compareAtPrice !== undefined
+        ? dto.compareAtPrice
+        : current.compareAtPrice;
     if (!isValidCompareAtPrice(price, compareAtPrice)) {
       throw new BadRequestException(COMPARE_AT_PRICE_MESSAGE);
     }
@@ -118,7 +122,10 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
     await this.writeAndRecalculate(productID, variant.isActive, (tx) =>
       tx.productVariant.update({
         where: { id: variantID },
-        data: { deletedAt: new Date(), sku: `${variant.sku}--deleted-${variantID}` },
+        data: {
+          deletedAt: new Date(),
+          sku: `${variant.sku}--deleted-${variantID}`,
+        },
       }),
     );
     return { id: variantID };
@@ -169,7 +176,10 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
    * Variant chưa xóa (cả variant đang tắt) kèm thông tin product cần để bán.
    * Bên gọi tự quyết định variant có mua được không (xem `getSaleStatus` trong carts).
    */
-  findForSale(ids: string[], db: Prisma.TransactionClient = this.prismaService) {
+  findForSale(
+    ids: string[],
+    db: Prisma.TransactionClient = this.prismaService,
+  ) {
     if (!ids.length) return Promise.resolve([] as SaleVariant[]);
     return db.productVariant.findMany({
       where: { id: { in: ids }, ...NOT_DELETED },
@@ -192,7 +202,10 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
   }
 
   /** Hoàn kho khi hủy đơn (kể cả variant đã bị xóa sau khi đặt). */
-  async restoreStock(lines: Omit<StockLine, 'name'>[], tx: Prisma.TransactionClient) {
+  async restoreStock(
+    lines: Omit<StockLine, 'name'>[],
+    tx: Prisma.TransactionClient,
+  ) {
     for (const { variantID, quantity } of lines) {
       await tx.productVariant.updateMany({
         where: { id: variantID },
@@ -210,7 +223,13 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
       where: {
         isActive: true,
         stock: { lte: threshold },
-        product: { is: { status: ProductStatus.active, allowBackorder: false, ...NOT_DELETED } },
+        product: {
+          is: {
+            status: ProductStatus.active,
+            allowBackorder: false,
+            ...NOT_DELETED,
+          },
+        },
       },
       select: {
         id: true,
@@ -255,7 +274,8 @@ export class ProductVariantsService extends PrismaBaseService<'productVariant'> 
     const variant = await this.extended.findFirst({
       where: { id: variantID, productID },
     });
-    if (!variant) throw new NotFoundException('Không tìm thấy variant của sản phẩm này');
+    if (!variant)
+      throw new NotFoundException('Không tìm thấy variant của sản phẩm này');
     return variant;
   }
 }

@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { createPrismaModelMock, PrismaModelMock } from '../../../test/mocks/prisma.mock';
+import {
+  createPrismaModelMock,
+  PrismaModelMock,
+} from '../../../test/mocks/prisma.mock';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ProductsService } from '../products/products.service';
 import { ProductVariantsService } from './product-variants.service';
@@ -34,7 +37,10 @@ describe('ProductVariantsService', () => {
 
   /** recalculateSummary được gọi trong transaction (tx = mock prisma), với ensureSelling tương ứng. */
   const expectRecalculated = (ensureSelling: boolean) =>
-    expect(products.recalculateSummary).toHaveBeenCalledWith(P, { tx: prisma, ensureSelling });
+    expect(products.recalculateSummary).toHaveBeenCalledWith(P, {
+      tx: prisma,
+      ensureSelling,
+    });
 
   beforeEach(() => {
     variant = createPrismaModelMock();
@@ -48,11 +54,22 @@ describe('ProductVariantsService', () => {
       findOneOrThrow: jest.fn().mockResolvedValue({ id: P, status: 'active' }),
       recalculateSummary: jest.fn(),
     };
-    service = new ProductVariantsService(prisma, products as unknown as ProductsService);
+    service = new ProductVariantsService(
+      prisma,
+      products as unknown as ProductsService,
+    );
   });
 
   describe('create', () => {
-    const dto = { sku: 'SOFA-3C', name: '3 chỗ', options: [], price: 12_000_000, stock: 5, weightKg: 50, isActive: true };
+    const dto = {
+      sku: 'SOFA-3C',
+      name: '3 chỗ',
+      options: [],
+      price: 12_000_000,
+      stock: 5,
+      weightKg: 50,
+      isActive: true,
+    };
 
     it('tạo variant rồi tính lại giá / màu của product trong cùng transaction', async () => {
       variant.findMany.mockResolvedValue([]); // SKU chưa có
@@ -61,20 +78,26 @@ describe('ProductVariantsService', () => {
       await expect(service.create(P, dto)).resolves.toEqual({ id: 'new' });
 
       expect(transaction).toHaveBeenCalledTimes(1);
-      expect(variant.create).toHaveBeenCalledWith({ data: { ...dto, productID: P } });
+      expect(variant.create).toHaveBeenCalledWith({
+        data: { ...dto, productID: P },
+      });
       expectRecalculated(false);
     });
 
     it('SKU đã tồn tại → 409, không tạo', async () => {
       variant.findMany.mockResolvedValue([{ sku: 'SOFA-3C' }]);
-      await expect(service.create(P, dto)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.create(P, dto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
       expect(variant.create).not.toHaveBeenCalled();
       expect(products.recalculateSummary).not.toHaveBeenCalled();
     });
 
     it('product không tồn tại → 404', async () => {
       products.findOneOrThrow.mockRejectedValue(new NotFoundException());
-      await expect(service.create(P, dto)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.create(P, dto)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -86,18 +109,27 @@ describe('ProductVariantsService', () => {
 
     it('cập nhật rồi tính lại giá / màu của product trong cùng transaction', async () => {
       await service.update(P, V, { price: 8_500_000 });
-      expect(variant.update).toHaveBeenCalledWith({ where: { id: V }, data: { price: 8_500_000 } });
+      expect(variant.update).toHaveBeenCalledWith({
+        where: { id: V },
+        data: { price: 8_500_000 },
+      });
       expectRecalculated(false);
     });
 
     it('variant không thuộc product này → 404', async () => {
       variant.findFirst.mockResolvedValue(null);
-      await expect(service.update(P, V, { name: 'X' })).rejects.toBeInstanceOf(NotFoundException);
-      expect(variant.findFirst).toHaveBeenCalledWith({ where: { id: V, productID: P } });
+      await expect(service.update(P, V, { name: 'X' })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(variant.findFirst).toHaveBeenCalledWith({
+        where: { id: V, productID: P },
+      });
     });
 
     it('giá mới >= giá gạch ngang hiện tại → 400 (so với giá trị đang lưu)', async () => {
-      await expect(service.update(P, V, { price: 10_000_000 })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.update(P, V, { price: 10_000_000 }),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(variant.update).not.toHaveBeenCalled();
     });
 
@@ -108,7 +140,9 @@ describe('ProductVariantsService', () => {
 
     it('đổi sang SKU đã có → 409', async () => {
       variant.findMany.mockResolvedValue([{ sku: 'SOFA-3C' }]);
-      await expect(service.update(P, V, { sku: 'SOFA-3C' })).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.update(P, V, { sku: 'SOFA-3C' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('tắt variant đang bán: kiểm tra "còn variant đang bán" trong transaction', async () => {
@@ -118,7 +152,9 @@ describe('ProductVariantsService', () => {
 
     it('tắt variant đang bán cuối cùng của product active → 409 (lỗi từ recalculateSummary, transaction rollback)', async () => {
       products.recalculateSummary.mockRejectedValue(new ConflictException());
-      await expect(service.update(P, V, { isActive: false })).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.update(P, V, { isActive: false }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('variant đang tắt mà tắt tiếp / sửa field khác thì không cần kiểm tra', async () => {
@@ -128,12 +164,17 @@ describe('ProductVariantsService', () => {
     });
 
     it('BUG-08: 2 admin cùng tắt 2 variant cuối → transaction sau xung đột (P2034), chạy lại thì nhận 409', async () => {
-      const conflict = new Prisma.PrismaClientKnownRequestError('WriteConflict', { code: 'P2034', clientVersion: 't' });
+      const conflict = new Prisma.PrismaClientKnownRequestError(
+        'WriteConflict',
+        { code: 'P2034', clientVersion: 't' },
+      );
       products.recalculateSummary
         .mockRejectedValueOnce(conflict) // lần 1: document product đã bị transaction kia ghi
         .mockRejectedValueOnce(new ConflictException()); // lần 2: đọc lại thấy không còn variant đang bán
 
-      await expect(service.update(P, V, { isActive: false })).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.update(P, V, { isActive: false }),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(transaction).toHaveBeenCalledTimes(2);
     });
   });
@@ -154,7 +195,9 @@ describe('ProductVariantsService', () => {
     it('xóa variant đang bán cuối cùng của product active → 409', async () => {
       variant.findFirst.mockResolvedValue(existingVariant());
       products.recalculateSummary.mockRejectedValue(new ConflictException());
-      await expect(service.remove(P, V)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.remove(P, V)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
     });
 
     it('variant đang tắt thì xóa luôn, không cần kiểm tra', async () => {
@@ -165,7 +208,9 @@ describe('ProductVariantsService', () => {
 
     it('variant không thuộc product → 404, không ghi', async () => {
       variant.findFirst.mockResolvedValue(null);
-      await expect(service.remove(P, V)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove(P, V)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(transaction).not.toHaveBeenCalled();
     });
   });
@@ -175,8 +220,15 @@ describe('ProductVariantsService', () => {
       variant.findMany.mockResolvedValue([{ id: V }]);
       await expect(service.findForSale([V])).resolves.toEqual([{ id: V }]);
       const args = variant.findMany.mock.calls[0][0];
-      expect(args.where).toMatchObject({ id: { in: [V] }, OR: expect.any(Array) });
-      expect(args.select.product.select).toMatchObject({ status: true, allowBackorder: true, leadTimeDays: true });
+      expect(args.where).toMatchObject({
+        id: { in: [V] },
+        OR: expect.any(Array),
+      });
+      expect(args.select.product.select).toMatchObject({
+        status: true,
+        allowBackorder: true,
+        leadTimeDays: true,
+      });
 
       variant.findMany.mockClear();
       await expect(service.findForSale([])).resolves.toEqual([]);
@@ -184,7 +236,14 @@ describe('ProductVariantsService', () => {
     });
 
     it('reserveStock: trừ ATOMIC chỉ khi còn đủ; không đủ → 409 nêu tên sản phẩm', async () => {
-      const tx = { productVariant: { updateMany: jest.fn().mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 }) } };
+      const tx = {
+        productVariant: {
+          updateMany: jest
+            .fn()
+            .mockResolvedValueOnce({ count: 1 })
+            .mockResolvedValueOnce({ count: 0 }),
+        },
+      };
       await expect(
         service.reserveStock(
           [
@@ -202,8 +261,14 @@ describe('ProductVariantsService', () => {
 
     it('restoreStock: cộng lại kho (kể cả variant đã xóa)', async () => {
       const tx = { productVariant: { updateMany: jest.fn() } };
-      await service.restoreStock([{ variantID: 'v1', quantity: 3 }], tx as never);
-      expect(tx.productVariant.updateMany).toHaveBeenCalledWith({ where: { id: 'v1' }, data: { stock: { increment: 3 } } });
+      await service.restoreStock(
+        [{ variantID: 'v1', quantity: 3 }],
+        tx as never,
+      );
+      expect(tx.productVariant.updateMany).toHaveBeenCalledWith({
+        where: { id: 'v1' },
+        data: { stock: { increment: 3 } },
+      });
     });
   });
 
@@ -215,7 +280,13 @@ describe('ProductVariantsService', () => {
         where: {
           isActive: true,
           stock: { lte: 5 },
-          product: { is: { status: 'active', allowBackorder: false, OR: expect.any(Array) } },
+          product: {
+            is: {
+              status: 'active',
+              allowBackorder: false,
+              OR: expect.any(Array),
+            },
+          },
         },
         orderBy: [{ stock: 'asc' }, { sku: 'asc' }],
         take: 20,
@@ -228,7 +299,10 @@ describe('ProductVariantsService', () => {
       variant.findMany.mockResolvedValue([{ id: V }]);
       await expect(service.findByProduct(P)).resolves.toEqual([{ id: V }]);
       expect(products.findOneOrThrow).toHaveBeenCalledWith(P);
-      expect(variant.findMany).toHaveBeenCalledWith({ where: { productID: P }, orderBy: { createdAt: 'asc' } });
+      expect(variant.findMany).toHaveBeenCalledWith({
+        where: { productID: P },
+        orderBy: { createdAt: 'asc' },
+      });
     });
   });
 
@@ -239,7 +313,10 @@ describe('ProductVariantsService', () => {
 
     it('{ stock }: đặt tồn kho', async () => {
       await service.updateStock(V, { stock: 20 });
-      expect(variant.update).toHaveBeenCalledWith({ where: { id: V }, data: { stock: 20 } });
+      expect(variant.update).toHaveBeenCalledWith({
+        where: { id: V },
+        data: { stock: 20 },
+      });
     });
 
     it('{ adjust > 0 }: cộng kho, không cần điều kiện', async () => {
@@ -260,12 +337,16 @@ describe('ProductVariantsService', () => {
 
     it('trừ quá tồn kho → 409', async () => {
       variant.updateMany.mockResolvedValue({ count: 0 });
-      await expect(service.updateStock(V, { adjust: -10 })).rejects.toThrow('hiện còn 4');
+      await expect(service.updateStock(V, { adjust: -10 })).rejects.toThrow(
+        'hiện còn 4',
+      );
     });
 
     it('variant không tồn tại → 404', async () => {
       variant.findUnique.mockResolvedValue(null);
-      await expect(service.updateStock(V, { stock: 1 })).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.updateStock(V, { stock: 1 })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

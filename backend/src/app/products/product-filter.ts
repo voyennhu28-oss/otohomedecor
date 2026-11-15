@@ -12,7 +12,8 @@ export const buildPublicProductWhere = (
   query: Omit<ProductListQueryDto, 'sort' | 'page' | 'itemPerPage'>,
   categoryIDs?: string[],
 ): Prisma.ProductWhereInput => {
-  const { room, style, material, color, minPrice, maxPrice, inStock, q } = query;
+  const { room, style, material, color, minPrice, maxPrice, inStock, q } =
+    query;
   const conditions: Prisma.ProductWhereInput[] = [
     { status: ProductStatus.active }, // khách chỉ thấy sản phẩm đang bán
   ];

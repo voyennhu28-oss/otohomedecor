@@ -6,7 +6,9 @@ const AUTH_COOKIES = Object.values(TokenKeys);
 
 /** Trả lỗi cùng format với CatchEverythingFilter (middleware Express chạy ngoài filter của Nest). */
 const reject = (res: Response, status: number, message: string) => {
-  res.status(status).json({ errors: [{ message }], data: null, message: 'ERROR' });
+  res
+    .status(status)
+    .json({ errors: [{ message }], data: null, message: 'ERROR' });
 };
 
 /** "https://a.com/, http://b.com" → ["https://a.com", "http://b.com"]. Bỏ qua giá trị không phải URL. */
@@ -66,9 +68,14 @@ export const rejectNonJsonBody: RequestHandler = (req, res, next) => {
   // fetch(url, { method: 'POST' }) không body vẫn gửi "Content-Length: 0" và không có Content-Type
   // (vd logout, refresh-token chỉ dùng cookie) → coi là không có body, cho qua
   const hasBody =
-    req.headers['transfer-encoding'] !== undefined || Number(req.headers['content-length']) > 0;
+    req.headers['transfer-encoding'] !== undefined ||
+    Number(req.headers['content-length']) > 0;
   if (hasBody && !req.is(['json', 'multipart'])) {
-    return reject(res, 415, 'Chỉ nhận dữ liệu JSON (Content-Type: application/json)');
+    return reject(
+      res,
+      415,
+      'Chỉ nhận dữ liệu JSON (Content-Type: application/json)',
+    );
   }
   next();
 };

@@ -60,7 +60,9 @@ export class CreatePromotionDto extends createZodDto(
 ) {}
 
 /** PATCH /admin/promotions/:id. Rule giữa các field kiểm tra trong service (cần giá trị hiện tại). */
-export class UpdatePromotionDto extends createZodDto(z.object(fields).partial().strict()) {}
+export class UpdatePromotionDto extends createZodDto(
+  z.object(fields).partial().strict(),
+) {}
 
 /** GET /admin/promotions?q=&isActive=&page=&itemPerPage= */
 export class PromotionListQueryDto extends createZodDto(

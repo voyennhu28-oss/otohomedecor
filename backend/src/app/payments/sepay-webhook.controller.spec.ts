@@ -43,13 +43,18 @@ describe('SepayWebhookController', () => {
       controllers: [SepayWebhookController],
       providers: [
         { provide: PaymentsService, useValue: payments },
-        { provide: ConfigService, useValue: { get: (key: string) => env[key] } },
+        {
+          provide: ConfigService,
+          useValue: { get: (key: string) => env[key] },
+        },
         { provide: APP_PIPE, useClass: ZodValidationPipe },
         SepayWebhookGuard,
       ],
     }).compile();
     // rawBody giống main.ts (NEST_APP_OPTIONS), parser JSON mặc định cũng giữ body gốc
-    const app = moduleRef.createNestApplication({ rawBody: NEST_APP_OPTIONS.rawBody });
+    const app = moduleRef.createNestApplication({
+      rawBody: NEST_APP_OPTIONS.rawBody,
+    });
     await app.init();
     return app;
   };
@@ -79,27 +84,54 @@ describe('SepayWebhookController', () => {
 
     it('chữ ký đúng trên BODY GỐC → 200 và ĐÚNG body {"success":true}', async () => {
       const ts = nowSeconds();
-      const res = await post(RAW_BODY, { 'X-SePay-Timestamp': String(ts), 'X-SePay-Signature': sign(RAW_BODY, ts) });
+      const res = await post(RAW_BODY, {
+        'X-SePay-Timestamp': String(ts),
+        'X-SePay-Signature': sign(RAW_BODY, ts),
+      });
       expect(res.status).toBe(200);
       expect(res.text).toBe('{"success":true}');
       expect(payments.handleSepayWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 2, content: 'Thanh toán đơn HD2611137K3M9Q' }),
+        expect.objectContaining({
+          id: 2,
+          content: 'Thanh toán đơn HD2611137K3M9Q',
+        }),
       );
     });
 
     it('ký trên JSON đã chuẩn hóa lại (không phải body gốc) → 401', async () => {
       const ts = nowSeconds();
       const reserialized = JSON.stringify(JSON.parse(RAW_BODY));
-      const res = await post(RAW_BODY, { 'X-SePay-Timestamp': String(ts), 'X-SePay-Signature': sign(reserialized, ts) });
+      const res = await post(RAW_BODY, {
+        'X-SePay-Timestamp': String(ts),
+        'X-SePay-Signature': sign(reserialized, ts),
+      });
       expect(res.status).toBe(401);
     });
 
     it.each([
-      ['sai secret', (ts: number) => ({ 'X-SePay-Timestamp': String(ts), 'X-SePay-Signature': sign(RAW_BODY, ts, 'wrong') })],
+      [
+        'sai secret',
+        (ts: number) => ({
+          'X-SePay-Timestamp': String(ts),
+          'X-SePay-Signature': sign(RAW_BODY, ts, 'wrong'),
+        }),
+      ],
       ['thiếu chữ ký', (ts: number) => ({ 'X-SePay-Timestamp': String(ts) })],
-      ['thiếu timestamp', (ts: number) => ({ 'X-SePay-Signature': sign(RAW_BODY, ts) })],
-      ['timestamp khác lúc ký', (ts: number) => ({ 'X-SePay-Timestamp': String(ts + 1), 'X-SePay-Signature': sign(RAW_BODY, ts) })],
-      ['dùng API key thay chữ ký', () => ({ Authorization: `Apikey ${API_KEY}` })],
+      [
+        'thiếu timestamp',
+        (ts: number) => ({ 'X-SePay-Signature': sign(RAW_BODY, ts) }),
+      ],
+      [
+        'timestamp khác lúc ký',
+        (ts: number) => ({
+          'X-SePay-Timestamp': String(ts + 1),
+          'X-SePay-Signature': sign(RAW_BODY, ts),
+        }),
+      ],
+      [
+        'dùng API key thay chữ ký',
+        () => ({ Authorization: `Apikey ${API_KEY}` }),
+      ],
     ])('%s → 401, không xử lý', async (_name, headers) => {
       const res = await post(RAW_BODY, headers(nowSeconds()));
       expect(res.status).toBe(401);
@@ -108,7 +140,10 @@ describe('SepayWebhookController', () => {
 
     it('timestamp cũ hơn 5 phút (request bị phát lại) → 401 "hết hạn"', async () => {
       const ts = nowSeconds() - 301;
-      const res = await post(RAW_BODY, { 'X-SePay-Timestamp': String(ts), 'X-SePay-Signature': sign(RAW_BODY, ts) });
+      const res = await post(RAW_BODY, {
+        'X-SePay-Timestamp': String(ts),
+        'X-SePay-Signature': sign(RAW_BODY, ts),
+      });
       expect(res.status).toBe(401);
       expect(res.body.message).toMatch(/hết hạn/); // app test không có CatchEverythingFilter → format mặc định
     });
@@ -116,7 +151,10 @@ describe('SepayWebhookController', () => {
     it('chữ ký đúng nhưng body sai schema → 400', async () => {
       const ts = nowSeconds();
       const raw = '{"id":"abc"}';
-      const res = await post(raw, { 'X-SePay-Timestamp': String(ts), 'X-SePay-Signature': sign(raw, ts) });
+      const res = await post(raw, {
+        'X-SePay-Timestamp': String(ts),
+        'X-SePay-Signature': sign(raw, ts),
+      });
       expect(res.status).toBe(400);
     });
   });
@@ -128,17 +166,25 @@ describe('SepayWebhookController', () => {
     });
     afterAll(() => app.close());
 
-    const post = () => request(app.getHttpServer()).post('/payments/sepay/webhook');
+    const post = () =>
+      request(app.getHttpServer()).post('/payments/sepay/webhook');
 
     it('đúng API key → 200 và ĐÚNG body {"success":true}', async () => {
-      const res = await post().set('Authorization', `Apikey ${API_KEY}`).send(body);
+      const res = await post()
+        .set('Authorization', `Apikey ${API_KEY}`)
+        .send(body);
       expect(res.status).toBe(200);
       expect(res.text).toBe('{"success":true}');
-      expect(payments.handleSepayWebhook).toHaveBeenCalledWith(expect.objectContaining({ id: 1, transferAmount: 100_000 }));
+      expect(payments.handleSepayWebhook).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1, transferAmount: 100_000 }),
+      );
     });
 
     it('chữ "Apikey" không phân biệt hoa thường', async () => {
-      expect((await post().set('Authorization', `APIKEY ${API_KEY}`).send(body)).status).toBe(200);
+      expect(
+        (await post().set('Authorization', `APIKEY ${API_KEY}`).send(body))
+          .status,
+      ).toBe(200);
     });
 
     it.each([
@@ -159,19 +205,26 @@ describe('SepayWebhookController', () => {
 
     it('giao dịch bỏ qua / trùng vẫn trả {"success":true} (SePay không gửi lại)', async () => {
       payments.handleSepayWebhook.mockResolvedValue({ outcome: 'duplicate' });
-      const res = await post().set('Authorization', `Apikey ${API_KEY}`).send(body);
+      const res = await post()
+        .set('Authorization', `Apikey ${API_KEY}`)
+        .send(body);
       expect(res.text).toBe('{"success":true}');
     });
 
     it('lỗi hệ thống → 5xx để SePay gửi lại', async () => {
       payments.handleSepayWebhook.mockRejectedValue(new Error('db down'));
-      const res = await post().set('Authorization', `Apikey ${API_KEY}`).send(body);
+      const res = await post()
+        .set('Authorization', `Apikey ${API_KEY}`)
+        .send(body);
       expect(res.status).toBeGreaterThanOrEqual(500);
     });
   });
 
   it('đặt cả 2 → dùng HMAC (API key không còn đủ)', async () => {
-    const app = await createApp({ SEPAY_WEBHOOK_SECRET: SECRET, SEPAY_WEBHOOK_API_KEY: API_KEY });
+    const app = await createApp({
+      SEPAY_WEBHOOK_SECRET: SECRET,
+      SEPAY_WEBHOOK_API_KEY: API_KEY,
+    });
     const res = await request(app.getHttpServer())
       .post('/payments/sepay/webhook')
       .set('Authorization', `Apikey ${API_KEY}`)

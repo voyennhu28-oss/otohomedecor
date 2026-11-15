@@ -32,8 +32,16 @@ import { AdminShippingZonesController } from './shipping-zones/admin-shipping-zo
 import { ShippingZonesController } from './shipping-zones/shipping-zones.controller';
 import { ShippingZonesService } from './shipping-zones/shipping-zones.service';
 
-const me: UserInfo = { userID: 'u1', userEmail: 'khach@x.com', role: Role.customer };
-const admin: UserInfo = { userID: 'a1', userEmail: 'admin@x.com', role: Role.admin };
+const me: UserInfo = {
+  userID: 'u1',
+  userEmail: 'khach@x.com',
+  role: Role.customer,
+};
+const admin: UserInfo = {
+  userID: 'a1',
+  userEmail: 'admin@x.com',
+  role: Role.admin,
+};
 const ID = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const ORDER_NUMBER = 'HD261113-ABCDEF';
 
@@ -45,16 +53,19 @@ const handlers = (controller: Ctor) =>
 
 describe('Controller giai đoạn 3', () => {
   describe('phân quyền', () => {
-    it.each([AddressesController, CartsController, CheckoutController, OrdersController, PaymentsController])(
-      '%p: cần đăng nhập, không phải chỉ admin',
-      (controller) => {
-        expect(Reflect.getMetadata(IS_PUBLIC, controller)).toBeUndefined();
-        expect(Reflect.getMetadata(IS_ADMIN_ONLY, controller)).toBeUndefined();
-        for (const handler of handlers(controller)) {
-          expect(Reflect.getMetadata(IS_PUBLIC, handler)).toBeUndefined();
-        }
-      },
-    );
+    it.each([
+      AddressesController,
+      CartsController,
+      CheckoutController,
+      OrdersController,
+      PaymentsController,
+    ])('%p: cần đăng nhập, không phải chỉ admin', (controller) => {
+      expect(Reflect.getMetadata(IS_PUBLIC, controller)).toBeUndefined();
+      expect(Reflect.getMetadata(IS_ADMIN_ONLY, controller)).toBeUndefined();
+      for (const handler of handlers(controller)) {
+        expect(Reflect.getMetadata(IS_PUBLIC, handler)).toBeUndefined();
+      }
+    });
 
     it.each([
       AdminOrdersController,
@@ -63,23 +74,34 @@ describe('Controller giai đoạn 3', () => {
       AdminPaymentsController,
       AdminReviewsController,
       AdminDashboardController,
-    ])(
-      '%p: @AdminOnly ở cấp class',
-      (controller) => {
-        expect(Reflect.getMetadata(IS_ADMIN_ONLY, controller)).toBe(true);
-      },
-    );
+    ])('%p: @AdminOnly ở cấp class', (controller) => {
+      expect(Reflect.getMetadata(IS_ADMIN_ONLY, controller)).toBe(true);
+    });
 
     it('review: xem là public; viết / sửa / xóa cần đăng nhập', () => {
-      expect(Reflect.getMetadata(IS_PUBLIC, ReviewsController.prototype.findByProduct)).toBe(true);
+      expect(
+        Reflect.getMetadata(
+          IS_PUBLIC,
+          ReviewsController.prototype.findByProduct,
+        ),
+      ).toBe(true);
       for (const method of ['create', 'update', 'remove'] as const) {
-        expect(Reflect.getMetadata(IS_PUBLIC, ReviewsController.prototype[method])).toBeUndefined();
+        expect(
+          Reflect.getMetadata(IS_PUBLIC, ReviewsController.prototype[method]),
+        ).toBeUndefined();
       }
-      expect(Reflect.getMetadata(IS_ADMIN_ONLY, ReviewsController)).toBeUndefined();
+      expect(
+        Reflect.getMetadata(IS_ADMIN_ONLY, ReviewsController),
+      ).toBeUndefined();
     });
 
     it('GET /shipping-zones/provinces là public (form địa chỉ dùng trước khi đăng nhập)', () => {
-      expect(Reflect.getMetadata(IS_PUBLIC, ShippingZonesController.prototype.listProvinces)).toBe(true);
+      expect(
+        Reflect.getMetadata(
+          IS_PUBLIC,
+          ShippingZonesController.prototype.listProvinces,
+        ),
+      ).toBe(true);
     });
   });
 
@@ -88,7 +110,9 @@ describe('Controller giai đoạn 3', () => {
       const module = await AutoMockingModule.createTestingModule({
         controllers: [AddressesController, CartsController],
       });
-      const addresses = module.get(AddressesService) as jest.Mocked<AddressesService>;
+      const addresses = module.get(
+        AddressesService,
+      ) as jest.Mocked<AddressesService>;
       const carts = module.get(CartsService) as jest.Mocked<CartsService>;
       const addressCtrl = module.get(AddressesController);
       const cartCtrl = module.get(CartsController);
@@ -106,7 +130,10 @@ describe('Controller giai đoạn 3', () => {
       await cartCtrl.updateItem(me, { variantID: ID }, { quantity: 3 });
       await cartCtrl.removeItem(me, { variantID: ID });
       await cartCtrl.clear(me);
-      expect(carts.addItem).toHaveBeenCalledWith('u1', { variantID: ID, quantity: 2 });
+      expect(carts.addItem).toHaveBeenCalledWith('u1', {
+        variantID: ID,
+        quantity: 2,
+      });
       expect(carts.updateItem).toHaveBeenCalledWith('u1', ID, 3);
       expect(carts.removeItem).toHaveBeenCalledWith('u1', ID);
       expect(carts.clearCart).toHaveBeenCalledWith('u1');
@@ -116,10 +143,16 @@ describe('Controller giai đoạn 3', () => {
       const module = await AutoMockingModule.createTestingModule({
         controllers: [CheckoutController, OrdersController],
       });
-      const checkout = module.get(CheckoutService) as jest.Mocked<CheckoutService>;
+      const checkout = module.get(
+        CheckoutService,
+      ) as jest.Mocked<CheckoutService>;
       const orders = module.get(OrdersService) as jest.Mocked<OrdersService>;
 
-      const dto = { addressID: ID, withAssembly: false, paymentMethod: 'cod' as const };
+      const dto = {
+        addressID: ID,
+        withAssembly: false,
+        paymentMethod: 'cod' as const,
+      };
       await module.get(CheckoutController).checkout(me, dto);
       await module.get(CheckoutController).preview(me, dto);
       expect(checkout.checkout).toHaveBeenCalledWith(me, dto);
@@ -128,51 +161,97 @@ describe('Controller giai đoạn 3', () => {
       const ctrl = module.get(OrdersController);
       await ctrl.findMine(me, { page: 1, itemPerPage: 10 });
       await ctrl.findOne(me, { orderNumber: ORDER_NUMBER });
-      await ctrl.cancel(me, { orderNumber: ORDER_NUMBER }, { reason: 'Đặt nhầm' });
-      expect(orders.findMine).toHaveBeenCalledWith('u1', { page: 1, itemPerPage: 10 });
+      await ctrl.cancel(
+        me,
+        { orderNumber: ORDER_NUMBER },
+        { reason: 'Đặt nhầm' },
+      );
+      expect(orders.findMine).toHaveBeenCalledWith('u1', {
+        page: 1,
+        itemPerPage: 10,
+      });
       expect(orders.findMineByNumber).toHaveBeenCalledWith('u1', ORDER_NUMBER);
-      expect(orders.cancelMine).toHaveBeenCalledWith(me, ORDER_NUMBER, 'Đặt nhầm');
+      expect(orders.cancelMine).toHaveBeenCalledWith(
+        me,
+        ORDER_NUMBER,
+        'Đặt nhầm',
+      );
     });
   });
 
   describe('admin', () => {
     it('orders: đổi trạng thái ghi nhận admin thao tác; export trả file xlsx', async () => {
-      const module = await AutoMockingModule.createTestingModule({ controllers: [AdminOrdersController] });
+      const module = await AutoMockingModule.createTestingModule({
+        controllers: [AdminOrdersController],
+      });
       const orders = module.get(OrdersService) as jest.Mocked<OrdersService>;
       const ctrl = module.get(AdminOrdersController);
 
       await ctrl.updateStatus(admin, { id: ID }, { status: 'confirmed' });
-      expect(orders.updateStatus).toHaveBeenCalledWith(admin, ID, { status: 'confirmed' });
+      expect(orders.updateStatus).toHaveBeenCalledWith(admin, ID, {
+        status: 'confirmed',
+      });
 
-      orders.exportExcel.mockResolvedValue({ xlsx: { writeBuffer: () => Promise.resolve(new ArrayBuffer(4)) } } as never);
+      orders.exportExcel.mockResolvedValue({
+        xlsx: { writeBuffer: () => Promise.resolve(new ArrayBuffer(4)) },
+      } as never);
       const file = await ctrl.exportExcel({});
       expect(file.getHeaders()).toMatchObject({
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        disposition: expect.stringMatching(/^attachment; filename="orders_\d{4}_\d{2}_\d{2}\.xlsx"$/),
+        disposition: expect.stringMatching(
+          /^attachment; filename="orders_\d{4}_\d{2}_\d{2}\.xlsx"$/,
+        ),
       });
 
       await ctrl.findList({ page: 1, itemPerPage: 20 });
       await ctrl.findOne({ id: ID });
       expect(orders.findAdminByID).toHaveBeenCalledWith(ID);
 
-      await ctrl.markPaid(admin, { id: ID }, { note: 'Khách chuyển sai nội dung' });
-      expect(orders.markPaidManually).toHaveBeenCalledWith(admin, ID, 'Khách chuyển sai nội dung');
+      await ctrl.markPaid(
+        admin,
+        { id: ID },
+        { note: 'Khách chuyển sai nội dung' },
+      );
+      expect(orders.markPaidManually).toHaveBeenCalledWith(
+        admin,
+        ID,
+        'Khách chuyển sai nội dung',
+      );
     });
 
     it('reviews / dashboard: chuyển tiếp đúng tham số, userID lấy từ token', async () => {
-      const reviewModule = await AutoMockingModule.createTestingModule({ controllers: [ReviewsController] });
-      const adminReviewModule = await AutoMockingModule.createTestingModule({ controllers: [AdminReviewsController] });
-      const dashboardModule = await AutoMockingModule.createTestingModule({ controllers: [AdminDashboardController] });
-      const reviews = reviewModule.get(ReviewsService) as jest.Mocked<ReviewsService>;
-      const adminReviews = adminReviewModule.get(ReviewsService) as jest.Mocked<ReviewsService>;
-      const dashboard = dashboardModule.get(DashboardService) as jest.Mocked<DashboardService>;
+      const reviewModule = await AutoMockingModule.createTestingModule({
+        controllers: [ReviewsController],
+      });
+      const adminReviewModule = await AutoMockingModule.createTestingModule({
+        controllers: [AdminReviewsController],
+      });
+      const dashboardModule = await AutoMockingModule.createTestingModule({
+        controllers: [AdminDashboardController],
+      });
+      const reviews = reviewModule.get(
+        ReviewsService,
+      ) as jest.Mocked<ReviewsService>;
+      const adminReviews = adminReviewModule.get(
+        ReviewsService,
+      ) as jest.Mocked<ReviewsService>;
+      const dashboard = dashboardModule.get(
+        DashboardService,
+      ) as jest.Mocked<DashboardService>;
 
       const ctrl = reviewModule.get(ReviewsController);
-      await ctrl.findByProduct({ productID: ID }, { sort: 'newest', page: 1, itemPerPage: 10 });
+      await ctrl.findByProduct(
+        { productID: ID },
+        { sort: 'newest', page: 1, itemPerPage: 10 },
+      );
       await ctrl.create(me, { productID: ID }, { rating: 5 });
       await ctrl.update(me, { id: ID }, { rating: 4 });
       await ctrl.remove(me, { id: ID });
-      expect(reviews.findPublic).toHaveBeenCalledWith(ID, { sort: 'newest', page: 1, itemPerPage: 10 });
+      expect(reviews.findPublic).toHaveBeenCalledWith(ID, {
+        sort: 'newest',
+        page: 1,
+        itemPerPage: 10,
+      });
       expect(reviews.create).toHaveBeenCalledWith(me, ID, { rating: 5 });
       expect(reviews.updateMine).toHaveBeenCalledWith('u1', ID, { rating: 4 });
       expect(reviews.removeMine).toHaveBeenCalledWith('u1', ID);
@@ -184,25 +263,45 @@ describe('Controller giai đoạn 3', () => {
 
       await adminCtrl.removeImage({ id: ID, publicID: 'hd-review-x' });
       expect(
-        (adminReviewModule.get(ReviewImagesService) as jest.Mocked<ReviewImagesService>).removeAsAdmin,
+        (
+          adminReviewModule.get(
+            ReviewImagesService,
+          ) as jest.Mocked<ReviewImagesService>
+        ).removeAsAdmin,
       ).toHaveBeenCalledWith(ID, 'hd-review-x');
 
-      await dashboardModule.get(AdminDashboardController).getOverview({ lowStockThreshold: 5, topLimit: 10 });
-      expect(dashboard.getOverview).toHaveBeenCalledWith({ lowStockThreshold: 5, topLimit: 10 });
+      await dashboardModule
+        .get(AdminDashboardController)
+        .getOverview({ lowStockThreshold: 5, topLimit: 10 });
+      expect(dashboard.getOverview).toHaveBeenCalledWith({
+        lowStockThreshold: 5,
+        topLimit: 10,
+      });
     });
 
     it('payments: thông tin chuyển khoản lấy userID từ token; admin xem danh sách giao dịch', async () => {
-      const meModule = await AutoMockingModule.createTestingModule({ controllers: [PaymentsController] });
-      const adminModule = await AutoMockingModule.createTestingModule({ controllers: [AdminPaymentsController] });
+      const meModule = await AutoMockingModule.createTestingModule({
+        controllers: [PaymentsController],
+      });
+      const adminModule = await AutoMockingModule.createTestingModule({
+        controllers: [AdminPaymentsController],
+      });
 
-      await meModule.get(PaymentsController).getTransferInfo(me, { orderNumber: ORDER_NUMBER });
-      expect((meModule.get(PaymentsService) as jest.Mocked<PaymentsService>).getMyTransferInfo).toHaveBeenCalledWith(
-        'u1',
-        ORDER_NUMBER,
-      );
+      await meModule
+        .get(PaymentsController)
+        .getTransferInfo(me, { orderNumber: ORDER_NUMBER });
+      expect(
+        (meModule.get(PaymentsService) as jest.Mocked<PaymentsService>)
+          .getMyTransferInfo,
+      ).toHaveBeenCalledWith('u1', ORDER_NUMBER);
 
-      await adminModule.get(AdminPaymentsController).findList({ status: 'failed', page: 1, itemPerPage: 20 });
-      expect((adminModule.get(PaymentsService) as jest.Mocked<PaymentsService>).findList).toHaveBeenCalledWith({
+      await adminModule
+        .get(AdminPaymentsController)
+        .findList({ status: 'failed', page: 1, itemPerPage: 20 });
+      expect(
+        (adminModule.get(PaymentsService) as jest.Mocked<PaymentsService>)
+          .findList,
+      ).toHaveBeenCalledWith({
         status: 'failed',
         page: 1,
         itemPerPage: 20,
@@ -211,12 +310,24 @@ describe('Controller giai đoạn 3', () => {
 
     it('promotions / shipping zones: chuyển tiếp đúng tham số', async () => {
       // Mỗi controller 1 module: AutoMockingModule tạo mock riêng cho từng nơi inject
-      const promoModule = await AutoMockingModule.createTestingModule({ controllers: [AdminPromotionsController] });
-      const zoneModule = await AutoMockingModule.createTestingModule({ controllers: [AdminShippingZonesController] });
-      const publicModule = await AutoMockingModule.createTestingModule({ controllers: [ShippingZonesController] });
-      const promotions = promoModule.get(PromotionsService) as jest.Mocked<PromotionsService>;
-      const zones = zoneModule.get(ShippingZonesService) as jest.Mocked<ShippingZonesService>;
-      const publicZones = publicModule.get(ShippingZonesService) as jest.Mocked<ShippingZonesService>;
+      const promoModule = await AutoMockingModule.createTestingModule({
+        controllers: [AdminPromotionsController],
+      });
+      const zoneModule = await AutoMockingModule.createTestingModule({
+        controllers: [AdminShippingZonesController],
+      });
+      const publicModule = await AutoMockingModule.createTestingModule({
+        controllers: [ShippingZonesController],
+      });
+      const promotions = promoModule.get(
+        PromotionsService,
+      ) as jest.Mocked<PromotionsService>;
+      const zones = zoneModule.get(
+        ShippingZonesService,
+      ) as jest.Mocked<ShippingZonesService>;
+      const publicZones = publicModule.get(
+        ShippingZonesService,
+      ) as jest.Mocked<ShippingZonesService>;
 
       const promoCtrl = promoModule.get(AdminPromotionsController);
       await promoCtrl.findList({ page: 1, itemPerPage: 20 });

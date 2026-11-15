@@ -14,7 +14,11 @@ import { UserInfo } from '../../common/decorators/user.decorator';
 import { parseOrigins } from '../../common/middlewares/csrf.middleware';
 import { MailUtilService } from '../../common/utils/mail-util/mail-util.service';
 import { safeHtml } from '../../common/utils/string-util/html.util';
-import { omitSensitive, SALT_ROUNDS, UsersService } from '../users/users.service';
+import {
+  omitSensitive,
+  SALT_ROUNDS,
+  UsersService,
+} from '../users/users.service';
 import {
   ACCESS_TOKEN_TTL,
   JwtPayload,
@@ -37,7 +41,10 @@ const hashToken = (token: string) =>
  * Hash giả (cùng cost với hash thật) để signIn luôn chạy bcrypt.compare kể cả khi email
  * không tồn tại → không dò được email đã đăng ký qua thời gian phản hồi.
  */
-const DUMMY_PASSWORD_HASH = bcrypt.hashSync(randomBytes(16).toString('hex'), SALT_ROUNDS);
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
+  randomBytes(16).toString('hex'),
+  SALT_ROUNDS,
+);
 
 type TokenUser = Pick<User, 'id' | 'email' | 'role'> & {
   tokenVersion?: number | null;
@@ -57,7 +64,8 @@ export class AuthService {
   ) {
     this.refreshSecret = config.getOrThrow<string>(JWTEnvs.JWT_REFRESH_SECRET);
     // Link trong email trỏ về FE đầu tiên, chuẩn hóa giống CORS ("https://a.com/" → "https://a.com")
-    this.feUrl = parseOrigins(config.get<string>('FE_URL'))[0] ?? 'http://localhost:3000';
+    this.feUrl =
+      parseOrigins(config.get<string>('FE_URL'))[0] ?? 'http://localhost:3000';
   }
 
   async signUp(dto: SignUpDto) {
@@ -71,7 +79,10 @@ export class AuthService {
 
   async signIn({ email, password }: SignInDto) {
     const user = await this.usersService.findForAuth({ email });
-    const isMatch = await bcrypt.compare(password, user?.password ?? DUMMY_PASSWORD_HASH);
+    const isMatch = await bcrypt.compare(
+      password,
+      user?.password ?? DUMMY_PASSWORD_HASH,
+    );
     if (!user || !isMatch) {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
@@ -155,14 +166,19 @@ export class AuthService {
     if (!(await bcrypt.compare(oldPassword, user.password))) {
       throw new BadRequestException('Mật khẩu cũ không đúng');
     }
-    const tokenVersion = await this.usersService.updatePassword(user, newPassword);
+    const tokenVersion = await this.usersService.updatePassword(
+      user,
+      newPassword,
+    );
     return {
       message: 'Đổi mật khẩu thành công',
       ...(await this.createTokens({ ...user, tokenVersion })),
     };
   }
 
-  private async sendResetPasswordEmail(user: Pick<User, 'id' | 'email' | 'fullName'>) {
+  private async sendResetPasswordEmail(
+    user: Pick<User, 'id' | 'email' | 'fullName'>,
+  ) {
     try {
       const token = randomBytes(32).toString('hex');
       await this.usersService.setResetPasswordToken(

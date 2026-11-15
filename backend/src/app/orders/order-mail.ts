@@ -1,4 +1,9 @@
-import { OrderStatus, PaymentMethod, PaymentStatus, type Order } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  type Order,
+} from '@prisma/client';
 import { raw, safeHtml } from '../../common/utils/string-util/html.util';
 import type { TransferInfo } from '../payments/sepay.util';
 import { formatAddress } from './order-excel';
@@ -36,9 +41,16 @@ export interface MailContext {
 
 const vnd = (n: number) => `${new Intl.NumberFormat('vi-VN').format(n)}đ`;
 const date = (d: Date) =>
-  new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'long' }).format(d);
+  new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    dateStyle: 'long',
+  }).format(d);
 const dateTime = (d: Date) =>
-  new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }).format(d);
+  new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(d);
 
 // ───────────── khối dùng chung ─────────────
 
@@ -52,7 +64,9 @@ ${raw(body)}
 </div>`;
 
 const row = (label: string, value: string, bold = false) =>
-  raw(safeHtml`<tr><td style="padding:2px 0">${label}</td><td style="padding:2px 0;text-align:right${bold ? ';font-weight:bold' : ''}">${value}</td></tr>`);
+  raw(
+    safeHtml`<tr><td style="padding:2px 0">${label}</td><td style="padding:2px 0;text-align:right${bold ? ';font-weight:bold' : ''}">${value}</td></tr>`,
+  );
 
 /** Bảng sản phẩm + tiền. */
 const orderSummary = (o: MailOrder) => {
@@ -66,7 +80,14 @@ const orderSummary = (o: MailOrder) => {
     row('Tạm tính', vnd(o.subtotal)),
     row('Phí vận chuyển', vnd(o.shippingFee)),
     ...(o.assemblyFee ? [row('Phí lắp đặt', vnd(o.assemblyFee))] : []),
-    ...(o.discount ? [row(`Giảm giá${o.promotionCode ? ` (${o.promotionCode})` : ''}`, `-${vnd(o.discount)}`)] : []),
+    ...(o.discount
+      ? [
+          row(
+            `Giảm giá${o.promotionCode ? ` (${o.promotionCode})` : ''}`,
+            `-${vnd(o.discount)}`,
+          ),
+        ]
+      : []),
     row('Tổng cộng', vnd(o.total), true),
   ];
   return safeHtml`<table style="width:100%;border-collapse:collapse;margin:12px 0">${items}</table>
@@ -87,7 +108,10 @@ ${row('Số tiền', vnd(t.amount), true)}${row('Nội dung', t.content, true)}
 
 const itemsText = (o: MailOrder) =>
   [
-    ...o.items.map((i) => `- ${i.name}${i.variantName ? ` (${i.variantName})` : ''} × ${i.quantity}: ${vnd(i.lineTotal)}`),
+    ...o.items.map(
+      (i) =>
+        `- ${i.name}${i.variantName ? ` (${i.variantName})` : ''} × ${i.quantity}: ${vnd(i.lineTotal)}`,
+    ),
     `Tổng cộng: ${vnd(o.total)}`,
   ].join('\n');
 
@@ -126,12 +150,22 @@ ${raw(payment)}${raw(delivery)}${raw(orderSummary(o))}`,
 };
 
 /** Nội dung theo trạng thái; null = trạng thái này không gửi email (pending, processing). */
-const statusContent = (o: MailOrder): { title: string; message: string } | null => {
+const statusContent = (
+  o: MailOrder,
+): { title: string; message: string } | null => {
   switch (o.status) {
     case OrderStatus.confirmed:
-      return o.paymentMethod === PaymentMethod.bank_transfer && o.paymentStatus === PaymentStatus.paid
-        ? { title: 'Đã nhận thanh toán', message: `Shop đã nhận được ${vnd(o.total)} và xác nhận đơn hàng. Đơn sẽ sớm được chuẩn bị.` }
-        : { title: 'Đơn hàng đã được xác nhận', message: 'Shop đã xác nhận đơn hàng và sẽ sớm chuẩn bị hàng cho bạn.' };
+      return o.paymentMethod === PaymentMethod.bank_transfer &&
+        o.paymentStatus === PaymentStatus.paid
+        ? {
+            title: 'Đã nhận thanh toán',
+            message: `Shop đã nhận được ${vnd(o.total)} và xác nhận đơn hàng. Đơn sẽ sớm được chuẩn bị.`,
+          }
+        : {
+            title: 'Đơn hàng đã được xác nhận',
+            message:
+              'Shop đã xác nhận đơn hàng và sẽ sớm chuẩn bị hàng cho bạn.',
+          };
     case OrderStatus.shipping:
       return {
         title: 'Đơn hàng đang được giao',
@@ -140,13 +174,18 @@ const statusContent = (o: MailOrder): { title: string; message: string } | null 
           : 'Đơn hàng đã được giao cho đơn vị vận chuyển.',
       };
     case OrderStatus.delivered:
-      return { title: 'Giao hàng thành công', message: `Đơn hàng đã được giao. Cảm ơn bạn đã tin chọn ${SHOP_NAME}!` };
+      return {
+        title: 'Giao hàng thành công',
+        message: `Đơn hàng đã được giao. Cảm ơn bạn đã tin chọn ${SHOP_NAME}!`,
+      };
     case OrderStatus.cancelled:
       return {
         title: 'Đơn hàng đã bị hủy',
         message: [
           o.cancelReason ? `Lý do: ${o.cancelReason}.` : 'Đơn hàng đã bị hủy.',
-          o.paymentStatus === PaymentStatus.refunded ? 'Khoản tiền bạn đã thanh toán sẽ được shop hoàn lại.' : '',
+          o.paymentStatus === PaymentStatus.refunded
+            ? 'Khoản tiền bạn đã thanh toán sẽ được shop hoàn lại.'
+            : '',
         ]
           .filter(Boolean)
           .join(' '),
@@ -165,13 +204,20 @@ const statusContent = (o: MailOrder): { title: string; message: string } | null 
 };
 
 /** Email khi đơn đổi trạng thái (gồm cả khi SePay báo đã nhận tiền). */
-export const buildStatusEmail = (o: MailOrder, ctx: MailContext): OrderEmail | null => {
+export const buildStatusEmail = (
+  o: MailOrder,
+  ctx: MailContext,
+): OrderEmail | null => {
   const content = statusContent(o);
   if (!content) return null;
   const title = `${content.title} #${o.orderNumber}`;
   return {
     subject: `[${SHOP_NAME}] ${title}`,
-    html: layout(title, safeHtml`<p>${content.message}</p>${raw(orderSummary(o))}`, ctx),
+    html: layout(
+      title,
+      safeHtml`<p>${content.message}</p>${raw(orderSummary(o))}`,
+      ctx,
+    ),
     text: `Chào ${ctx.customerName},\n\n${content.message}\n\n${itemsText(o)}\n\nXem đơn: ${ctx.orderUrl}`,
   };
 };

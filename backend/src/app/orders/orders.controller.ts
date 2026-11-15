@@ -1,7 +1,19 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
-import { CancelOrderDto, MyOrderListQueryDto, OrderNumberParamDto } from './dto/order.dto';
+import {
+  CancelOrderDto,
+  MyOrderListQueryDto,
+  OrderNumberParamDto,
+} from './dto/order.dto';
 import { OrdersService } from './orders.service';
 
 /** Đơn hàng của người đang đăng nhập. userID luôn lấy từ token. */
@@ -16,7 +28,10 @@ export class OrdersController {
   }
 
   @Get(':orderNumber')
-  findOne(@User() user: UserInfo, @Param() { orderNumber }: OrderNumberParamDto) {
+  findOne(
+    @User() user: UserInfo,
+    @Param() { orderNumber }: OrderNumberParamDto,
+  ) {
     return this.ordersService.findMineByNumber(user.userID, orderNumber);
   }
 

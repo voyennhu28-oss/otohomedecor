@@ -8,7 +8,10 @@ describe('FormatResponseInterceptor', () => {
   const handle = (data: unknown): CallHandler => ({ handle: () => of(data) });
 
   it('bọc dữ liệu trả về theo format chung { errors, data, message }', async () => {
-    const result$ = interceptor.intercept({} as ExecutionContext, handle({ id: 1 }));
+    const result$ = interceptor.intercept(
+      {} as ExecutionContext,
+      handle({ id: 1 }),
+    );
     await expect(lastValueFrom(result$)).resolves.toEqual({
       errors: null,
       data: { id: 1 },
@@ -17,7 +20,12 @@ describe('FormatResponseInterceptor', () => {
   });
 
   it('dữ liệu có message thì dùng làm message của response', async () => {
-    const result$ = interceptor.intercept({} as ExecutionContext, handle({ message: 'Đã đăng xuất' }));
-    await expect(lastValueFrom(result$)).resolves.toMatchObject({ message: 'Đã đăng xuất' });
+    const result$ = interceptor.intercept(
+      {} as ExecutionContext,
+      handle({ message: 'Đã đăng xuất' }),
+    );
+    await expect(lastValueFrom(result$)).resolves.toMatchObject({
+      message: 'Đã đăng xuất',
+    });
   });
 });

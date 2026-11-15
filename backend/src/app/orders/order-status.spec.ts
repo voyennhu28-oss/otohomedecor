@@ -6,7 +6,12 @@ import {
   ORDER_NUMBER_REGEX,
   toPaymentCode,
 } from './order-number';
-import { assertTransition, canTransition, ORDER_TRANSITIONS, statusTimestamp } from './order-status';
+import {
+  assertTransition,
+  canTransition,
+  ORDER_TRANSITIONS,
+  statusTimestamp,
+} from './order-status';
 
 const ALL = Object.values(OrderStatus);
 
@@ -38,7 +43,11 @@ describe('order-status', () => {
   });
 
   it('không hủy được đơn đang chuẩn bị / đang giao / đã giao', () => {
-    for (const from of [OrderStatus.processing, OrderStatus.shipping, OrderStatus.delivered]) {
+    for (const from of [
+      OrderStatus.processing,
+      OrderStatus.shipping,
+      OrderStatus.delivered,
+    ]) {
       expect(canTransition(from, OrderStatus.cancelled)).toBe(false);
     }
   });
@@ -49,14 +58,22 @@ describe('order-status', () => {
   });
 
   it('thông báo lỗi dùng nhãn tiếng Việt', () => {
-    expect(() => assertTransition('delivered', 'cancelled')).toThrow('từ "Đã giao" sang "Đã hủy"');
+    expect(() => assertTransition('delivered', 'cancelled')).toThrow(
+      'từ "Đã giao" sang "Đã hủy"',
+    );
   });
 
   it('statusTimestamp: shipping / delivered / cancelled có mốc thời gian riêng', () => {
     const at = new Date();
-    expect(statusTimestamp(OrderStatus.shipping, at)).toEqual({ shippedAt: at });
-    expect(statusTimestamp(OrderStatus.delivered, at)).toEqual({ deliveredAt: at });
-    expect(statusTimestamp(OrderStatus.cancelled, at)).toEqual({ cancelledAt: at });
+    expect(statusTimestamp(OrderStatus.shipping, at)).toEqual({
+      shippedAt: at,
+    });
+    expect(statusTimestamp(OrderStatus.delivered, at)).toEqual({
+      deliveredAt: at,
+    });
+    expect(statusTimestamp(OrderStatus.cancelled, at)).toEqual({
+      cancelledAt: at,
+    });
     expect(statusTimestamp(OrderStatus.confirmed, at)).toEqual({});
   });
 });
@@ -71,7 +88,9 @@ describe('generateOrderNumber', () => {
   });
 
   it('ngẫu nhiên giữa các lần gọi', () => {
-    const numbers = new Set(Array.from({ length: 200 }, () => generateOrderNumber()));
+    const numbers = new Set(
+      Array.from({ length: 200 }, () => generateOrderNumber()),
+    );
     expect(numbers.size).toBe(200);
   });
 });
@@ -86,7 +105,9 @@ describe('mã thanh toán SePay', () => {
   it('findOrderNumberInText: đọc lại mã đơn từ code / nội dung chuyển khoản', () => {
     expect(findOrderNumberInText('HD2611137K3M9Q')).toBe('HD261113-7K3M9Q');
     // ngân hàng thêm tiền tố, khách gõ thường / có khoảng trắng / còn giữ dấu "-"
-    expect(findOrderNumberInText('MBVCB.123456.hd2611137k3m9q thanh toan')).toBe('HD261113-7K3M9Q');
+    expect(
+      findOrderNumberInText('MBVCB.123456.hd2611137k3m9q thanh toan'),
+    ).toBe('HD261113-7K3M9Q');
     expect(findOrderNumberInText('CK HD261113-7K3M9Q')).toBe('HD261113-7K3M9Q');
     expect(findOrderNumberInText('HD 261113 7K3M9Q')).toBe('HD261113-7K3M9Q');
   });
@@ -100,7 +121,9 @@ describe('mã thanh toán SePay', () => {
   it('khứ hồi: mọi mã đơn sinh ra đều đọc lại đúng từ mã thanh toán', () => {
     for (let i = 0; i < 100; i++) {
       const orderNumber = generateOrderNumber();
-      expect(findOrderNumberInText(toPaymentCode(orderNumber))).toBe(orderNumber);
+      expect(findOrderNumberInText(toPaymentCode(orderNumber))).toBe(
+        orderNumber,
+      );
     }
   });
 });

@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { createPrismaModelMock, PrismaModelMock } from '../../../test/mocks/prisma.mock';
+import {
+  createPrismaModelMock,
+  PrismaModelMock,
+} from '../../../test/mocks/prisma.mock';
 import type { UserInfo } from '../../common/decorators/user.decorator';
 import { NOT_DELETED, PrismaService } from '../../common/prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
@@ -17,9 +20,18 @@ const USER_ID = 'bbbbbbbbbbbbbbbbbbbbbbbb';
 const P1 = 'cccccccccccccccccccccccc';
 const P2 = 'dddddddddddddddddddddddd';
 
-const admin: UserInfo = { userID: ADMIN_ID, userEmail: 'admin@x.com', role: Role.admin };
+const admin: UserInfo = {
+  userID: ADMIN_ID,
+  userEmail: 'admin@x.com',
+  role: Role.admin,
+};
 
-const SENSITIVE = ['password', 'resetPasswordToken', 'resetPasswordExp', 'tokenVersion'];
+const SENSITIVE = [
+  'password',
+  'resetPasswordToken',
+  'resetPasswordExp',
+  'tokenVersion',
+];
 
 /** Mọi lệnh đọc / ghi trả user ra ngoài phải omit đủ các field nhạy cảm. */
 const expectOmitSensitive = (args: { omit?: Record<string, boolean> }) => {
@@ -51,10 +63,14 @@ describe('UsersService', () => {
 
   describe('getMe / updateMe', () => {
     it('getMe: không trả field nhạy cảm; không có → 404', async () => {
-      user.findUnique.mockResolvedValueOnce({ id: USER_ID }).mockResolvedValueOnce(null);
+      user.findUnique
+        .mockResolvedValueOnce({ id: USER_ID })
+        .mockResolvedValueOnce(null);
       await expect(service.getMe(USER_ID)).resolves.toEqual({ id: USER_ID });
       expectOmitSensitive(user.findUnique.mock.calls[0][0]);
-      await expect(service.getMe(USER_ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.getMe(USER_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('updateMe: 1 lệnh update đúng user trong token (chưa xóa), không trả field nhạy cảm', async () => {
@@ -63,24 +79,32 @@ describe('UsersService', () => {
       await service.updateMe(USER_ID, { fullName: 'Mới' });
 
       const args = user.update.mock.calls[0][0];
-      expect(args).toMatchObject({ where: { id: USER_ID, ...NOT_DELETED }, data: { fullName: 'Mới' } });
+      expect(args).toMatchObject({
+        where: { id: USER_ID, ...NOT_DELETED },
+        data: { fullName: 'Mới' },
+      });
       expectOmitSensitive(args);
       expect(user.findUnique).not.toHaveBeenCalled();
     });
 
     it('updateMe: tài khoản đã xóa (update không khớp, P2025) → 404', async () => {
       user.update.mockRejectedValue(
-        new Prisma.PrismaClientKnownRequestError('not found', { code: 'P2025', clientVersion: 't' }),
+        new Prisma.PrismaClientKnownRequestError('not found', {
+          code: 'P2025',
+          clientVersion: 't',
+        }),
       );
-      await expect(service.updateMe(USER_ID, { fullName: 'X' })).rejects.toThrow(
-        new NotFoundException('Không tìm thấy tài khoản'),
-      );
+      await expect(
+        service.updateMe(USER_ID, { fullName: 'X' }),
+      ).rejects.toThrow(new NotFoundException('Không tìm thấy tài khoản'));
     });
 
     it('updateMe: lỗi khác thì ném nguyên', async () => {
       const error = new Error('db down');
       user.update.mockRejectedValue(error);
-      await expect(service.updateMe(USER_ID, { fullName: 'X' })).rejects.toBe(error);
+      await expect(service.updateMe(USER_ID, { fullName: 'X' })).rejects.toBe(
+        error,
+      );
     });
   });
 
@@ -94,47 +118,69 @@ describe('UsersService', () => {
     });
 
     it('getWishlist: thêm sau hiện trước, sản phẩm đã ẩn / xóa không hiện', async () => {
-      user.findUnique.mockResolvedValue({ wishlistProductIDs: [P1, 'hidden', P2] });
+      user.findUnique.mockResolvedValue({
+        wishlistProductIDs: [P1, 'hidden', P2],
+      });
       products.findCardsByIDs.mockResolvedValue([{ id: P1 }, { id: P2 }]);
-      await expect(service.getWishlist(USER_ID)).resolves.toEqual([{ id: P2 }, { id: P1 }]);
+      await expect(service.getWishlist(USER_ID)).resolves.toEqual([
+        { id: P2 },
+        { id: P1 },
+      ]);
     });
 
     it('getWishlist: tài khoản không tồn tại → 404', async () => {
       user.findUnique.mockResolvedValue(null);
-      await expect(service.getWishlist(USER_ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.getWishlist(USER_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('addToWishlist: atomic, chỉ push khi chưa có (thêm 2 lần không trùng)', async () => {
       user.findUnique.mockResolvedValueOnce({ wishlistProductIDs: [P1] });
 
-      await expect(service.addToWishlist(USER_ID, P1)).resolves.toEqual({ wishlistProductIDs: [P1] });
+      await expect(service.addToWishlist(USER_ID, P1)).resolves.toEqual({
+        wishlistProductIDs: [P1],
+      });
 
       expect(products.ensureActive).toHaveBeenCalledWith(P1);
       expect(user.updateMany).toHaveBeenCalledWith({
-        where: { id: USER_ID, ...NOT_DELETED, NOT: { wishlistProductIDs: { has: P1 } } },
+        where: {
+          id: USER_ID,
+          ...NOT_DELETED,
+          NOT: { wishlistProductIDs: { has: P1 } },
+        },
         data: { wishlistProductIDs: { push: P1 } },
       });
     });
 
     it('addToWishlist: sản phẩm không đang bán → 404, không ghi', async () => {
       products.ensureActive.mockRejectedValue(new NotFoundException());
-      await expect(service.addToWishlist(USER_ID, P1)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.addToWishlist(USER_ID, P1)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(user.updateMany).not.toHaveBeenCalled();
     });
 
     it('addToWishlist: tài khoản đã xóa → không khớp NOT_DELETED (không ghi gì) và 404', async () => {
       user.updateMany.mockResolvedValue({ count: 0 });
       user.findUnique.mockResolvedValue(null);
-      await expect(service.addToWishlist(USER_ID, P1)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.addToWishlist(USER_ID, P1)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('removeFromWishlist: đọc + ghi trong transaction, bỏ đúng sản phẩm', async () => {
       user.findFirst.mockResolvedValue({ wishlistProductIDs: [P1, P2] });
 
-      await expect(service.removeFromWishlist(USER_ID, P1)).resolves.toEqual({ wishlistProductIDs: [P2] });
+      await expect(service.removeFromWishlist(USER_ID, P1)).resolves.toEqual({
+        wishlistProductIDs: [P2],
+      });
 
       expect(transaction).toHaveBeenCalledTimes(1);
-      expect(user.findFirst.mock.calls[0][0].where).toEqual({ id: USER_ID, ...NOT_DELETED });
+      expect(user.findFirst.mock.calls[0][0].where).toEqual({
+        id: USER_ID,
+        ...NOT_DELETED,
+      });
       expect(user.update).toHaveBeenCalledWith({
         where: { id: USER_ID },
         data: { wishlistProductIDs: { set: [P2] } },
@@ -143,23 +189,32 @@ describe('UsersService', () => {
 
     it('removeFromWishlist: sản phẩm không có trong wishlist thì không ghi', async () => {
       user.findFirst.mockResolvedValue({ wishlistProductIDs: [P2] });
-      await expect(service.removeFromWishlist(USER_ID, P1)).resolves.toEqual({ wishlistProductIDs: [P2] });
+      await expect(service.removeFromWishlist(USER_ID, P1)).resolves.toEqual({
+        wishlistProductIDs: [P2],
+      });
       expect(user.update).not.toHaveBeenCalled();
     });
 
     it('removeFromWishlist: tài khoản không tồn tại → 404', async () => {
       user.findFirst.mockResolvedValue(null);
-      await expect(service.removeFromWishlist(USER_ID, P1)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.removeFromWishlist(USER_ID, P1),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('BUG-08: có request thêm sản phẩm chen vào (P2034) → đọc lại, không làm mất sản phẩm vừa thêm', async () => {
-      const conflict = new Prisma.PrismaClientKnownRequestError('WriteConflict', { code: 'P2034', clientVersion: 't' });
+      const conflict = new Prisma.PrismaClientKnownRequestError(
+        'WriteConflict',
+        { code: 'P2034', clientVersion: 't' },
+      );
       user.findFirst
         .mockResolvedValueOnce({ wishlistProductIDs: [P1] })
         .mockResolvedValueOnce({ wishlistProductIDs: [P1, P2] }); // P2 vừa được thêm
       user.update.mockRejectedValueOnce(conflict).mockResolvedValue({});
 
-      await expect(service.removeFromWishlist(USER_ID, P1)).resolves.toEqual({ wishlistProductIDs: [P2] });
+      await expect(service.removeFromWishlist(USER_ID, P1)).resolves.toEqual({
+        wishlistProductIDs: [P2],
+      });
       expect(transaction).toHaveBeenCalledTimes(2);
       expect(user.update).toHaveBeenLastCalledWith({
         where: { id: USER_ID },
@@ -175,7 +230,13 @@ describe('UsersService', () => {
       user.findMany.mockResolvedValue([{ id: USER_ID }]);
       user.count.mockResolvedValue(41);
 
-      const result = await service.findAll({ page: 3, itemPerPage: 20, q: 'an', role: Role.customer, status: UserStatus.active });
+      const result = await service.findAll({
+        page: 3,
+        itemPerPage: 20,
+        q: 'an',
+        role: Role.customer,
+        status: UserStatus.active,
+      });
 
       const args = user.findMany.mock.calls[0][0];
       expect(args.where).toEqual({
@@ -190,7 +251,11 @@ describe('UsersService', () => {
       expect(args).toMatchObject({ skip: 40, take: 20 });
       expectOmitSensitive(args);
       expect(user.count).toHaveBeenCalledWith({ where: args.where });
-      expect(result).toEqual({ list: [{ id: USER_ID }], totalItems: 41, totalPages: 3 });
+      expect(result).toEqual({
+        list: [{ id: USER_ID }],
+        totalItems: 41,
+        totalPages: 3,
+      });
     });
 
     it('không lọc gì thì where rỗng', async () => {
@@ -206,7 +271,10 @@ describe('UsersService', () => {
       user.findUnique.mockResolvedValue({ id: USER_ID });
       orders.totalSpent.mockResolvedValue(5_000_000);
 
-      await expect(service.findOne(USER_ID)).resolves.toEqual({ id: USER_ID, totalSpent: 5_000_000 });
+      await expect(service.findOne(USER_ID)).resolves.toEqual({
+        id: USER_ID,
+        totalSpent: 5_000_000,
+      });
       expectOmitSensitive(user.findUnique.mock.calls[0][0]);
       expect(orders.totalSpent).toHaveBeenCalledWith(USER_ID);
     });
@@ -214,12 +282,20 @@ describe('UsersService', () => {
     it('không có user → 404', async () => {
       user.findUnique.mockResolvedValue(null);
       orders.totalSpent.mockResolvedValue(0);
-      await expect(service.findOne(USER_ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findOne(USER_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
   describe('create', () => {
-    const dto = { email: 'moi@x.com', password: 'Password1', fullName: 'Mới', role: Role.customer, status: UserStatus.active };
+    const dto = {
+      email: 'moi@x.com',
+      password: 'Password1',
+      fullName: 'Mới',
+      role: Role.customer,
+      status: UserStatus.active,
+    };
 
     it('hash mật khẩu, không trả field nhạy cảm', async () => {
       user.findUnique.mockResolvedValue(null);
@@ -229,82 +305,118 @@ describe('UsersService', () => {
 
       const args = user.create.mock.calls[0][0];
       expect(args.data.password).not.toBe(dto.password);
-      await expect(bcrypt.compare(dto.password, args.data.password)).resolves.toBe(true);
+      await expect(
+        bcrypt.compare(dto.password, args.data.password),
+      ).resolves.toBe(true);
       expectOmitSensitive(args);
     });
 
     it('email đã dùng → 409', async () => {
       user.findUnique.mockResolvedValue({ deletedAt: null });
-      await expect(service.create(dto)).rejects.toThrow(new ConflictException('Email đã được sử dụng'));
+      await expect(service.create(dto)).rejects.toThrow(
+        new ConflictException('Email đã được sử dụng'),
+      );
       expect(user.create).not.toHaveBeenCalled();
     });
 
     it('email của tài khoản đã xóa → 409 (đọc bằng client gốc, thấy cả bản ghi đã xóa)', async () => {
       user.findUnique.mockResolvedValue({ deletedAt: new Date() });
       await expect(service.create(dto)).rejects.toThrow('đã bị xóa');
-      expect(user.findUnique).toHaveBeenCalledWith({ where: { email: dto.email }, select: { deletedAt: true } });
+      expect(user.findUnique).toHaveBeenCalledWith({
+        where: { email: dto.email },
+        select: { deletedAt: true },
+      });
     });
   });
 
   describe('update', () => {
     beforeEach(() => {
-      user.findUnique.mockResolvedValue({ id: USER_ID, status: UserStatus.active, tokenVersion: 2 });
+      user.findUnique.mockResolvedValue({
+        id: USER_ID,
+        status: UserStatus.active,
+        tokenVersion: 2,
+      });
       user.update.mockResolvedValue({ id: USER_ID });
     });
 
     it('admin không tự hạ quyền chính mình → 400', async () => {
-      await expect(service.update(admin, ADMIN_ID, { role: Role.customer })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.update(admin, ADMIN_ID, { role: Role.customer }),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(user.update).not.toHaveBeenCalled();
     });
 
     it('admin không tự khóa chính mình → 400', async () => {
-      await expect(service.update(admin, ADMIN_ID, { status: UserStatus.inactive })).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        service.update(admin, ADMIN_ID, { status: UserStatus.inactive }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('admin tự sửa thông tin khác của mình thì được', async () => {
-      await service.update(admin, ADMIN_ID, { role: Role.admin, fullName: 'Admin' });
+      await service.update(admin, ADMIN_ID, {
+        role: Role.admin,
+        fullName: 'Admin',
+      });
       expect(user.update).toHaveBeenCalled();
     });
 
     it('BUG-02: khóa user khác → tăng tokenVersion (thu hồi refresh token)', async () => {
       await service.update(admin, USER_ID, { status: UserStatus.inactive });
       const args = user.update.mock.calls[0][0];
-      expect(args.data).toEqual({ status: UserStatus.inactive, tokenVersion: 3 });
+      expect(args.data).toEqual({
+        status: UserStatus.inactive,
+        tokenVersion: 3,
+      });
       expectOmitSensitive(args);
     });
 
     it('user đã bị khóa sẵn, hoặc chỉ sửa field khác → không tăng tokenVersion', async () => {
-      user.findUnique.mockResolvedValue({ id: USER_ID, status: UserStatus.inactive, tokenVersion: null });
+      user.findUnique.mockResolvedValue({
+        id: USER_ID,
+        status: UserStatus.inactive,
+        tokenVersion: null,
+      });
       await service.update(admin, USER_ID, { status: UserStatus.inactive });
       await service.update(admin, USER_ID, { fullName: 'X' });
-      expect(user.update.mock.calls[0][0].data).toEqual({ status: UserStatus.inactive });
+      expect(user.update.mock.calls[0][0].data).toEqual({
+        status: UserStatus.inactive,
+      });
       expect(user.update.mock.calls[1][0].data).toEqual({ fullName: 'X' });
     });
 
     it('user không tồn tại → 404', async () => {
       user.findUnique.mockResolvedValue(null);
-      await expect(service.update(admin, USER_ID, { fullName: 'X' })).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.update(admin, USER_ID, { fullName: 'X' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
   describe('remove', () => {
     it('admin không tự xóa chính mình → 400', async () => {
-      await expect(service.remove(admin, ADMIN_ID)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.remove(admin, ADMIN_ID)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(user.softDelete).not.toHaveBeenCalled();
     });
 
     it('soft delete user khác bằng 1 lệnh, chỉ khi chưa bị xóa', async () => {
       user.softDelete.mockResolvedValue({ count: 1 });
-      await expect(service.remove(admin, USER_ID)).resolves.toEqual({ id: USER_ID });
-      expect(user.softDelete).toHaveBeenCalledWith({ id: USER_ID, ...NOT_DELETED });
+      await expect(service.remove(admin, USER_ID)).resolves.toEqual({
+        id: USER_ID,
+      });
+      expect(user.softDelete).toHaveBeenCalledWith({
+        id: USER_ID,
+        ...NOT_DELETED,
+      });
       expect(user.findUnique).not.toHaveBeenCalled();
     });
 
     it('user không tồn tại / đã xóa → 404', async () => {
       user.softDelete.mockResolvedValue({ count: 0 });
-      await expect(service.remove(admin, USER_ID)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove(admin, USER_ID)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -328,7 +440,9 @@ describe('UsersService', () => {
     it('findForAuth: tìm theo id hoặc email', async () => {
       user.findUnique.mockResolvedValue({ id: USER_ID });
       await service.findForAuth({ email: 'a@x.com' });
-      expect(user.findUnique).toHaveBeenCalledWith({ where: { email: 'a@x.com' } });
+      expect(user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'a@x.com' },
+      });
     });
 
     it('setResetPasswordToken: lưu hash + hạn dùng', async () => {
@@ -343,19 +457,36 @@ describe('UsersService', () => {
     it('findByResetPasswordToken: chỉ token còn hạn của user đang hoạt động', async () => {
       await service.findByResetPasswordToken('hash');
       expect(user.findFirst).toHaveBeenCalledWith({
-        where: { resetPasswordToken: 'hash', resetPasswordExp: { gt: expect.any(Date) }, status: UserStatus.active },
+        where: {
+          resetPasswordToken: 'hash',
+          resetPasswordExp: { gt: expect.any(Date) },
+          status: UserStatus.active,
+        },
         select: { id: true, tokenVersion: true },
       });
     });
 
     it('updatePassword: hash mật khẩu mới, xóa token reset, tăng tokenVersion (thiếu = 0)', async () => {
-      await expect(service.updatePassword({ id: USER_ID }, 'NewPassword1')).resolves.toBe(1);
-      await expect(service.updatePassword({ id: USER_ID, tokenVersion: 4 }, 'NewPassword1')).resolves.toBe(5);
+      await expect(
+        service.updatePassword({ id: USER_ID }, 'NewPassword1'),
+      ).resolves.toBe(1);
+      await expect(
+        service.updatePassword(
+          { id: USER_ID, tokenVersion: 4 },
+          'NewPassword1',
+        ),
+      ).resolves.toBe(5);
 
       const { where, data } = user.update.mock.calls[0][0];
       expect(where).toEqual({ id: USER_ID });
-      expect(data).toMatchObject({ resetPasswordToken: null, resetPasswordExp: null, tokenVersion: 1 });
-      await expect(bcrypt.compare('NewPassword1', data.password)).resolves.toBe(true);
+      expect(data).toMatchObject({
+        resetPasswordToken: null,
+        resetPasswordExp: null,
+        tokenVersion: 1,
+      });
+      await expect(bcrypt.compare('NewPassword1', data.password)).resolves.toBe(
+        true,
+      );
     });
   });
 });

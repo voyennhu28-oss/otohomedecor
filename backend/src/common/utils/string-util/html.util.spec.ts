@@ -27,7 +27,9 @@ describe('html.util', () => {
   it('raw: đoạn đã dựng bằng safeHtml không bị escape 2 lần; mảng được nối lại', () => {
     const names = ['<b>Sofa</b>', 'Đèn & Gương'];
     const rows = names.map((n) => raw(safeHtml`<li>${n}</li>`));
-    expect(safeHtml`<ul>${rows}</ul>`).toBe('<ul><li>&lt;b&gt;Sofa&lt;/b&gt;</li><li>Đèn &amp; Gương</li></ul>');
+    expect(safeHtml`<ul>${rows}</ul>`).toBe(
+      '<ul><li>&lt;b&gt;Sofa&lt;/b&gt;</li><li>Đèn &amp; Gương</li></ul>',
+    );
   });
 
   it('mảng chuỗi thường vẫn bị escape từng phần tử', () => {

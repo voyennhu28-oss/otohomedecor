@@ -12,7 +12,13 @@ import { ORDER_NUMBER_REGEX } from '../order-number';
 const note = z.string().trim().min(1).max(500);
 
 export class OrderNumberParamDto extends createZodDto(
-  z.object({ orderNumber: z.string().trim().toUpperCase().regex(ORDER_NUMBER_REGEX, 'Mã đơn không hợp lệ') }),
+  z.object({
+    orderNumber: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(ORDER_NUMBER_REGEX, 'Mã đơn không hợp lệ'),
+  }),
 ) {}
 
 /** GET /me/orders?status=&page=&itemPerPage= */
@@ -41,7 +47,8 @@ const adminOrderFilter = z.object({
   email: searchQuery.optional(), // tìm 1 phần email khách
 });
 
-const fromBeforeTo = (f: { from?: Date; to?: Date }) => !f.from || !f.to || f.from <= f.to;
+const fromBeforeTo = (f: { from?: Date; to?: Date }) =>
+  !f.from || !f.to || f.from <= f.to;
 const FROM_TO_ERROR = { message: '"from" phải trước "to"', path: ['from'] };
 
 export type AdminOrderFilter = z.infer<typeof adminOrderFilter>;
@@ -65,5 +72,7 @@ export class MarkPaidDto extends createZodDto(
 
 /** PATCH /admin/orders/:id/status. `note` lưu vào lịch sử; hủy đơn thì là lý do hủy. */
 export class UpdateOrderStatusDto extends createZodDto(
-  z.object({ status: z.nativeEnum(OrderStatus), note: note.optional() }).strict(),
+  z
+    .object({ status: z.nativeEnum(OrderStatus), note: note.optional() })
+    .strict(),
 ) {}

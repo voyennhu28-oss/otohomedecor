@@ -6,7 +6,11 @@ import { IS_PUBLIC } from '../../common/decorators/public.decorator';
 import type { UserInfo } from '../../common/decorators/user.decorator';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL, TokenKeys } from './consts/jwt.const';
+import {
+  ACCESS_TOKEN_TTL,
+  REFRESH_TOKEN_TTL,
+  TokenKeys,
+} from './consts/jwt.const';
 
 const tokens = { accessToken: 'access.jwt', refreshToken: 'refresh.jwt' };
 const user = {
@@ -129,14 +133,22 @@ describe('AuthController', () => {
 
     it('ưu tiên token trong cookie', async () => {
       const res = createResponse();
-      await controller.refreshToken('from-cookie', { refreshToken: 'from-body' }, res);
+      await controller.refreshToken(
+        'from-cookie',
+        { refreshToken: 'from-body' },
+        res,
+      );
       expect(authService.refreshToken).toHaveBeenCalledWith('from-cookie');
       expectTokenCookies(res);
     });
 
     it('không có cookie thì dùng token trong body (app mobile)', async () => {
       const res = createResponse();
-      const result = await controller.refreshToken(undefined, { refreshToken: 'from-body' }, res);
+      const result = await controller.refreshToken(
+        undefined,
+        { refreshToken: 'from-body' },
+        res,
+      );
       expect(authService.refreshToken).toHaveBeenCalledWith('from-body');
       expect(result).toEqual(tokens);
     });
@@ -144,9 +156,9 @@ describe('AuthController', () => {
     it('không có token ở đâu cả: chuyển undefined cho service xử lý', async () => {
       authService.refreshToken.mockRejectedValue(new UnauthorizedException());
       const res = createResponse();
-      await expect(controller.refreshToken(undefined, {}, res)).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      await expect(
+        controller.refreshToken(undefined, {}, res),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(authService.refreshToken).toHaveBeenCalledWith(undefined);
       expect(res.cookie).not.toHaveBeenCalled();
     });
@@ -173,8 +185,12 @@ describe('AuthController', () => {
     it('forgotPassword chuyển dto cho service', async () => {
       const response = { message: 'ok' };
       authService.forgotPassword.mockResolvedValue(response);
-      await expect(controller.forgotPassword({ email: 'c@x.com' })).resolves.toBe(response);
-      expect(authService.forgotPassword).toHaveBeenCalledWith({ email: 'c@x.com' });
+      await expect(
+        controller.forgotPassword({ email: 'c@x.com' }),
+      ).resolves.toBe(response);
+      expect(authService.forgotPassword).toHaveBeenCalledWith({
+        email: 'c@x.com',
+      });
     });
 
     it('resetPassword chuyển dto cho service', async () => {
@@ -186,10 +202,15 @@ describe('AuthController', () => {
 
     it('changePassword truyền user lấy từ token, set cookie token mới cho phiên hiện tại', async () => {
       const dto = { oldPassword: 'old12345', newPassword: 'new12345' };
-      authService.changePassword.mockResolvedValue({ message: 'ok', ...tokens });
+      authService.changePassword.mockResolvedValue({
+        message: 'ok',
+        ...tokens,
+      });
       const res = createResponse();
 
-      await expect(controller.changePassword(currentUser, dto, res)).resolves.toEqual({
+      await expect(
+        controller.changePassword(currentUser, dto, res),
+      ).resolves.toEqual({
         message: 'ok',
         ...tokens,
       });
@@ -200,7 +221,9 @@ describe('AuthController', () => {
 
   describe('COOKIE_SAME_SITE', () => {
     it('đọc từ config (FE và API khác domain gốc thì đặt "none")', async () => {
-      const config = { get: (key: string) => (key === 'COOKIE_SAME_SITE' ? 'none' : undefined) };
+      const config = {
+        get: (key: string) => (key === 'COOKIE_SAME_SITE' ? 'none' : undefined),
+      };
       const ctrl = new AuthController(authService, config as never);
       authService.signIn.mockResolvedValue({ user, ...tokens } as any);
       const res = createResponse();
@@ -208,7 +231,11 @@ describe('AuthController', () => {
       await ctrl.signIn({ email: 'c@x.com', password: '12345678' }, res);
 
       for (const [, , options] of res.cookie.mock.calls) {
-        expect(options).toMatchObject({ sameSite: 'none', secure: true, httpOnly: true });
+        expect(options).toMatchObject({
+          sameSite: 'none',
+          secure: true,
+          httpOnly: true,
+        });
       }
     });
   });

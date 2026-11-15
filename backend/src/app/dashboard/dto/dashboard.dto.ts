@@ -17,9 +17,18 @@ export class DashboardQueryDto extends createZodDto(
       lowStockThreshold: z.coerce.number().int().min(0).max(1000).default(5),
       topLimit: z.coerce.number().int().min(1).max(50).default(10),
     })
-    .refine((q) => !q.from || !q.to || q.from <= q.to, { message: '"from" phải trước "to"', path: ['from'] })
-    .refine((q) => !q.from || !q.to || q.to.getTime() - q.from.getTime() < MAX_RANGE_DAYS * DAY_MS, {
-      message: `Tối đa ${MAX_RANGE_DAYS} ngày`,
-      path: ['to'],
-    }),
+    .refine((q) => !q.from || !q.to || q.from <= q.to, {
+      message: '"from" phải trước "to"',
+      path: ['from'],
+    })
+    .refine(
+      (q) =>
+        !q.from ||
+        !q.to ||
+        q.to.getTime() - q.from.getTime() < MAX_RANGE_DAYS * DAY_MS,
+      {
+        message: `Tối đa ${MAX_RANGE_DAYS} ngày`,
+        path: ['to'],
+      },
+    ),
 ) {}

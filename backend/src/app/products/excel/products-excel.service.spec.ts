@@ -7,11 +7,22 @@ import { ProductsService } from '../products.service';
 import { PRODUCT_EXCEL_COLUMNS } from './product-excel.mapper';
 import { ProductsExcelService } from './products-excel.service';
 
-jest.mock('node:fs/promises', () => ({ unlink: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('node:fs/promises', () => ({
+  unlink: jest.fn().mockResolvedValue(undefined),
+}));
 
 const CATEGORY_ID = 'aaaaaaaaaaaaaaaaaaaaaaaa';
-const row = (name: string, sku: string, extra: Record<string, unknown> = {}) => ({
-  name, categorySlug: 'sofa', sku, variantName: sku, price: 1_000_000, ...extra,
+const row = (
+  name: string,
+  sku: string,
+  extra: Record<string, unknown> = {},
+) => ({
+  name,
+  categorySlug: 'sofa',
+  sku,
+  variantName: sku,
+  price: 1_000_000,
+  ...extra,
 });
 
 describe('ProductsExcelService', () => {
@@ -23,15 +34,24 @@ describe('ProductsExcelService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     productFindMany = jest.fn().mockResolvedValue([]);
-    excel = { read: jest.fn(), generateExcel: jest.fn().mockReturnValue('workbook') };
+    excel = {
+      read: jest.fn(),
+      generateExcel: jest.fn().mockReturnValue('workbook'),
+    };
     products = {
-      create: jest.fn(({ name, slug }) => Promise.resolve({ name, slug: slug ?? name.toLowerCase() })),
+      create: jest.fn(({ name, slug }) =>
+        Promise.resolve({ name, slug: slug ?? name.toLowerCase() }),
+      ),
     };
     const categories = {
-      findIDsBySlugs: jest.fn().mockResolvedValue(new Map([['sofa', CATEGORY_ID]])),
+      findIDsBySlugs: jest
+        .fn()
+        .mockResolvedValue(new Map([['sofa', CATEGORY_ID]])),
     };
     service = new ProductsExcelService(
-      { extended: { product: { findMany: productFindMany } } } as unknown as PrismaService,
+      {
+        extended: { product: { findMany: productFindMany } },
+      } as unknown as PrismaService,
       excel as unknown as ExcelUtilService,
       products as unknown as ProductsService,
       categories as unknown as CategoriesService,
@@ -60,12 +80,24 @@ describe('ProductsExcelService', () => {
       const result = await service.import(file);
 
       expect(products.create).toHaveBeenCalledTimes(2); // Sofa A + Gương D
-      expect(products.create.mock.calls[0][0].variants.map((v: { sku: string }) => v.sku)).toEqual(['A1', 'A2']);
+      expect(
+        products.create.mock.calls[0][0].variants.map(
+          (v: { sku: string }) => v.sku,
+        ),
+      ).toEqual(['A1', 'A2']);
       expect(result.totalRows).toBe(5);
       expect(result.created).toEqual([{ name: 'Sofa A', slug: 'sofa-a' }]);
       expect(result.errors).toEqual([
-        { rows: [4], product: 'Đèn B', messages: ['Không tìm thấy danh mục "khong-co"'] },
-        { rows: [5], product: 'Kệ C', messages: [expect.stringContaining('variants.0.price')] },
+        {
+          rows: [4],
+          product: 'Đèn B',
+          messages: ['Không tìm thấy danh mục "khong-co"'],
+        },
+        {
+          rows: [5],
+          product: 'Kệ C',
+          messages: [expect.stringContaining('variants.0.price')],
+        },
         { rows: [6], product: 'Gương D', messages: ['SKU đã tồn tại: D1'] },
       ]);
       expect(fs.unlink).toHaveBeenCalledWith(file.path);
@@ -73,7 +105,10 @@ describe('ProductsExcelService', () => {
 
     it('BUG-04: sản phẩm "active" mà mọi variant đều tắt → nằm trong errors đúng các dòng, không trong created', async () => {
       // Dùng ProductsService thật (prisma mock) để chạy đúng rule của create()
-      const productModel = { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(({ data }) => Promise.resolve(data)) };
+      const productModel = {
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(({ data }) => Promise.resolve(data)),
+      };
       const prisma = {
         product: productModel,
         productVariant: { findMany: jest.fn().mockResolvedValue([]) },
@@ -82,13 +117,19 @@ describe('ProductsExcelService', () => {
       const realProducts = new ProductsService(
         prisma,
         { ensureExists: jest.fn() } as unknown as CategoriesService,
-        { toSlug: (s: string) => s.toLowerCase().replace(/\s+/g, '-') } as never,
+        {
+          toSlug: (s: string) => s.toLowerCase().replace(/\s+/g, '-'),
+        } as never,
       );
       const importService = new ProductsExcelService(
         prisma,
         excel as unknown as ExcelUtilService,
         realProducts,
-        { findIDsBySlugs: jest.fn().mockResolvedValue(new Map([['sofa', CATEGORY_ID]])) } as unknown as CategoriesService,
+        {
+          findIDsBySlugs: jest
+            .fn()
+            .mockResolvedValue(new Map([['sofa', CATEGORY_ID]])),
+        } as unknown as CategoriesService,
       );
       excel.read.mockResolvedValue({
         Products: [
@@ -102,19 +143,27 @@ describe('ProductsExcelService', () => {
 
       expect(result.created).toEqual([{ name: 'Kệ B', slug: 'kệ-b' }]);
       expect(result.errors).toEqual([
-        { rows: [2, 3], product: 'Sofa A', messages: [expect.stringContaining('ít nhất 1 variant đang bán')] },
+        {
+          rows: [2, 3],
+          product: 'Sofa A',
+          messages: [expect.stringContaining('ít nhất 1 variant đang bán')],
+        },
       ]);
       expect(productModel.create).toHaveBeenCalledTimes(1);
     });
 
     it('file rỗng → 400, vẫn xóa file tạm', async () => {
       excel.read.mockResolvedValue({ Products: [] });
-      await expect(service.import(file)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.import(file)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(fs.unlink).toHaveBeenCalledWith(file.path);
     });
 
     it('không có file → 400', async () => {
-      await expect(service.import(undefined)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.import(undefined)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 
@@ -131,7 +180,9 @@ describe('ProductsExcelService', () => {
 
     it('lọc theo ids nếu có', async () => {
       await service.export([CATEGORY_ID]);
-      expect(productFindMany.mock.calls[0][0].where).toEqual({ id: { in: [CATEGORY_ID] } });
+      expect(productFindMany.mock.calls[0][0].where).toEqual({
+        id: { in: [CATEGORY_ID] },
+      });
     });
   });
 });

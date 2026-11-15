@@ -13,6 +13,10 @@ export class AddCartItemDto extends createZodDto(
 ) {}
 
 /** PATCH /me/cart/items/:variantID: đặt lại số lượng. */
-export class UpdateCartItemDto extends createZodDto(z.object({ quantity }).strict()) {}
+export class UpdateCartItemDto extends createZodDto(
+  z.object({ quantity }).strict(),
+) {}
 
-export class CartVariantParamDto extends createZodDto(z.object({ variantID: objectId })) {}
+export class CartVariantParamDto extends createZodDto(
+  z.object({ variantID: objectId }),
+) {}

@@ -31,7 +31,11 @@ import {
 /** Kết quả xử lý 1 webhook. Mọi trường hợp đều trả { success: true } cho SePay. */
 export type WebhookResult =
   | { outcome: TransferOutcome; orderNumber: string }
-  | { outcome: 'ignored'; reason: 'not_incoming' | 'other_account' | 'no_order_code' | 'order_not_found' }
+  | {
+      outcome: 'ignored';
+      reason:
+        'not_incoming' | 'other_account' | 'no_order_code' | 'order_not_found';
+    }
   | { outcome: 'duplicate' };
 
 /** Giao dịch không tự áp được vào đơn: admin cần đối soát / hoàn tiền (GET /admin/payments?status=failed). */
@@ -58,9 +62,15 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     const accountNumber = config.get<string>('SEPAY_ACCOUNT_NUMBER');
     this.account =
       bank && accountNumber
-        ? { bank, accountNumber, accountName: config.get<string>('SEPAY_ACCOUNT_NAME') ?? null }
+        ? {
+            bank,
+            accountNumber,
+            accountName: config.get<string>('SEPAY_ACCOUNT_NAME') ?? null,
+          }
         : null;
-    this.unpaidTimeoutMinutes = Number(config.get('ORDER_UNPAID_TIMEOUT_MINUTES') ?? 30);
+    this.unpaidTimeoutMinutes = Number(
+      config.get('ORDER_UNPAID_TIMEOUT_MINUTES') ?? 30,
+    );
   }
 
   // ───────────── thông tin chuyển khoản ─────────────
@@ -68,22 +78,32 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
   /** Gọi TRƯỚC khi tạo đơn bank_transfer: chưa cấu hình tài khoản nhận tiền thì không cho đặt. */
   assertTransferAvailable() {
     if (!this.account) {
-      throw new ServiceUnavailableException('Shop chưa hỗ trợ chuyển khoản, vui lòng chọn COD');
+      throw new ServiceUnavailableException(
+        'Shop chưa hỗ trợ chuyển khoản, vui lòng chọn COD',
+      );
     }
   }
 
-  transferInfo(order: Pick<Order, 'orderNumber' | 'total' | 'createdAt'>): TransferInfo {
+  transferInfo(
+    order: Pick<Order, 'orderNumber' | 'total' | 'createdAt'>,
+  ): TransferInfo {
     this.assertTransferAvailable();
     return buildTransferInfo(this.account!, order, this.unpaidTimeoutMinutes);
   }
 
   /** GET /me/orders/:orderNumber/payment: chỉ đơn chuyển khoản đang chờ tiền. */
   async getMyTransferInfo(userID: string, orderNumber: string) {
-    const order = await this.ordersService.findMineByNumber(userID, orderNumber);
+    const order = await this.ordersService.findMineByNumber(
+      userID,
+      orderNumber,
+    );
     if (order.paymentMethod !== PaymentMethod.bank_transfer) {
-      throw new BadRequestException('Đơn này không thanh toán bằng chuyển khoản');
+      throw new BadRequestException(
+        'Đơn này không thanh toán bằng chuyển khoản',
+      );
     }
-    if (order.paymentStatus === PaymentStatus.paid) throw new BadRequestException('Đơn đã được thanh toán');
+    if (order.paymentStatus === PaymentStatus.paid)
+      throw new BadRequestException('Đơn đã được thanh toán');
     if (order.status !== OrderStatus.pending) {
       throw new BadRequestException('Đơn không còn chờ thanh toán');
     }
@@ -100,21 +120,37 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
   async handleSepayWebhook(payload: SepayWebhookDto): Promise<WebhookResult> {
     const transactionID = String(payload.id);
 
-    if (payload.transferType !== 'in') return { outcome: 'ignored', reason: 'not_incoming' };
-    if (this.account && payload.accountNumber && payload.accountNumber !== this.account.accountNumber) {
+    if (payload.transferType !== 'in')
+      return { outcome: 'ignored', reason: 'not_incoming' };
+    if (
+      this.account &&
+      payload.accountNumber &&
+      payload.accountNumber !== this.account.accountNumber
+    ) {
       return this.ignore(transactionID, 'other_account');
     }
     // `code` là mã SePay nhận diện theo cấu hình; không có thì tự tìm trong nội dung chuyển khoản
-    const orderNumber = findOrderNumberInText(payload.code) ?? findOrderNumberInText(payload.content);
+    const orderNumber =
+      findOrderNumberInText(payload.code) ??
+      findOrderNumberInText(payload.content);
     if (!orderNumber) return this.ignore(transactionID, 'no_order_code');
 
     let processed: { result: WebhookResult; confirmedOrderID: string | null };
     try {
       processed = await withRetry(() =>
         this.prismaService.$transaction(async (tx) => {
-          const order = await this.ordersService.findForPayment(orderNumber, tx);
+          const order = await this.ordersService.findForPayment(
+            orderNumber,
+            tx,
+          );
           if (!order) {
-            return { result: { outcome: 'ignored', reason: 'order_not_found' } as const, confirmedOrderID: null };
+            return {
+              result: {
+                outcome: 'ignored',
+                reason: 'order_not_found',
+              } as const,
+              confirmedOrderID: null,
+            };
           }
 
           const outcome = evaluateTransfer(order, payload.transferAmount);
@@ -123,7 +159,8 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
               orderID: order.id,
               method: PaymentMethod.bank_transfer,
               amount: payload.transferAmount,
-              status: outcome === 'paid' ? PaymentStatus.paid : PaymentStatus.failed,
+              status:
+                outcome === 'paid' ? PaymentStatus.paid : PaymentStatus.failed,
               transactionID,
               rawResponse: payload as Prisma.InputJsonObject,
             },
@@ -132,7 +169,9 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
           if (outcome === 'paid') {
             const { confirmed } = await this.ordersService.markPaid(order, tx, {
               changedBy: 'sepay',
-              note: ['Nhận chuyển khoản', payload.gateway, `#${transactionID}`].filter(Boolean).join(' '),
+              note: ['Nhận chuyển khoản', payload.gateway, `#${transactionID}`]
+                .filter(Boolean)
+                .join(' '),
             });
             if (confirmed) confirmedOrderID = order.id;
           }
@@ -141,14 +180,18 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
       );
     } catch (error) {
       // transactionID đã có: SePay gửi lại giao dịch đã xử lý → bỏ qua, vẫn báo thành công
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         return { outcome: 'duplicate' };
       }
       throw error;
     }
 
     const { result, confirmedOrderID } = processed;
-    if (result.outcome === 'ignored') return this.ignore(transactionID, result.reason, orderNumber);
+    if (result.outcome === 'ignored')
+      return this.ignore(transactionID, result.reason, orderNumber);
     if (result.outcome !== 'paid' && result.outcome !== 'duplicate') {
       this.logger.warn(
         `SePay #${transactionID}: nhận ${payload.transferAmount}đ cho đơn ${orderNumber} nhưng ${NEEDS_ADMIN[result.outcome]}. Cần admin xử lý`,
@@ -164,14 +207,24 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     const where: Prisma.PaymentWhereInput = {
       ...(status && { status }),
       ...(orderNumber && {
-        order: { is: { orderNumber: { contains: orderNumber, mode: 'insensitive' } } },
+        order: {
+          is: { orderNumber: { contains: orderNumber, mode: 'insensitive' } },
+        },
       }),
     };
     const [list, totalItems] = await Promise.all([
       this.extended.findMany({
         where,
         include: {
-          order: { select: { id: true, orderNumber: true, status: true, paymentStatus: true, total: true } },
+          order: {
+            select: {
+              id: true,
+              orderNumber: true,
+              status: true,
+              paymentStatus: true,
+              total: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         ...paginate(pagination),
@@ -187,7 +240,10 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
    */
   countFailed({ from, to }: { from: Date; to: Date }) {
     return this.extended.count({
-      where: { status: PaymentStatus.failed, createdAt: { gte: from, lte: to } },
+      where: {
+        status: PaymentStatus.failed,
+        createdAt: { gte: from, lte: to },
+      },
     });
   }
 
@@ -198,7 +254,9 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     reason: Extract<WebhookResult, { outcome: 'ignored' }>['reason'],
     orderNumber?: string,
   ): WebhookResult {
-    this.logger.log(`SePay #${transactionID}: bỏ qua (${reason}${orderNumber ? `, ${orderNumber}` : ''})`);
+    this.logger.log(
+      `SePay #${transactionID}: bỏ qua (${reason}${orderNumber ? `, ${orderNumber}` : ''})`,
+    );
     return { outcome: 'ignored', reason };
   }
 }

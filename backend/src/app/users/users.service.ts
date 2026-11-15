@@ -28,7 +28,9 @@ const SENSITIVE_FIELDS = {
 } satisfies Prisma.UserOmit;
 
 /** Bỏ các field nhạy cảm khỏi user đã đọc kèm password (vd từ `findForAuth`), không cần query lại. */
-export const omitSensitive = <T extends Record<keyof typeof SENSITIVE_FIELDS, unknown>>({
+export const omitSensitive = <
+  T extends Record<keyof typeof SENSITIVE_FIELDS, unknown>,
+>({
   password: _password,
   resetPasswordToken: _resetPasswordToken,
   resetPasswordExp: _resetPasswordExp,
@@ -43,7 +45,10 @@ const userNotFound = () => new NotFoundException('Không tìm thấy tài khoả
 
 /** `update` không khớp bản ghi nào (không tồn tại / đã soft delete) → 404 với câu thông báo riêng. */
 const rethrowNotFound = (error: unknown): never => {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2025'
+  ) {
     throw userNotFound();
   }
   throw error;
@@ -226,7 +231,8 @@ export class UsersService extends PrismaBaseService<'user'> {
     const current = await this.ensureExists(id);
     // Khóa tài khoản: thu hồi luôn refresh token, để mở khóa sau này token cũ không dùng lại được
     const isLocking =
-      dto.status === UserStatus.inactive && current.status !== UserStatus.inactive;
+      dto.status === UserStatus.inactive &&
+      current.status !== UserStatus.inactive;
     return this.extended.update({
       where: { id },
       data: isLocking

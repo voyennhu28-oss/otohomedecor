@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
@@ -19,7 +28,10 @@ export class ReviewsController {
   /** Review đã duyệt của sản phẩm đang bán, phân trang, kèm thống kê số sao. */
   @Public()
   @Get('products/:productID/reviews')
-  findByProduct(@Param() { productID }: ProductReviewParamDto, @Query() query: ReviewListQueryDto) {
+  findByProduct(
+    @Param() { productID }: ProductReviewParamDto,
+    @Query() query: ReviewListQueryDto,
+  ) {
     return this.reviewsService.findPublic(productID, query);
   }
 
@@ -35,7 +47,11 @@ export class ReviewsController {
 
   /** Chỉ chủ review. */
   @Patch('reviews/:id')
-  update(@User() user: UserInfo, @Param() { id }: IDDto, @Body() dto: UpdateReviewDto) {
+  update(
+    @User() user: UserInfo,
+    @Param() { id }: IDDto,
+    @Body() dto: UpdateReviewDto,
+  ) {
     return this.reviewsService.updateMine(user.userID, id, dto);
   }
 

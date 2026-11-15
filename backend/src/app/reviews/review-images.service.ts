@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ImageItem, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { withRetry } from '../../common/prisma/with-retry';
@@ -43,8 +47,18 @@ export class ReviewImagesService {
       save: (images) =>
         this.updateImages(reviewID, userID, (current) => {
           assertRoom(current.length, images.length);
-          const nextOrder = current.reduce((max, img) => Math.max(max, img.sortOrder + 1), 0);
-          return [...current, ...images.map((img, i) => ({ ...img, alt: null, sortOrder: nextOrder + i }))];
+          const nextOrder = current.reduce(
+            (max, img) => Math.max(max, img.sortOrder + 1),
+            0,
+          );
+          return [
+            ...current,
+            ...images.map((img, i) => ({
+              ...img,
+              alt: null,
+              sortOrder: nextOrder + i,
+            })),
+          ];
         }),
     });
   }
@@ -62,7 +76,8 @@ export class ReviewImagesService {
   private async remove(reviewID: string, publicID: string, userID?: string) {
     const images = await this.updateImages(reviewID, userID, (current) => {
       const remaining = current.filter((img) => img.publicID !== publicID);
-      if (remaining.length === current.length) throw new NotFoundException('Đánh giá không có ảnh này');
+      if (remaining.length === current.length)
+        throw new NotFoundException('Đánh giá không có ảnh này');
       return remaining;
     });
     this.imageUpload.destroyQuietly([publicID]);
@@ -87,7 +102,10 @@ export class ReviewImagesService {
         if (!review) throw new NotFoundException('Không tìm thấy đánh giá');
 
         const images = change(review.images);
-        await tx.review.update({ where: { id: reviewID }, data: { images: { set: images } } });
+        await tx.review.update({
+          where: { id: reviewID },
+          data: { images: { set: images } },
+        });
         return images;
       }),
     );

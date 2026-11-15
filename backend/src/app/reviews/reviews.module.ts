@@ -14,7 +14,11 @@ import { ReviewsService } from './reviews.service';
     OrdersModule, // đơn đã giao chứa sản phẩm (điều kiện viết review)
     FileUtilModule, // multer lưu file tạm + upload Cloudinary (ảnh review)
   ],
-  controllers: [ReviewsController, ReviewImagesController, AdminReviewsController],
+  controllers: [
+    ReviewsController,
+    ReviewImagesController,
+    AdminReviewsController,
+  ],
   providers: [ReviewsService, ReviewImagesService],
 })
 export class ReviewsModule {}

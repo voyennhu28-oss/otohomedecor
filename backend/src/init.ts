@@ -72,10 +72,17 @@ const initOpenAPI = (app: INestApplication) => {
  * - bodyParser: false → tắt parser mặc định (có urlencoded); `applyMiddlewares` chỉ bật lại parser JSON
  * - rawBody: true → giữ body gốc ở `req.rawBody` để kiểm tra chữ ký HMAC của webhook SePay
  */
-const NEST_APP_OPTIONS = { bodyParser: false, rawBody: true } satisfies NestApplicationOptions;
+const NEST_APP_OPTIONS = {
+  bodyParser: false,
+  rawBody: true,
+} satisfies NestApplicationOptions;
 
 const initApp = (app: NestExpressApplication) => {
-  const { APP_PREFIX = '/api', FE_URL = 'http://localhost:3000', TRUST_PROXY = '0' } = process.env;
+  const {
+    APP_PREFIX = '/api',
+    FE_URL = 'http://localhost:3000',
+    TRUST_PROXY = '0',
+  } = process.env;
   // Sau reverse proxy (Render, Railway, Nginx): tin X-Forwarded-For của N proxy gần nhất để req.ip
   // là IP thật của khách (rate limit theo IP). KHÔNG bật khi không có proxy: client sẽ giả được IP.
   const proxyHops = Number(TRUST_PROXY);

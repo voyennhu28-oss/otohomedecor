@@ -26,4 +26,6 @@ export class CreateAddressDto extends createZodDto(
 ) {}
 
 /** PATCH /me/addresses/:id. Đặt mặc định dùng PATCH /me/addresses/:id/default. */
-export class UpdateAddressDto extends createZodDto(z.object(fields).partial().strict()) {}
+export class UpdateAddressDto extends createZodDto(
+  z.object(fields).partial().strict(),
+) {}

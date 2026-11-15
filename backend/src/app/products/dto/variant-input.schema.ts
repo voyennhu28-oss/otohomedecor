@@ -44,8 +44,10 @@ export const variantFieldsSchema = z
   .strict();
 
 /** Giá gạch ngang (nếu có) phải lớn hơn giá bán. */
-export const isValidCompareAtPrice = (price: number, compareAtPrice?: number | null) =>
-  compareAtPrice == null || compareAtPrice > price;
+export const isValidCompareAtPrice = (
+  price: number,
+  compareAtPrice?: number | null,
+) => compareAtPrice == null || compareAtPrice > price;
 
 export const COMPARE_AT_PRICE_MESSAGE = 'Giá gạch ngang phải lớn hơn giá bán';
 

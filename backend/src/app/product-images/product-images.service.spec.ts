@@ -5,7 +5,9 @@ import { ImageUploadService } from '../../common/utils/file-util/image-upload.se
 import { ProductsService } from '../products/products.service';
 import { ProductImagesService } from './product-images.service';
 
-jest.mock('node:fs/promises', () => ({ unlink: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('node:fs/promises', () => ({
+  unlink: jest.fn().mockResolvedValue(undefined),
+}));
 
 const P = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const files = [
@@ -16,13 +18,20 @@ const files = [
 describe('ProductImagesService', () => {
   let service: ProductImagesService;
   let strategy: { upload: jest.Mock; remove: jest.Mock };
-  let products: { findOneOrThrow: jest.Mock; appendImages: jest.Mock; removeImage: jest.Mock };
+  let products: {
+    findOneOrThrow: jest.Mock;
+    appendImages: jest.Mock;
+    removeImage: jest.Mock;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
     strategy = {
       upload: jest.fn((publicID: string) =>
-        Promise.resolve({ public_id: publicID, secure_url: `https://cdn/${publicID}.jpg` }),
+        Promise.resolve({
+          public_id: publicID,
+          secure_url: `https://cdn/${publicID}.jpg`,
+        }),
       ),
       remove: jest.fn().mockResolvedValue({ result: 'ok' }),
     };
@@ -42,7 +51,9 @@ describe('ProductImagesService', () => {
     it('mỗi ảnh có public_id riêng (không dùng tên file gốc), không chứa "/"', async () => {
       await service.upload(P, files);
 
-      const publicIDs = strategy.upload.mock.calls.map(([publicID]) => publicID as string);
+      const publicIDs = strategy.upload.mock.calls.map(
+        ([publicID]) => publicID as string,
+      );
       expect(new Set(publicIDs).size).toBe(2);
       for (const id of publicIDs) {
         expect(id).toMatch(new RegExp(`^hd-product-${P}-[a-f0-9]{12}$`));
@@ -67,7 +78,9 @@ describe('ProductImagesService', () => {
 
     it('BUG-09: 1 ảnh upload lỗi → xóa các ảnh đã lên Cloudinary, không lưu gì vào DB', async () => {
       strategy.upload
-        .mockImplementationOnce((publicID: string) => Promise.resolve({ public_id: publicID, secure_url: 'u' }))
+        .mockImplementationOnce((publicID: string) =>
+          Promise.resolve({ public_id: publicID, secure_url: 'u' }),
+        )
         .mockRejectedValueOnce(new Error('Cloudinary down'));
 
       await expect(service.upload(P, files)).rejects.toThrow('Cloudinary down');
@@ -81,10 +94,16 @@ describe('ProductImagesService', () => {
     it('BUG-09: ghi DB lỗi → xóa mọi ảnh vừa upload', async () => {
       products.appendImages.mockRejectedValue(new NotFoundException());
 
-      await expect(service.upload(P, files)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.upload(P, files)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
 
-      const uploadedIDs = strategy.upload.mock.calls.map(([publicID]) => publicID);
-      expect(strategy.remove.mock.calls.map(([publicID]) => publicID)).toEqual(uploadedIDs);
+      const uploadedIDs = strategy.upload.mock.calls.map(
+        ([publicID]) => publicID,
+      );
+      expect(strategy.remove.mock.calls.map(([publicID]) => publicID)).toEqual(
+        uploadedIDs,
+      );
     });
 
     it('BUG-09: dọn ảnh lỗi thì chỉ ghi log, vẫn ném lỗi gốc', async () => {
@@ -105,13 +124,17 @@ describe('ProductImagesService', () => {
 
     it('product không tồn tại → 404, không upload, vẫn xóa file tạm', async () => {
       products.findOneOrThrow.mockRejectedValue(new NotFoundException());
-      await expect(service.upload(P, files)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.upload(P, files)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(strategy.upload).not.toHaveBeenCalled();
       expect(fs.unlink).toHaveBeenCalledTimes(2);
     });
 
     it('không có file → 400', async () => {
-      await expect(service.upload(P, [])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.upload(P, [])).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 

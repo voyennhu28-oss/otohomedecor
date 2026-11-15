@@ -1,4 +1,9 @@
-import { Controller, ExecutionContext, ForbiddenException, Get } from '@nestjs/common';
+import {
+  Controller,
+  ExecutionContext,
+  ForbiddenException,
+  Get,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
 import { AdminOnly } from '../decorators/admin-only.decorator';
@@ -36,19 +41,29 @@ describe('AdminGuard', () => {
   it('cho qua route không gắn @AdminOnly, kể cả khi chưa đăng nhập', () => {
     const p = OpenController.prototype;
     expect(guard.canActivate(makeContext(OpenController, p.open))).toBe(true);
-    expect(guard.canActivate(makeContext(OpenController, p.open, customer))).toBe(true);
+    expect(
+      guard.canActivate(makeContext(OpenController, p.open, customer)),
+    ).toBe(true);
   });
 
   it('@AdminOnly ở method: admin qua, customer và khách bị 403', () => {
     const h = OpenController.prototype.adminMethod;
     expect(guard.canActivate(makeContext(OpenController, h, admin))).toBe(true);
-    expect(() => guard.canActivate(makeContext(OpenController, h, customer))).toThrow(ForbiddenException);
-    expect(() => guard.canActivate(makeContext(OpenController, h))).toThrow(ForbiddenException);
+    expect(() =>
+      guard.canActivate(makeContext(OpenController, h, customer)),
+    ).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(makeContext(OpenController, h))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('@AdminOnly ở class áp dụng cho mọi method', () => {
     const h = AdminController.prototype.list;
-    expect(guard.canActivate(makeContext(AdminController, h, admin))).toBe(true);
-    expect(() => guard.canActivate(makeContext(AdminController, h, customer))).toThrow(ForbiddenException);
+    expect(guard.canActivate(makeContext(AdminController, h, admin))).toBe(
+      true,
+    );
+    expect(() =>
+      guard.canActivate(makeContext(AdminController, h, customer)),
+    ).toThrow(ForbiddenException);
   });
 });

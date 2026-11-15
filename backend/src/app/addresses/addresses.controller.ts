@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
 import { IDDto } from '../../common/dto/param.dto';
@@ -22,7 +30,11 @@ export class AddressesController {
   }
 
   @Patch(':id')
-  update(@User() user: UserInfo, @Param() { id }: IDDto, @Body() dto: UpdateAddressDto) {
+  update(
+    @User() user: UserInfo,
+    @Param() { id }: IDDto,
+    @Body() dto: UpdateAddressDto,
+  ) {
     return this.addressesService.update(user.userID, id, dto);
   }
 

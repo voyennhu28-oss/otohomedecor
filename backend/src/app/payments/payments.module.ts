@@ -9,7 +9,11 @@ import { SepayWebhookController } from './sepay-webhook.controller';
 /** Thanh toán chuyển khoản qua SePay (plan mục 12). */
 @Module({
   imports: [OrdersModule], // tìm đơn, đánh dấu đã trả tiền, gửi email
-  controllers: [SepayWebhookController, PaymentsController, AdminPaymentsController],
+  controllers: [
+    SepayWebhookController,
+    PaymentsController,
+    AdminPaymentsController,
+  ],
   providers: [PaymentsService, SepayWebhookGuard],
   exports: [PaymentsService], // checkout lấy thông tin chuyển khoản
 })

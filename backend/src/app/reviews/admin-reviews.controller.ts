@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { IDDto } from '../../common/dto/param.dto';
@@ -27,7 +35,10 @@ export class AdminReviewsController {
 
   /** Ẩn hoặc duyệt review. Điểm đánh giá của sản phẩm được tính lại ngay. */
   @Patch(':id/status')
-  updateStatus(@Param() { id }: IDDto, @Body() { status }: UpdateReviewStatusDto) {
+  updateStatus(
+    @Param() { id }: IDDto,
+    @Body() { status }: UpdateReviewStatusDto,
+  ) {
     return this.reviewsService.updateStatus(id, status);
   }
 

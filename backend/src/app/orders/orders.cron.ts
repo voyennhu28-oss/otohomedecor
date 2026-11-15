@@ -19,7 +19,10 @@ export class OrdersCron {
     this.running = true;
     try {
       const cancelled = await this.ordersService.cancelExpiredUnpaid();
-      if (cancelled) this.logger.log(`Đã hủy ${cancelled} đơn chuyển khoản quá hạn thanh toán`);
+      if (cancelled)
+        this.logger.log(
+          `Đã hủy ${cancelled} đơn chuyển khoản quá hạn thanh toán`,
+        );
     } catch (error) {
       this.logger.error('Cron hủy đơn quá hạn lỗi', (error as Error)?.stack);
     } finally {

@@ -11,7 +11,9 @@ export const imageUploadOptions = (maxFiles: number): MulterOptions => ({
   fileFilter: (_req, file, callback) => {
     if (ALLOWED_MIME_TYPES.includes(file.mimetype)) return callback(null, true);
     callback(
-      new BadRequestException(`"${file.originalname}" không phải ảnh jpg / png / webp`),
+      new BadRequestException(
+        `"${file.originalname}" không phải ảnh jpg / png / webp`,
+      ),
       false,
     );
   },

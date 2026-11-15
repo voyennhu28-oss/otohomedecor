@@ -11,7 +11,9 @@ const ratingQuery = z.coerce.number().int().min(1).max(5);
 export const REVIEW_SORTS = ['newest', 'rating_desc', 'rating_asc'] as const;
 export type ReviewSort = (typeof REVIEW_SORTS)[number];
 
-export class ProductReviewParamDto extends createZodDto(z.object({ productID: objectId })) {}
+export class ProductReviewParamDto extends createZodDto(
+  z.object({ productID: objectId }),
+) {}
 
 export class ReviewImageParamDto extends createZodDto(
   z.object({ id: objectId, publicID: z.string().min(1).max(200) }),
@@ -32,15 +34,27 @@ export class ReviewListQueryDto extends createZodDto(
  * Không gửi orderID thì tự chọn đơn đã giao gần nhất chưa đánh giá.
  */
 export class CreateReviewDto extends createZodDto(
-  z.object({ rating, comment: comment.optional(), orderID: objectId.optional() }).strict(),
+  z
+    .object({
+      rating,
+      comment: comment.optional(),
+      orderID: objectId.optional(),
+    })
+    .strict(),
 ) {}
 
 /** PATCH /reviews/:id (chủ review). comment = null để xóa nội dung. */
 export class UpdateReviewDto extends createZodDto(
   z
-    .object({ rating: rating.optional(), comment: comment.nullable().optional() })
+    .object({
+      rating: rating.optional(),
+      comment: comment.nullable().optional(),
+    })
     .strict()
-    .refine((d) => d.rating !== undefined || d.comment !== undefined, 'Không có gì để cập nhật'),
+    .refine(
+      (d) => d.rating !== undefined || d.comment !== undefined,
+      'Không có gì để cập nhật',
+    ),
 ) {}
 
 /** GET /admin/reviews */

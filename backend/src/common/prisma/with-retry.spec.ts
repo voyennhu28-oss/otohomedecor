@@ -2,7 +2,10 @@ import { Prisma } from '@prisma/client';
 import { isTransactionConflict, withRetry } from './with-retry';
 
 const prismaError = (code: string) =>
-  new Prisma.PrismaClientKnownRequestError('x', { code, clientVersion: 'test' });
+  new Prisma.PrismaClientKnownRequestError('x', {
+    code,
+    clientVersion: 'test',
+  });
 
 describe('withRetry', () => {
   it('thành công ngay thì chỉ chạy 1 lần', async () => {
@@ -12,7 +15,10 @@ describe('withRetry', () => {
   });
 
   it('gặp P2034 thì chạy lại', async () => {
-    const fn = jest.fn().mockRejectedValueOnce(prismaError('P2034')).mockResolvedValue('ok');
+    const fn = jest
+      .fn()
+      .mockRejectedValueOnce(prismaError('P2034'))
+      .mockResolvedValue('ok');
     await expect(withRetry(fn)).resolves.toBe('ok');
     expect(fn).toHaveBeenCalledTimes(2);
   });

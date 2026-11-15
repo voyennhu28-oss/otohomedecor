@@ -28,8 +28,12 @@ describe('AdminUsersController (/admin/users)', () => {
 
   it('@AdminOnly() gắn ở cấp class, không route nào @Public', () => {
     expect(Reflect.getMetadata(IS_ADMIN_ONLY, AdminUsersController)).toBe(true);
-    expect(Reflect.getMetadata(IS_PUBLIC, AdminUsersController)).toBeUndefined();
-    for (const method of Object.getOwnPropertyNames(AdminUsersController.prototype)) {
+    expect(
+      Reflect.getMetadata(IS_PUBLIC, AdminUsersController),
+    ).toBeUndefined();
+    for (const method of Object.getOwnPropertyNames(
+      AdminUsersController.prototype,
+    )) {
       const handler = (AdminUsersController.prototype as any)[method];
       expect(Reflect.getMetadata(IS_PUBLIC, handler)).toBeUndefined();
     }
@@ -44,7 +48,10 @@ describe('AdminUsersController (/admin/users)', () => {
   });
 
   it('findOne: lấy id từ param', async () => {
-    usersService.findOne.mockResolvedValue({ id: OTHER_ID, totalSpent: 0 } as any);
+    usersService.findOne.mockResolvedValue({
+      id: OTHER_ID,
+      totalSpent: 0,
+    } as any);
     await controller.findOne({ id: OTHER_ID });
     expect(usersService.findOne).toHaveBeenCalledWith(OTHER_ID);
   });
@@ -73,14 +80,20 @@ describe('AdminUsersController (/admin/users)', () => {
     it('chuyển tiếp lỗi khi admin tự khóa mình', async () => {
       usersService.update.mockRejectedValue(new BadRequestException());
       await expect(
-        controller.update(admin, { id: admin.userID }, { status: UserStatus.inactive }),
+        controller.update(
+          admin,
+          { id: admin.userID },
+          { status: UserStatus.inactive },
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 
   it('remove: truyền admin hiện tại và id', async () => {
     usersService.remove.mockResolvedValue({ id: OTHER_ID });
-    await expect(controller.remove(admin, { id: OTHER_ID })).resolves.toEqual({ id: OTHER_ID });
+    await expect(controller.remove(admin, { id: OTHER_ID })).resolves.toEqual({
+      id: OTHER_ID,
+    });
     expect(usersService.remove).toHaveBeenCalledWith(admin, OTHER_ID);
   });
 });

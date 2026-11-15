@@ -1,12 +1,13 @@
 import { httpUrlSchema } from './url.schema';
 
 describe('httpUrlSchema', () => {
-  it.each(['https://cdn.example.com/a.jpg', 'http://localhost:3000/x', 'HTTPS://EXAMPLE.COM'])(
-    'nhận %s',
-    (url) => {
-      expect(httpUrlSchema.safeParse(url).success).toBe(true);
-    },
-  );
+  it.each([
+    'https://cdn.example.com/a.jpg',
+    'http://localhost:3000/x',
+    'HTTPS://EXAMPLE.COM',
+  ])('nhận %s', (url) => {
+    expect(httpUrlSchema.safeParse(url).success).toBe(true);
+  });
 
   it.each([
     'javascript:alert(document.cookie)',

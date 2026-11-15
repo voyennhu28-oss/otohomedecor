@@ -1,8 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
 import { CartsService } from './carts.service';
-import { AddCartItemDto, CartVariantParamDto, UpdateCartItemDto } from './dto/cart.dto';
+import {
+  AddCartItemDto,
+  CartVariantParamDto,
+  UpdateCartItemDto,
+} from './dto/cart.dto';
 
 /** Giỏ hàng của người đang đăng nhập. Mọi API trả về giỏ hàng mới nhất. */
 @ApiTags('Me / Cart')
@@ -30,7 +42,10 @@ export class CartsController {
   }
 
   @Delete('items/:variantID')
-  removeItem(@User() user: UserInfo, @Param() { variantID }: CartVariantParamDto) {
+  removeItem(
+    @User() user: UserInfo,
+    @Param() { variantID }: CartVariantParamDto,
+  ) {
     return this.cartsService.removeItem(user.userID, variantID);
   }
 

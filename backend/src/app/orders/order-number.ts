@@ -27,7 +27,8 @@ export const generateOrderNumber = (now = new Date()) => {
  * SePay chỉ nhận diện mã dạng tiền tố + chữ/số (cấu hình: tiền tố HD, hậu tố 12 ký tự số và chữ),
  * còn VietQR / ngân hàng tự bỏ ký tự đặc biệt khỏi nội dung chuyển khoản.
  */
-export const toPaymentCode = (orderNumber: string) => orderNumber.replace('-', '');
+export const toPaymentCode = (orderNumber: string) =>
+  orderNumber.replace('-', '');
 
 const PAYMENT_CODE_IN_TEXT = /HD(\d{6})([2-9A-HJ-NP-Z]{6})/;
 
@@ -36,6 +37,8 @@ const PAYMENT_CODE_IN_TEXT = /HD(\d{6})([2-9A-HJ-NP-Z]{6})/;
  * (`content`, khách có thể gõ thêm chữ, dấu cách, viết thường). Trả về mã đơn có dấu "-" hoặc null.
  */
 export const findOrderNumberInText = (text: string | null | undefined) => {
-  const match = PAYMENT_CODE_IN_TEXT.exec((text ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''));
+  const match = PAYMENT_CODE_IN_TEXT.exec(
+    (text ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),
+  );
   return match ? `HD${match[1]}-${match[2]}` : null;
 };

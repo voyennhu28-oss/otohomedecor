@@ -17,8 +17,14 @@ describe('OrdersCron', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('được đăng ký chạy mỗi 5 phút', () => {
-    const metadata = Reflect.getMetadata('SCHEDULE_CRON_OPTIONS', OrdersCron.prototype.cancelUnpaidOrders);
-    expect(metadata).toMatchObject({ cronTime: '0 */5 * * * *', name: 'cancel-unpaid-orders' });
+    const metadata = Reflect.getMetadata(
+      'SCHEDULE_CRON_OPTIONS',
+      OrdersCron.prototype.cancelUnpaidOrders,
+    );
+    expect(metadata).toMatchObject({
+      cronTime: '0 */5 * * * *',
+      name: 'cancel-unpaid-orders',
+    });
     expect(SchedulerRegistry).toBeDefined();
   });
 
@@ -30,7 +36,9 @@ describe('OrdersCron', () => {
 
   it('lần trước chưa chạy xong thì bỏ qua lần này (không chạy chồng)', async () => {
     let finish!: (n: number) => void;
-    orders.cancelExpiredUnpaid.mockReturnValue(new Promise<number>((resolve) => (finish = resolve)));
+    orders.cancelExpiredUnpaid.mockReturnValue(
+      new Promise<number>((resolve) => (finish = resolve)),
+    );
 
     const first = cron.cancelUnpaidOrders();
     await cron.cancelUnpaidOrders();
@@ -44,7 +52,9 @@ describe('OrdersCron', () => {
   });
 
   it('lỗi không làm crash cron, lần sau vẫn chạy', async () => {
-    orders.cancelExpiredUnpaid.mockRejectedValueOnce(new Error('db down')).mockResolvedValue(0);
+    orders.cancelExpiredUnpaid
+      .mockRejectedValueOnce(new Error('db down'))
+      .mockResolvedValue(0);
     await expect(cron.cancelUnpaidOrders()).resolves.toBeUndefined();
     await cron.cancelUnpaidOrders();
     expect(orders.cancelExpiredUnpaid).toHaveBeenCalledTimes(2);

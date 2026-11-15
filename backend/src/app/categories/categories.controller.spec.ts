@@ -21,7 +21,9 @@ describe('CategoriesController (public)', () => {
 
   it('@Public() ở cấp class: khách xem được', () => {
     expect(Reflect.getMetadata(IS_PUBLIC, CategoriesController)).toBe(true);
-    expect(Reflect.getMetadata(IS_ADMIN_ONLY, CategoriesController)).toBeUndefined();
+    expect(
+      Reflect.getMetadata(IS_ADMIN_ONLY, CategoriesController),
+    ).toBeUndefined();
   });
 
   it('getTree', async () => {
@@ -49,8 +51,12 @@ describe('AdminCategoriesController', () => {
   });
 
   it('@AdminOnly() ở cấp class, không route nào @Public', () => {
-    expect(Reflect.getMetadata(IS_ADMIN_ONLY, AdminCategoriesController)).toBe(true);
-    for (const method of Object.getOwnPropertyNames(AdminCategoriesController.prototype)) {
+    expect(Reflect.getMetadata(IS_ADMIN_ONLY, AdminCategoriesController)).toBe(
+      true,
+    );
+    for (const method of Object.getOwnPropertyNames(
+      AdminCategoriesController.prototype,
+    )) {
       const handler = (AdminCategoriesController.prototype as any)[method];
       expect(Reflect.getMetadata(IS_PUBLIC, handler)).toBeUndefined();
     }

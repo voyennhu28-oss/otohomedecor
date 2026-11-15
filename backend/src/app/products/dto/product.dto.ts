@@ -1,7 +1,11 @@
 import { ProductStatus } from '@prisma/client';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { MATERIALS, ROOMS, STYLES } from '../../../common/constants/catalog.const';
+import {
+  MATERIALS,
+  ROOMS,
+  STYLES,
+} from '../../../common/constants/catalog.const';
 import { objectId, slugSchema } from '../../../common/dto/param.dto';
 import { variantInputSchema } from './variant-input.schema';
 

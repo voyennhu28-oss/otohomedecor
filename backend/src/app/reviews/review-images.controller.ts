@@ -13,7 +13,10 @@ import { IDDto } from '../../common/dto/param.dto';
 import { imageUploadOptions } from '../../common/utils/file-util/image-upload.const';
 import type { UploadedImage } from '../../common/utils/file-util/image-upload.service';
 import { ReviewImageParamDto } from './dto/review.dto';
-import { MAX_IMAGES_PER_REVIEW, ReviewImagesService } from './review-images.service';
+import {
+  MAX_IMAGES_PER_REVIEW,
+  ReviewImagesService,
+} from './review-images.service';
 
 /** Ảnh của review, chỉ chủ review. Tạo review (JSON) trước, rồi upload ảnh. */
 @ApiTags('Reviews')
@@ -27,18 +30,31 @@ export class ReviewImagesController {
   @ApiBody({
     schema: {
       type: 'object',
-      properties: { files: { type: 'array', items: { type: 'string', format: 'binary' } } },
+      properties: {
+        files: { type: 'array', items: { type: 'string', format: 'binary' } },
+      },
     },
   })
   @UseInterceptors(
-    FilesInterceptor('files', MAX_IMAGES_PER_REVIEW, imageUploadOptions(MAX_IMAGES_PER_REVIEW)),
+    FilesInterceptor(
+      'files',
+      MAX_IMAGES_PER_REVIEW,
+      imageUploadOptions(MAX_IMAGES_PER_REVIEW),
+    ),
   )
-  upload(@User() user: UserInfo, @Param() { id }: IDDto, @UploadedFiles() files: UploadedImage[]) {
+  upload(
+    @User() user: UserInfo,
+    @Param() { id }: IDDto,
+    @UploadedFiles() files: UploadedImage[],
+  ) {
     return this.reviewImagesService.upload(user.userID, id, files);
   }
 
   @Delete(':publicID')
-  remove(@User() user: UserInfo, @Param() { id, publicID }: ReviewImageParamDto) {
+  remove(
+    @User() user: UserInfo,
+    @Param() { id, publicID }: ReviewImageParamDto,
+  ) {
     return this.reviewImagesService.removeMine(user.userID, id, publicID);
   }
 }

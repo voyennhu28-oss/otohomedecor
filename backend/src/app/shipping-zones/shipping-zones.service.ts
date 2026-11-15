@@ -8,7 +8,10 @@ import { Prisma } from '@prisma/client';
 import { PROVINCES } from '../../common/constants/catalog.const';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { PrismaBaseService } from '../../common/services/prisma-base.service';
-import { CreateShippingZoneDto, UpdateShippingZoneDto } from './dto/shipping-zone.dto';
+import {
+  CreateShippingZoneDto,
+  UpdateShippingZoneDto,
+} from './dto/shipping-zone.dto';
 
 @Injectable()
 export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
@@ -31,7 +34,9 @@ export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
   // ───────────── admin ─────────────
 
   findAll() {
-    return this.extended.findMany({ orderBy: [{ isActive: 'desc' }, { name: 'asc' }] });
+    return this.extended.findMany({
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+    });
   }
 
   async findOne(id: string) {
@@ -64,11 +69,15 @@ export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
   // ───────────── dùng cho checkout ─────────────
 
   /** Vùng đang hoạt động chứa tỉnh này. Không có thì 400 (chưa giao tới). */
-  async findForProvince(province: string, db: Prisma.TransactionClient = this.prismaService) {
+  async findForProvince(
+    province: string,
+    db: Prisma.TransactionClient = this.prismaService,
+  ) {
     const zone = await db.shippingZone.findFirst({
       where: { isActive: true, provinces: { has: province } },
     });
-    if (!zone) throw new BadRequestException(`Chưa hỗ trợ giao hàng tới ${province}`);
+    if (!zone)
+      throw new BadRequestException(`Chưa hỗ trợ giao hàng tới ${province}`);
     return zone;
   }
 
@@ -88,8 +97,11 @@ export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
 
     const wanted = new Set(provinces);
     const conflicts = others.map(
-      (z) => `${z.provinces.filter((p) => wanted.has(p)).join(', ')} (vùng "${z.name}")`,
+      (z) =>
+        `${z.provinces.filter((p) => wanted.has(p)).join(', ')} (vùng "${z.name}")`,
     );
-    throw new ConflictException(`Tỉnh đã thuộc vùng khác đang hoạt động: ${conflicts.join('; ')}`);
+    throw new ConflictException(
+      `Tỉnh đã thuộc vùng khác đang hoạt động: ${conflicts.join('; ')}`,
+    );
   }
 }

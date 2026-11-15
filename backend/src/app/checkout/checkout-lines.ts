@@ -47,7 +47,10 @@ export const buildCheckoutLines = (
       quantity,
       unitPrice: variant.price,
       lineTotal: variant.price * quantity,
-      assemblyFee: withAssembly && product.requiresAssembly ? product.assemblyFee * quantity : 0,
+      assemblyFee:
+        withAssembly && product.requiresAssembly
+          ? product.assemblyFee * quantity
+          : 0,
       reserveStock: status === 'available',
     };
   });

@@ -15,7 +15,11 @@ export interface ShippingLine {
 
 export type ShippingRates = Pick<
   ShippingZone,
-  'baseFee' | 'baseWeightKg' | 'feePerKg' | 'bulkySurcharge' | 'freeShipThreshold'
+  | 'baseFee'
+  | 'baseWeightKg'
+  | 'feePerKg'
+  | 'bulkySurcharge'
+  | 'freeShipThreshold'
 >;
 
 export const volumetricKg = (d?: Dimensions | null) =>
@@ -43,12 +47,22 @@ export const calculateShippingFee = (
   subtotal: number,
 ): number => {
   const bulky = lines.some(isBulky);
-  if (!bulky && zone.freeShipThreshold != null && subtotal >= zone.freeShipThreshold) return 0;
+  if (
+    !bulky &&
+    zone.freeShipThreshold != null &&
+    subtotal >= zone.freeShipThreshold
+  )
+    return 0;
 
   // Làm tròn 3 số lẻ trước khi ceil để tránh lỗi số thực (0.1 + 0.2 = 0.30000000000000004)
-  const totalKg = Math.round(lines.reduce((sum, l) => sum + chargeableKg(l) * l.quantity, 0) * 1000) / 1000;
+  const totalKg =
+    Math.round(
+      lines.reduce((sum, l) => sum + chargeableKg(l) * l.quantity, 0) * 1000,
+    ) / 1000;
   const extraKg = Math.max(0, Math.ceil(totalKg - zone.baseWeightKg));
-  return zone.baseFee + extraKg * zone.feePerKg + (bulky ? zone.bulkySurcharge : 0);
+  return (
+    zone.baseFee + extraKg * zone.feePerKg + (bulky ? zone.bulkySurcharge : 0)
+  );
 };
 
 /**
@@ -59,4 +73,7 @@ export const estimateDeliveryDate = (
   estimatedDays: number,
   leadTimes: number[],
   now = new Date(),
-): Date => new Date(now.getTime() + (estimatedDays + Math.max(0, ...leadTimes)) * DAY_MS);
+): Date =>
+  new Date(
+    now.getTime() + (estimatedDays + Math.max(0, ...leadTimes)) * DAY_MS,
+  );

@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import {
@@ -23,7 +31,10 @@ export class AdminProductVariantsController {
   }
 
   @Post('products/:productID/variants')
-  create(@Param() { productID }: ProductIDParamDto, @Body() dto: CreateVariantDto) {
+  create(
+    @Param() { productID }: ProductIDParamDto,
+    @Body() dto: CreateVariantDto,
+  ) {
     return this.variantsService.create(productID, dto);
   }
 
@@ -41,7 +52,10 @@ export class AdminProductVariantsController {
   }
 
   @Patch('variants/:variantID/stock')
-  updateStock(@Param() { variantID }: VariantIDParamDto, @Body() dto: UpdateStockDto) {
+  updateStock(
+    @Param() { variantID }: VariantIDParamDto,
+    @Body() dto: UpdateStockDto,
+  ) {
     return this.variantsService.updateStock(variantID, dto);
   }
 }

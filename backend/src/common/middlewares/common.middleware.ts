@@ -8,7 +8,15 @@ import { rejectNonJsonBody, verifyOrigin } from './csrf.middleware';
  * không nhận body urlencoded (loại form HTML cross-site gửi được). Thứ tự middleware có ý nghĩa:
  * cookieParser phải chạy trước verifyOrigin, và mọi bước kiểm tra chạy trước khi parse body.
  */
-export const applyMiddlewares = (app: NestExpressApplication, allowedOrigins: string[]) => {
-  app.use(helmet(), cookieParser(), verifyOrigin(allowedOrigins), rejectNonJsonBody);
+export const applyMiddlewares = (
+  app: NestExpressApplication,
+  allowedOrigins: string[],
+) => {
+  app.use(
+    helmet(),
+    cookieParser(),
+    verifyOrigin(allowedOrigins),
+    rejectNonJsonBody,
+  );
   app.useBodyParser('json');
 };

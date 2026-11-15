@@ -20,7 +20,9 @@ describe('AdminProductVariantsController', () => {
   });
 
   it('@AdminOnly() ở cấp class', () => {
-    expect(Reflect.getMetadata(IS_ADMIN_ONLY, AdminProductVariantsController)).toBe(true);
+    expect(
+      Reflect.getMetadata(IS_ADMIN_ONLY, AdminProductVariantsController),
+    ).toBe(true);
   });
 
   it('chuyển đúng tham số cho service', async () => {
@@ -40,7 +42,8 @@ describe('AdminProductVariantsController', () => {
 
 describe('DTO variant', () => {
   it('UpdateStockDto: phải gửi đúng 1 trong 2 "stock" / "adjust"', () => {
-    const parse = (body: unknown) => UpdateStockDto.schema.safeParse(body).success;
+    const parse = (body: unknown) =>
+      UpdateStockDto.schema.safeParse(body).success;
     expect(parse({ stock: 10 })).toBe(true);
     expect(parse({ adjust: -3 })).toBe(true);
     expect(parse({})).toBe(false);

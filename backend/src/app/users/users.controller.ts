@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
 import { ProductIDParamDto, UpdateMeDto } from './dto/update-me.dto';
@@ -26,12 +34,18 @@ export class UsersController {
   }
 
   @Post('wishlist/:productID')
-  addToWishlist(@User() user: UserInfo, @Param() { productID }: ProductIDParamDto) {
+  addToWishlist(
+    @User() user: UserInfo,
+    @Param() { productID }: ProductIDParamDto,
+  ) {
     return this.usersService.addToWishlist(user.userID, productID);
   }
 
   @Delete('wishlist/:productID')
-  removeFromWishlist(@User() user: UserInfo, @Param() { productID }: ProductIDParamDto) {
+  removeFromWishlist(
+    @User() user: UserInfo,
+    @Param() { productID }: ProductIDParamDto,
+  ) {
     return this.usersService.removeFromWishlist(user.userID, productID);
   }
 }

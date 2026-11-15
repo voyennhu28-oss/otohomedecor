@@ -34,7 +34,9 @@ describe('CatchEverythingFilter', () => {
 
   beforeEach(() => {
     reply = jest.fn();
-    const adapterHost = { httpAdapter: { reply } } as unknown as HttpAdapterHost;
+    const adapterHost = {
+      httpAdapter: { reply },
+    } as unknown as HttpAdapterHost;
     filter = new CatchEverythingFilter(
       adapterHost,
       new ZodExceptionFilter(),
@@ -52,7 +54,9 @@ describe('CatchEverythingFilter', () => {
   };
 
   it('HttpException: giữ status và message', () => {
-    const { status, body } = handle(new NotFoundException('Không tìm thấy sản phẩm'));
+    const { status, body } = handle(
+      new NotFoundException('Không tìm thấy sản phẩm'),
+    );
     expect(status).toBe(HttpStatus.NOT_FOUND);
     expect(body).toEqual({
       errors: [{ message: 'Không tìm thấy sản phẩm' }],
@@ -63,14 +67,20 @@ describe('CatchEverythingFilter', () => {
   });
 
   it('ThrottlerException: 429', () => {
-    expect(handle(new ThrottlerException()).status).toBe(HttpStatus.TOO_MANY_REQUESTS);
+    expect(handle(new ThrottlerException()).status).toBe(
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   });
 
   describe('lỗi Prisma', () => {
     it('P2002 (MongoDB, target là tên index) → 409 kèm field bị trùng', () => {
-      const { status, body } = handle(prismaError('P2002', { target: 'Product_slug_key' }));
+      const { status, body } = handle(
+        prismaError('P2002', { target: 'Product_slug_key' }),
+      );
       expect(status).toBe(HttpStatus.CONFLICT);
-      expect(body.errors).toEqual([{ message: 'Dữ liệu đã tồn tại: slug', fields: ['slug'] }]);
+      expect(body.errors).toEqual([
+        { message: 'Dữ liệu đã tồn tại: slug', fields: ['slug'] },
+      ]);
     });
 
     it('P2002 với index nhiều field → liệt kê đủ field', () => {
@@ -81,7 +91,9 @@ describe('CatchEverythingFilter', () => {
     });
 
     it('P2002 (target là mảng field) → 409', () => {
-      const { status, body } = handle(prismaError('P2002', { target: ['sku'] }));
+      const { status, body } = handle(
+        prismaError('P2002', { target: ['sku'] }),
+      );
       expect(status).toBe(HttpStatus.CONFLICT);
       expect(body.errors[0].fields).toEqual(['sku']);
     });
@@ -114,9 +126,9 @@ describe('CatchEverythingFilter', () => {
     it('ZodValidationException → 400 kèm field lỗi', () => {
       const { status, body } = handle(new ZodValidationException(zodError));
       expect(status).toBe(HttpStatus.BAD_REQUEST);
-      expect(body.errors.flatMap((e: { fields: string[] }) => e.fields)).toEqual(
-        expect.arrayContaining(['email', 'password']),
-      );
+      expect(
+        body.errors.flatMap((e: { fields: string[] }) => e.fields),
+      ).toEqual(expect.arrayContaining(['email', 'password']));
     });
 
     it('ZodSerializationException (response sai schema) là lỗi server → 500', () => {
@@ -128,9 +140,13 @@ describe('CatchEverythingFilter', () => {
 
   describe('lỗi không xác định', () => {
     it('→ 500, câu chung cho client, log đầy đủ stack cho server', () => {
-      const { status, body } = handle(new TypeError("Cannot read properties of undefined (reading 'id')"));
+      const { status, body } = handle(
+        new TypeError("Cannot read properties of undefined (reading 'id')"),
+      );
       expect(status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
-      expect(body.errors).toEqual([{ message: 'Lỗi hệ thống, vui lòng thử lại sau' }]);
+      expect(body.errors).toEqual([
+        { message: 'Lỗi hệ thống, vui lòng thử lại sau' },
+      ]);
       expect(loggerError).toHaveBeenCalledWith(
         'POST /api/admin/products',
         expect.stringContaining('TypeError'),

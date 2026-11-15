@@ -15,7 +15,10 @@ export class PaymentsController {
    * Frontend poll GET /me/orders/:orderNumber tới khi paymentStatus = "paid".
    */
   @Get(':orderNumber/payment')
-  getTransferInfo(@User() user: UserInfo, @Param() { orderNumber }: OrderNumberParamDto) {
+  getTransferInfo(
+    @User() user: UserInfo,
+    @Param() { orderNumber }: OrderNumberParamDto,
+  ) {
     return this.paymentsService.getMyTransferInfo(user.userID, orderNumber);
   }
 }

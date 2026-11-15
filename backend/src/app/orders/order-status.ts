@@ -17,7 +17,9 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
 };
 
 /** Customer chỉ tự hủy được đơn chưa xác nhận. */
-export const CUSTOMER_CANCELLABLE: readonly OrderStatus[] = [OrderStatus.pending];
+export const CUSTOMER_CANCELLABLE: readonly OrderStatus[] = [
+  OrderStatus.pending,
+];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Chờ xác nhận',
@@ -41,7 +43,10 @@ export const assertTransition = (from: OrderStatus, to: OrderStatus) => {
 };
 
 /** Mốc thời gian set khi chuyển sang trạng thái tương ứng. */
-export const statusTimestamp = (status: OrderStatus, at: Date): Prisma.OrderUpdateInput => {
+export const statusTimestamp = (
+  status: OrderStatus,
+  at: Date,
+): Prisma.OrderUpdateInput => {
   switch (status) {
     case OrderStatus.shipping:
       return { shippedAt: at };

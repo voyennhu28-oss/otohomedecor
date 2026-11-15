@@ -12,11 +12,16 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { objectId } from '../../common/dto/param.dto';
-import { IMAGE_UPLOAD_OPTIONS, MAX_IMAGES_PER_UPLOAD } from './product-images.const';
+import {
+  IMAGE_UPLOAD_OPTIONS,
+  MAX_IMAGES_PER_UPLOAD,
+} from './product-images.const';
 import type { UploadedImage } from '../../common/utils/file-util/image-upload.service';
 import { ProductImagesService } from './product-images.service';
 
-class ProductIDParamDto extends createZodDto(z.object({ productID: objectId })) {}
+class ProductIDParamDto extends createZodDto(
+  z.object({ productID: objectId }),
+) {}
 
 class ProductImageParamDto extends createZodDto(
   z.object({ productID: objectId, publicID: z.string().min(1).max(200) }),
@@ -39,8 +44,13 @@ export class AdminProductImagesController {
       },
     },
   })
-  @UseInterceptors(FilesInterceptor('files', MAX_IMAGES_PER_UPLOAD, IMAGE_UPLOAD_OPTIONS))
-  upload(@Param() { productID }: ProductIDParamDto, @UploadedFiles() files: UploadedImage[]) {
+  @UseInterceptors(
+    FilesInterceptor('files', MAX_IMAGES_PER_UPLOAD, IMAGE_UPLOAD_OPTIONS),
+  )
+  upload(
+    @Param() { productID }: ProductIDParamDto,
+    @UploadedFiles() files: UploadedImage[],
+  ) {
     return this.imagesService.upload(productID, files);
   }
 

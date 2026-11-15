@@ -36,12 +36,16 @@ describe('AdminProductImagesController', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    imagesService.upload.mockImplementation((_id, files: unknown[]) => Promise.resolve(files.map((_, i) => ({ sortOrder: i }))));
+    imagesService.upload.mockImplementation((_id, files: unknown[]) =>
+      Promise.resolve(files.map((_, i) => ({ sortOrder: i }))),
+    );
     imagesService.remove.mockResolvedValue([]);
   });
 
   it('chỉ admin (gắn @AdminOnly ở cấp class)', () => {
-    expect(Reflect.getMetadata(IS_ADMIN_ONLY, AdminProductImagesController)).toBe(true);
+    expect(
+      Reflect.getMetadata(IS_ADMIN_ONLY, AdminProductImagesController),
+    ).toBe(true);
   });
 
   describe('POST /admin/products/:productID/images', () => {
@@ -50,12 +54,17 @@ describe('AdminProductImagesController', () => {
         .post(URL)
         .attach('files', JPG, { filename: 'a.jpg', contentType: 'image/jpeg' })
         .attach('files', JPG, { filename: 'b.png', contentType: 'image/png' })
-        .attach('files', JPG, { filename: 'c.webp', contentType: 'image/webp' });
+        .attach('files', JPG, {
+          filename: 'c.webp',
+          contentType: 'image/webp',
+        });
 
       expect(res.status).toBe(201);
       const [productID, files] = imagesService.upload.mock.calls[0];
       expect(productID).toBe(P);
-      expect(files.map((f: { originalname: string }) => f.originalname)).toEqual(['a.jpg', 'b.png', 'c.webp']);
+      expect(
+        files.map((f: { originalname: string }) => f.originalname),
+      ).toEqual(['a.jpg', 'b.png', 'c.webp']);
     });
 
     it('productID sai định dạng → 400, không gọi service', async () => {
@@ -67,7 +76,9 @@ describe('AdminProductImagesController', () => {
     });
 
     it('không chọn file → 400 (lỗi từ service)', async () => {
-      imagesService.upload.mockRejectedValue(new BadRequestException('Chưa chọn ảnh nào'));
+      imagesService.upload.mockRejectedValue(
+        new BadRequestException('Chưa chọn ảnh nào'),
+      );
       const res = await request(app.getHttpServer()).post(URL).field('x', '1');
       expect(res.status).toBe(400);
       expect(imagesService.upload.mock.calls[0][1] ?? []).toEqual([]);
@@ -77,17 +88,25 @@ describe('AdminProductImagesController', () => {
       ['pdf', 'a.pdf', 'application/pdf'],
       ['svg (có thể chứa script)', 'a.svg', 'image/svg+xml'],
       ['gif', 'a.gif', 'image/gif'],
-    ])('file %s → 400, không gọi service', async (_name, filename, contentType) => {
-      const res = await request(app.getHttpServer()).post(URL).attach('files', JPG, { filename, contentType });
-      expect(res.status).toBe(400);
-      expect(res.body.message).toContain(filename);
-      expect(imagesService.upload).not.toHaveBeenCalled();
-    });
+    ])(
+      'file %s → 400, không gọi service',
+      async (_name, filename, contentType) => {
+        const res = await request(app.getHttpServer())
+          .post(URL)
+          .attach('files', JPG, { filename, contentType });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain(filename);
+        expect(imagesService.upload).not.toHaveBeenCalled();
+      },
+    );
 
     it(`quá ${MAX_IMAGES_PER_UPLOAD} ảnh một lần → 400`, async () => {
       let req = request(app.getHttpServer()).post(URL);
       for (let i = 0; i <= MAX_IMAGES_PER_UPLOAD; i++) {
-        req = req.attach('files', JPG, { filename: `${i}.jpg`, contentType: 'image/jpeg' });
+        req = req.attach('files', JPG, {
+          filename: `${i}.jpg`,
+          contentType: 'image/jpeg',
+        });
       }
       const res = await req;
       expect(res.status).toBe(400);
@@ -97,13 +116,17 @@ describe('AdminProductImagesController', () => {
 
   describe('DELETE /admin/products/:productID/images/:publicID', () => {
     it('chuyển productID + publicID cho service', async () => {
-      const res = await request(app.getHttpServer()).delete(`${URL}/hd-product-x`);
+      const res = await request(app.getHttpServer()).delete(
+        `${URL}/hd-product-x`,
+      );
       expect(res.status).toBe(200);
       expect(imagesService.remove).toHaveBeenCalledWith(P, 'hd-product-x');
     });
 
     it('productID sai định dạng → 400', async () => {
-      const res = await request(app.getHttpServer()).delete('/admin/products/123/images/hd-product-x');
+      const res = await request(app.getHttpServer()).delete(
+        '/admin/products/123/images/hd-product-x',
+      );
       expect(res.status).toBe(400);
       expect(imagesService.remove).not.toHaveBeenCalled();
     });

@@ -40,7 +40,10 @@ export class ProductsController {
   }
 
   @Get(':slug/related')
-  findRelated(@Param() { slug }: SlugDto, @Query() { limit }: ProductLimitQueryDto) {
+  findRelated(
+    @Param() { slug }: SlugDto,
+    @Query() { limit }: ProductLimitQueryDto,
+  ) {
     return this.productsService.findRelated(slug, limit);
   }
 }

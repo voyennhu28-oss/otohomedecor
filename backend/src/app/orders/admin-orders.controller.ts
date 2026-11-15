@@ -68,7 +68,11 @@ export class AdminOrdersController {
    */
   @Post(':id/mark-paid')
   @HttpCode(200)
-  markPaid(@User() admin: UserInfo, @Param() { id }: IDDto, @Body() { note }: MarkPaidDto) {
+  markPaid(
+    @User() admin: UserInfo,
+    @Param() { id }: IDDto,
+    @Body() { note }: MarkPaidDto,
+  ) {
     return this.ordersService.markPaidManually(admin, id, note);
   }
 }

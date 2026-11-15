@@ -19,7 +19,8 @@ async function bootstrap() {
   const port = config.getOrThrow<Env['PORT']>('PORT');
   const host = config.getOrThrow<Env['HOST']>('HOST');
   const prefix = config.getOrThrow<Env['APP_PREFIX']>('APP_PREFIX');
-  const protocol = config.get<Env['NODE_ENV']>('NODE_ENV') === 'production' ? 'https' : 'http';
+  const protocol =
+    config.get<Env['NODE_ENV']>('NODE_ENV') === 'production' ? 'https' : 'http';
 
   await app.listen(port);
   Logger.log(

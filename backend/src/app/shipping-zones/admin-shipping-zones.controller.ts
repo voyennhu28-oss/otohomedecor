@@ -1,8 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { IDDto } from '../../common/dto/param.dto';
-import { CreateShippingZoneDto, UpdateShippingZoneDto } from './dto/shipping-zone.dto';
+import {
+  CreateShippingZoneDto,
+  UpdateShippingZoneDto,
+} from './dto/shipping-zone.dto';
 import { ShippingZonesService } from './shipping-zones.service';
 
 @ApiTags('Admin / Shipping zones')

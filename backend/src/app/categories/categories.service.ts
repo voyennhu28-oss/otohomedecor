@@ -208,7 +208,9 @@ export class CategoriesService extends PrismaBaseService<'category'> {
    */
   private async assertValidParent(id: string | null, parentID: string) {
     if (id === parentID) {
-      throw new BadRequestException('Không thể chọn chính danh mục này làm danh mục cha');
+      throw new BadRequestException(
+        'Không thể chọn chính danh mục này làm danh mục cha',
+      );
     }
     const all = await this.extended.findMany({
       select: { id: true, parentID: true },

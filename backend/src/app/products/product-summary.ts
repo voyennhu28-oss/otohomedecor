@@ -16,12 +16,7 @@ export interface ProductSummary {
 
 /** "Màu sắc" → "mau-sac", để so với COLOR_OPTION_NAMES. */
 const normalize = (text: string) =>
-  kebabCase(
-    text
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[đĐ]/g, 'd'),
-  );
+  kebabCase(text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd'));
 
 const isColorOption = (optionName: string) =>
   COLOR_OPTION_NAMES.includes(normalize(optionName));

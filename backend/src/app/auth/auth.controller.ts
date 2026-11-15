@@ -42,7 +42,8 @@ export class AuthController {
     // Refresh token chỉ được gửi kèm request tới /api/auth/*
     this.refreshCookiePath = `${config.get<string>('APP_PREFIX') ?? '/api'}/auth`;
     this.sameSite =
-      config.get<CookieSameSite>('COOKIE_SAME_SITE') ?? COOKIE_CONFIG_DEFAULT.sameSite;
+      config.get<CookieSameSite>('COOKIE_SAME_SITE') ??
+      COOKIE_CONFIG_DEFAULT.sameSite;
   }
 
   @Public()

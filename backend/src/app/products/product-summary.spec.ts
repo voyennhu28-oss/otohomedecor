@@ -9,7 +9,11 @@ const variant = (
 describe('computeProductSummary', () => {
   it('min / max theo variant đang bán', () => {
     expect(
-      computeProductSummary([variant(12_000_000), variant(9_500_000), variant(15_000_000)]),
+      computeProductSummary([
+        variant(12_000_000),
+        variant(9_500_000),
+        variant(15_000_000),
+      ]),
     ).toMatchObject({ minPrice: 9_500_000, maxPrice: 15_000_000 });
   });
 
@@ -23,7 +27,9 @@ describe('computeProductSummary', () => {
   });
 
   it('không còn variant đang bán: giá 0, không có màu', () => {
-    expect(computeProductSummary([variant(1_000, [], { isActive: false })])).toEqual({
+    expect(
+      computeProductSummary([variant(1_000, [], { isActive: false })]),
+    ).toEqual({
       minPrice: 0,
       maxPrice: 0,
       colors: [],
@@ -32,7 +38,10 @@ describe('computeProductSummary', () => {
 
   it('colors: lấy option tên "Màu" / "Màu sắc" / "Color", không trùng, không phân biệt hoa thường', () => {
     const summary = computeProductSummary([
-      variant(1, [{ name: 'Màu', value: 'Xám' }, { name: 'Kích thước', value: '3 chỗ' }]),
+      variant(1, [
+        { name: 'Màu', value: 'Xám' },
+        { name: 'Kích thước', value: '3 chỗ' },
+      ]),
       variant(1, [{ name: 'màu sắc', value: 'Be' }]),
       variant(1, [{ name: 'Color', value: 'xám' }]), // trùng "Xám"
       variant(1, [{ name: 'Chất liệu', value: 'Gỗ sồi' }]),

@@ -27,11 +27,15 @@ export class SepayWebhookGuard implements CanActivate {
   }
 
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest<Request & { rawBody?: Buffer }>();
+    const req = context
+      .switchToHttp()
+      .getRequest<Request & { rawBody?: Buffer }>();
     if (this.secret) return this.checkSignature(req, this.secret);
     if (this.apiKey) return this.checkApiKey(req, this.apiKey);
     // Chưa cấu hình: 503 để SePay gửi lại sau khi cấu hình xong, không âm thầm nhận mọi request
-    throw new ServiceUnavailableException('Chưa cấu hình SEPAY_WEBHOOK_SECRET hoặc SEPAY_WEBHOOK_API_KEY');
+    throw new ServiceUnavailableException(
+      'Chưa cấu hình SEPAY_WEBHOOK_SECRET hoặc SEPAY_WEBHOOK_API_KEY',
+    );
   }
 
   private checkSignature(req: Request & { rawBody?: Buffer }, secret: string) {
@@ -41,13 +45,19 @@ export class SepayWebhookGuard implements CanActivate {
       signature: req.header('x-sepay-signature'),
       secret,
     });
-    if (result === 'expired') throw new UnauthorizedException('Webhook đã hết hạn (timestamp lệch quá 5 phút)');
-    if (result !== 'ok') throw new UnauthorizedException('Chữ ký webhook không hợp lệ');
+    if (result === 'expired')
+      throw new UnauthorizedException(
+        'Webhook đã hết hạn (timestamp lệch quá 5 phút)',
+      );
+    if (result !== 'ok')
+      throw new UnauthorizedException('Chữ ký webhook không hợp lệ');
     return true;
   }
 
   private checkApiKey(req: Request, apiKey: string) {
-    const [scheme, key] = (req.headers.authorization ?? '').trim().split(/\s+/, 2);
+    const [scheme, key] = (req.headers.authorization ?? '')
+      .trim()
+      .split(/\s+/, 2);
     if (scheme?.toLowerCase() !== 'apikey' || !key || !safeEqual(key, apiKey)) {
       throw new UnauthorizedException('API key không hợp lệ');
     }

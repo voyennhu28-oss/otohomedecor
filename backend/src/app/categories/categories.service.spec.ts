@@ -50,29 +50,39 @@ describe('CategoriesService', () => {
       );
       expect(tree.map((c) => c.slug)).toEqual(['phong-khach']); // "giuong" bị bỏ vì cha đang ẩn
       expect(tree[0].children.map((c) => c.slug)).toEqual(['sofa', 'ban-tra']);
-      expect(tree[0].children[0].children.map((c) => c.slug)).toEqual(['sofa-goc']);
+      expect(tree[0].children[0].children.map((c) => c.slug)).toEqual([
+        'sofa-goc',
+      ]);
     });
 
     it('getPublicBySlug: kèm breadcrumb từ gốc và danh mục con', async () => {
       const result = await service.getPublicBySlug('sofa');
-      expect(result.breadcrumb.map((c) => c.slug)).toEqual(['phong-khach', 'sofa']);
+      expect(result.breadcrumb.map((c) => c.slug)).toEqual([
+        'phong-khach',
+        'sofa',
+      ]);
       expect(result.children.map((c) => c.slug)).toEqual(['sofa-goc']);
     });
 
     it('getPublicBySlug: 404 khi slug không có hoặc một tổ tiên đang ẩn', async () => {
-      await expect(service.getPublicBySlug('khong-co')).rejects.toBeInstanceOf(NotFoundException);
-      await expect(service.getPublicBySlug('giuong')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.getPublicBySlug('khong-co')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      await expect(service.getPublicBySlug('giuong')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('getActiveIDsWithDescendants: gồm cả con cháu; rỗng khi không hiển thị', async () => {
-      await expect(service.getActiveIDsWithDescendants('phong-khach')).resolves.toEqual([
-        'pk',
-        'sofa',
-        'ban-tra',
-        'sofa-goc',
-      ]);
-      await expect(service.getActiveIDsWithDescendants('giuong')).resolves.toEqual([]);
-      await expect(service.getActiveIDsWithDescendants('khong-co')).resolves.toEqual([]);
+      await expect(
+        service.getActiveIDsWithDescendants('phong-khach'),
+      ).resolves.toEqual(['pk', 'sofa', 'ban-tra', 'sofa-goc']);
+      await expect(
+        service.getActiveIDsWithDescendants('giuong'),
+      ).resolves.toEqual([]);
+      await expect(
+        service.getActiveIDsWithDescendants('khong-co'),
+      ).resolves.toEqual([]);
     });
   });
 
@@ -83,7 +93,11 @@ describe('CategoriesService', () => {
         { ...SOFA, isActive: false, _count: { products: 3, children: 0 } },
       ]);
       const tree = await service.getAdminTree();
-      expect(tree[0].children[0]).toMatchObject({ slug: 'sofa', isActive: false, productCount: 3 });
+      expect(tree[0].children[0]).toMatchObject({
+        slug: 'sofa',
+        isActive: false,
+        productCount: 3,
+      });
       expect(tree[0]).not.toHaveProperty('_count');
       const include = model.findMany.mock.calls[0][0].include;
       expect(include._count.select.products.where).toEqual({
@@ -101,7 +115,11 @@ describe('CategoriesService', () => {
     });
 
     it('slug đã có (kể cả của danh mục đã xóa) thì thêm hậu tố -2, -3', async () => {
-      model.findMany.mockResolvedValue([{ slug: 'ban-tra' }, { slug: 'ban-tra-2' }, { slug: 'ban-tra-go' }]);
+      model.findMany.mockResolvedValue([
+        { slug: 'ban-tra' },
+        { slug: 'ban-tra-2' },
+        { slug: 'ban-tra-go' },
+      ]);
       model.create.mockImplementation(({ data }) => data);
       const created = await service.create({ name: 'Bàn trà' });
       expect(created.slug).toBe('ban-tra-3');
@@ -113,7 +131,9 @@ describe('CategoriesService', () => {
 
     it('slug tự nhập đã được dùng → 409', async () => {
       model.findUnique.mockResolvedValue({ id: 'other' });
-      await expect(service.create({ name: 'X', slug: 'sofa' })).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.create({ name: 'X', slug: 'sofa' }),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(model.create).not.toHaveBeenCalled();
     });
 
@@ -126,7 +146,10 @@ describe('CategoriesService', () => {
   });
 
   describe('update', () => {
-    const ALL = [PK, SOFA, SOFA_GOC, BAN_TRA].map(({ id, parentID }) => ({ id, parentID }));
+    const ALL = [PK, SOFA, SOFA_GOC, BAN_TRA].map(({ id, parentID }) => ({
+      id,
+      parentID,
+    }));
 
     beforeEach(() => {
       model.findUnique.mockResolvedValue({ slug: 'sofa' });
@@ -135,28 +158,42 @@ describe('CategoriesService', () => {
     });
 
     it('chọn chính nó làm cha → 400', async () => {
-      await expect(service.update('sofa', { parentID: 'sofa' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.update('sofa', { parentID: 'sofa' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('chuyển vào danh mục con cháu của nó (tạo vòng lặp) → 400', async () => {
-      await expect(service.update('pk', { parentID: 'sofa-goc' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.update('pk', { parentID: 'sofa-goc' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(model.update).not.toHaveBeenCalled();
     });
 
     it('chuyển sang nhánh khác hợp lệ', async () => {
       await service.update('sofa', { parentID: 'ban-tra' });
-      expect(model.update).toHaveBeenCalledWith({ where: { id: 'sofa' }, data: { parentID: 'ban-tra' } });
+      expect(model.update).toHaveBeenCalledWith({
+        where: { id: 'sofa' },
+        data: { parentID: 'ban-tra' },
+      });
     });
 
     it('parentID null: chuyển lên làm gốc, không cần kiểm tra cha', async () => {
       await service.update('sofa', { parentID: null });
       expect(model.findMany).not.toHaveBeenCalled();
-      expect(model.update).toHaveBeenCalledWith({ where: { id: 'sofa' }, data: { parentID: null } });
+      expect(model.update).toHaveBeenCalledWith({
+        where: { id: 'sofa' },
+        data: { parentID: null },
+      });
     });
 
     it('đổi slug sang slug của danh mục khác → 409; giữ slug cũ thì không kiểm tra', async () => {
-      model.findUnique.mockResolvedValueOnce({ slug: 'sofa' }).mockResolvedValueOnce({ id: 'ban-tra' });
-      await expect(service.update('sofa', { slug: 'ban-tra' })).rejects.toBeInstanceOf(ConflictException);
+      model.findUnique
+        .mockResolvedValueOnce({ slug: 'sofa' })
+        .mockResolvedValueOnce({ id: 'ban-tra' });
+      await expect(
+        service.update('sofa', { slug: 'ban-tra' }),
+      ).rejects.toBeInstanceOf(ConflictException);
 
       model.findUnique.mockReset().mockResolvedValue({ slug: 'sofa' });
       await service.update('sofa', { slug: 'sofa', name: 'Sofa mới' });
@@ -165,7 +202,9 @@ describe('CategoriesService', () => {
 
     it('không tồn tại → 404', async () => {
       model.findUnique.mockResolvedValue(null);
-      await expect(service.update('x', { name: 'X' })).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.update('x', { name: 'X' })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
@@ -178,7 +217,9 @@ describe('CategoriesService', () => {
 
     it('còn danh mục con → 409', async () => {
       model.findUnique.mockResolvedValue(withCount(0, 2));
-      await expect(service.remove('sofa')).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.remove('sofa')).rejects.toBeInstanceOf(
+        ConflictException,
+      );
       expect(model.update).not.toHaveBeenCalled();
     });
 
@@ -198,7 +239,9 @@ describe('CategoriesService', () => {
 
     it('không tồn tại → 404', async () => {
       model.findUnique.mockResolvedValue(null);
-      await expect(service.remove('x')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove('x')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

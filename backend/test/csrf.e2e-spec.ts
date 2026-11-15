@@ -39,12 +39,19 @@ describe('CSRF (e2e)', () => {
         { provide: APP_PIPE, useClass: ZodValidationPipe },
         {
           provide: AuthService,
-          useValue: { signIn: jest.fn().mockResolvedValue({ accessToken: 'a.jwt', refreshToken: 'r.jwt' }) },
+          useValue: {
+            signIn: jest.fn().mockResolvedValue({
+              accessToken: 'a.jwt',
+              refreshToken: 'r.jwt',
+            }),
+          },
         },
       ],
     }).compile();
 
-    app = initApp(moduleRef.createNestApplication<NestExpressApplication>(NEST_APP_OPTIONS));
+    app = initApp(
+      moduleRef.createNestApplication<NestExpressApplication>(NEST_APP_OPTIONS),
+    );
     await app.init();
   });
 
@@ -53,7 +60,8 @@ describe('CSRF (e2e)', () => {
     process.env = env;
   });
 
-  const adminUser = 'email=hacker@evil.com&password=12345678&fullName=x&role=admin';
+  const adminUser =
+    'email=hacker@evil.com&password=12345678&fullName=x&role=admin';
 
   it('POST /api/admin/users với body form-urlencoded → 415, không tạo được admin', async () => {
     const res = await request(app.getHttpServer())

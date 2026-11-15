@@ -11,8 +11,20 @@ const storedOrder = (overrides: Record<string, unknown> = {}) => ({
   id: 'o1',
   orderNumber: 'HD261113-7K3M9Q',
   items: [],
-  subtotal: 100, shippingFee: 0, assemblyFee: 0, discount: 0, total: 100, promotionCode: null,
-  shippingAddress: { fullName: 'Người Nhận', phone: '0901', province: 'Hà Nội', district: null, ward: 'P', street: 'S' },
+  subtotal: 100,
+  shippingFee: 0,
+  assemblyFee: 0,
+  discount: 0,
+  total: 100,
+  promotionCode: null,
+  shippingAddress: {
+    fullName: 'Người Nhận',
+    phone: '0901',
+    province: 'Hà Nội',
+    district: null,
+    ward: 'P',
+    street: 'S',
+  },
   paymentMethod: PaymentMethod.cod,
   paymentStatus: PaymentStatus.pending,
   status: OrderStatus.confirmed,
@@ -36,7 +48,9 @@ describe('OrderNotificationService', () => {
     service = new OrderNotificationService(
       { order: { findUnique } } as unknown as PrismaService,
       mail as unknown as MailUtilService,
-      { get: () => 'https://shop.vn, https://admin.shop.vn' } as unknown as ConfigService,
+      {
+        get: () => 'https://shop.vn, https://admin.shop.vn',
+      } as unknown as ConfigService,
     );
   });
 
@@ -51,23 +65,38 @@ describe('OrderNotificationService', () => {
       include: { user: { select: { email: true, fullName: true } } },
     });
     const sent = mail.send.mock.calls[0][0];
-    expect(sent).toMatchObject({ to: 'khach@x.com', subject: expect.stringContaining('đã được xác nhận') });
+    expect(sent).toMatchObject({
+      to: 'khach@x.com',
+      subject: expect.stringContaining('đã được xác nhận'),
+    });
     expect(sent.html).toContain('Chào Người Nhận');
     expect(sent.html).toContain('https://shop.vn/orders/HD261113-7K3M9Q');
   });
 
   it('trạng thái không cần báo → không gửi', async () => {
-    findUnique.mockResolvedValue(storedOrder({ status: OrderStatus.processing }));
+    findUnique.mockResolvedValue(
+      storedOrder({ status: OrderStatus.processing }),
+    );
     service.statusChanged('o1');
     await flush();
     expect(mail.send).not.toHaveBeenCalled();
   });
 
   it('orderPlaced: kèm thông tin chuyển khoản nếu có', async () => {
-    findUnique.mockResolvedValue(storedOrder({ status: OrderStatus.pending, paymentMethod: PaymentMethod.bank_transfer }));
+    findUnique.mockResolvedValue(
+      storedOrder({
+        status: OrderStatus.pending,
+        paymentMethod: PaymentMethod.bank_transfer,
+      }),
+    );
     service.orderPlaced('o1', {
-      bank: 'VCB', accountNumber: '0123', accountName: null, amount: 100, content: 'HD2611137K3M9Q',
-      qrUrl: 'https://vietqr.app/img?x=1', expiresAt: new Date(),
+      bank: 'VCB',
+      accountNumber: '0123',
+      accountName: null,
+      amount: 100,
+      content: 'HD2611137K3M9Q',
+      qrUrl: 'https://vietqr.app/img?x=1',
+      expiresAt: new Date(),
     });
     await flush();
     expect(mail.send.mock.calls[0][0].html).toContain('HD2611137K3M9Q');
@@ -82,12 +111,18 @@ describe('OrderNotificationService', () => {
     mail.send.mockRejectedValue(new Error('SMTP down'));
     service.statusChanged('o1');
     await flush();
-    expect(logError).toHaveBeenCalledWith(expect.stringContaining('o1'), expect.stringContaining('SMTP down'));
+    expect(logError).toHaveBeenCalledWith(
+      expect.stringContaining('o1'),
+      expect.stringContaining('SMTP down'),
+    );
 
     findUnique.mockRejectedValue('db down');
     service.orderPlaced('o1');
     await flush();
-    expect(logError).toHaveBeenLastCalledWith(expect.stringContaining('đặt hàng'), 'db down');
+    expect(logError).toHaveBeenLastCalledWith(
+      expect.stringContaining('đặt hàng'),
+      'db down',
+    );
   });
 
   it('đơn không tồn tại → không gửi', async () => {

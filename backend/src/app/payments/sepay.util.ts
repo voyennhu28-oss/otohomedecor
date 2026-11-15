@@ -50,14 +50,18 @@ export const buildTransferInfo = (
  *  - already_paid     đơn đã trả rồi (khách chuyển 2 lần) → admin hoàn tiền
  *  - order_closed     đơn đã hủy / trả hàng (vd tiền về sau khi cron hủy) → admin hoàn tiền
  */
-export type TransferOutcome = 'paid' | 'amount_mismatch' | 'already_paid' | 'order_closed';
+export type TransferOutcome =
+  'paid' | 'amount_mismatch' | 'already_paid' | 'order_closed';
 
 export const evaluateTransfer = (
   order: Pick<Order, 'status' | 'paymentStatus' | 'total'>,
   amount: number,
 ): TransferOutcome => {
   if (order.paymentStatus === PaymentStatus.paid) return 'already_paid';
-  if (order.status === OrderStatus.cancelled || order.status === OrderStatus.returned) {
+  if (
+    order.status === OrderStatus.cancelled ||
+    order.status === OrderStatus.returned
+  ) {
     return 'order_closed';
   }
   return amount === order.total ? 'paid' : 'amount_mismatch';
@@ -65,7 +69,10 @@ export const evaluateTransfer = (
 
 /** So sánh chuỗi bí mật không lộ thông tin qua thời gian chạy (băm trước để 2 buffer cùng độ dài). */
 export const safeEqual = (a: string, b: string) =>
-  timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest());
+  timingSafeEqual(
+    createHash('sha256').update(a).digest(),
+    createHash('sha256').update(b).digest(),
+  );
 
 /** SePay: timestamp lệch quá 5 phút thì từ chối (chống gửi lại request cũ bị bắt được). */
 export const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -90,8 +97,10 @@ export const verifySepaySignature = ({
   secret: string;
   now?: number;
 }): SignatureCheck => {
-  if (!rawBody || !signature || !timestamp || !/^\d+$/.test(timestamp)) return 'missing';
-  if (Math.abs(now / 1000 - Number(timestamp)) > SIGNATURE_TOLERANCE_SECONDS) return 'expired';
+  if (!rawBody || !signature || !timestamp || !/^\d+$/.test(timestamp))
+    return 'missing';
+  if (Math.abs(now / 1000 - Number(timestamp)) > SIGNATURE_TOLERANCE_SECONDS)
+    return 'expired';
 
   const expected = `sha256=${createHmac('sha256', secret).update(`${timestamp}.`).update(rawBody).digest('hex')}`;
   return safeEqual(signature.trim(), expected) ? 'ok' : 'invalid';

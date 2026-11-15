@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaymentMethod, Prisma } from '@prisma/client';
 import type { UserInfo } from '../../common/decorators/user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -12,7 +16,10 @@ import { PaymentsService } from '../payments/payments.service';
 import { ProductVariantsService } from '../product-variants/product-variants.service';
 import { computeDiscount } from '../promotions/promotion.util';
 import { PromotionsService } from '../promotions/promotions.service';
-import { calculateShippingFee, estimateDeliveryDate } from '../shipping-zones/shipping.util';
+import {
+  calculateShippingFee,
+  estimateDeliveryDate,
+} from '../shipping-zones/shipping.util';
 import { ShippingZonesService } from '../shipping-zones/shipping-zones.service';
 import { buildCheckoutLines, sumBy } from './checkout-lines';
 import { CheckoutDto, CheckoutPreviewDto } from './dto/checkout.dto';
@@ -26,7 +33,14 @@ const CHECKOUT_TX_OPTIONS = { maxWait: 5_000, timeout: 20_000 };
 type Quote = Awaited<ReturnType<CheckoutService['quote']>>;
 
 /** Không trả nguyên document địa chỉ ra ngoài, chỉ các field giao hàng. */
-const toShippingAddress = ({ fullName, phone, province, district, ward, street }: Quote['address']) => ({
+const toShippingAddress = ({
+  fullName,
+  phone,
+  province,
+  district,
+  ward,
+  street,
+}: Quote['address']) => ({
   fullName,
   phone,
   province,
@@ -66,7 +80,10 @@ export class CheckoutService {
         madeToOrder: !l.reserveStock,
       })),
       shippingAddress: toShippingAddress(quote.address),
-      shippingZone: { name: quote.zone.name, estimatedDays: quote.zone.estimatedDays },
+      shippingZone: {
+        name: quote.zone.name,
+        estimatedDays: quote.zone.estimatedDays,
+      },
       promotion: quote.promotion && {
         code: quote.promotion.code,
         name: quote.promotion.name,
@@ -101,10 +118,15 @@ export class CheckoutService {
         await this.productVariantsService.reserveStock(
           quote.lines
             .filter((l) => l.reserveStock)
-            .map((l) => ({ variantID: l.variant.id, quantity: l.quantity, name: l.variant.name })),
+            .map((l) => ({
+              variantID: l.variant.id,
+              quantity: l.quantity,
+              name: l.variant.name,
+            })),
           tx,
         );
-        if (quote.promotion) await this.promotionsService.consume(quote.promotion, tx);
+        if (quote.promotion)
+          await this.promotionsService.consume(quote.promotion, tx);
 
         const created = await this.ordersService.createInTx(
           tx,
@@ -144,7 +166,9 @@ export class CheckoutService {
     );
 
     // Ngoài transaction (đơn đã commit): thông tin chuyển khoản + QR, email xác nhận chạy nền
-    const payment = isTransfer ? this.paymentsService.transferInfo(order) : null;
+    const payment = isTransfer
+      ? this.paymentsService.transferInfo(order)
+      : null;
     this.notifications.orderPlaced(order.id, payment);
     return { order, payment };
   }
@@ -162,8 +186,13 @@ export class CheckoutService {
     const items = await this.cartsService.getItems(userID, db);
     if (!items.length) throw new BadRequestException('Giỏ hàng trống');
 
-    const address = await this.addressesService.findOwned(userID, dto.addressID, db);
-    if (!address) throw new NotFoundException('Không tìm thấy địa chỉ giao hàng');
+    const address = await this.addressesService.findOwned(
+      userID,
+      dto.addressID,
+      db,
+    );
+    if (!address)
+      throw new NotFoundException('Không tìm thấy địa chỉ giao hàng');
 
     const variants = await this.productVariantsService.findForSale(
       items.map((i) => i.variantID),
@@ -173,7 +202,10 @@ export class CheckoutService {
     const subtotal = sumBy(lines, (l) => l.lineTotal);
     const assemblyFee = sumBy(lines, (l) => l.assemblyFee);
 
-    const zone = await this.shippingZonesService.findForProvince(address.province, db);
+    const zone = await this.shippingZonesService.findForProvince(
+      address.province,
+      db,
+    );
     const shippingFee = calculateShippingFee(
       zone,
       lines.map((l) => ({
@@ -195,7 +227,9 @@ export class CheckoutService {
           db,
         )
       : null;
-    const discount = promotion ? computeDiscount(promotion, subtotal, shippingFee) : 0;
+    const discount = promotion
+      ? computeDiscount(promotion, subtotal, shippingFee)
+      : 0;
 
     return {
       address,

@@ -1,6 +1,14 @@
-import { BadRequestException, HttpException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { unlink } from 'node:fs/promises';
-import { NOT_DELETED, PrismaService } from '../../../common/prisma/prisma.service';
+import {
+  NOT_DELETED,
+  PrismaService,
+} from '../../../common/prisma/prisma.service';
 import { ExcelUtilService } from '../../../common/utils/excel-util/excel-util.service';
 import { CategoriesService } from '../../categories/categories.service';
 import { CreateProductDto } from '../dto/product.dto';
@@ -64,11 +72,16 @@ export class ProductsExcelService {
   async import(file: { path: string } | undefined) {
     if (!file) throw new BadRequestException('Chưa chọn file Excel');
     try {
-      const sheets = (await this.excelUtilService.read(file)) as Record<string, ExcelRow[]>;
+      const sheets = (await this.excelUtilService.read(file)) as Record<
+        string,
+        ExcelRow[]
+      >;
       const rows = sheets[SHEET_NAME] ?? Object.values(sheets)[0] ?? [];
       if (!rows.length) throw new BadRequestException('File không có dữ liệu');
       if (rows.length > MAX_IMPORT_ROWS) {
-        throw new BadRequestException(`Tối đa ${MAX_IMPORT_ROWS} dòng mỗi lần import`);
+        throw new BadRequestException(
+          `Tối đa ${MAX_IMPORT_ROWS} dòng mỗi lần import`,
+        );
       }
       return await this.importRows(rows);
     } finally {
@@ -82,34 +95,49 @@ export class ProductsExcelService {
     const created: { name: string; slug: string }[] = [];
 
     if (rowsWithoutProduct.length) {
-      errors.push({ rows: rowsWithoutProduct, messages: ['Thiếu cả "Name" lẫn "Slug"'] });
+      errors.push({
+        rows: rowsWithoutProduct,
+        messages: ['Thiếu cả "Name" lẫn "Slug"'],
+      });
     }
 
     const categorySlugs = groups
       .map((g) => cellText(g.rows[0].categorySlug))
       .filter((slug): slug is string => slug !== undefined);
-    const categoryIDs = await this.categoriesService.findIDsBySlugs([...new Set(categorySlugs)]);
+    const categoryIDs = await this.categoriesService.findIDsBySlugs([
+      ...new Set(categorySlugs),
+    ]);
 
     // Tạo lần lượt từng sản phẩm (không song song) để slug tự sinh không đụng nhau
     for (const group of groups) {
       const productName = cellText(group.rows[0].name);
       const categorySlug = cellText(group.rows[0].categorySlug);
-      const categoryID = categorySlug ? categoryIDs.get(categorySlug) : undefined;
+      const categoryID = categorySlug
+        ? categoryIDs.get(categorySlug)
+        : undefined;
       if (!categoryID) {
         errors.push({
           rows: group.rowNumbers,
           product: productName,
-          messages: [categorySlug ? `Không tìm thấy danh mục "${categorySlug}"` : 'Thiếu "Category Slug"'],
+          messages: [
+            categorySlug
+              ? `Không tìm thấy danh mục "${categorySlug}"`
+              : 'Thiếu "Category Slug"',
+          ],
         });
         continue;
       }
 
-      const parsed = CreateProductDto.schema.safeParse(toCreateProductInput(group, categoryID));
+      const parsed = CreateProductDto.schema.safeParse(
+        toCreateProductInput(group, categoryID),
+      );
       if (!parsed.success) {
         errors.push({
           rows: group.rowNumbers,
           product: productName,
-          messages: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+          messages: parsed.error.issues.map(
+            (i) => `${i.path.join('.')}: ${i.message}`,
+          ),
         });
         continue;
       }
@@ -119,12 +147,19 @@ export class ProductsExcelService {
         created.push({ name: product.name, slug: product.slug });
       } catch (error) {
         if (!(error instanceof HttpException)) {
-          this.logger.error(`Import sản phẩm "${productName}" lỗi`, (error as Error).stack);
+          this.logger.error(
+            `Import sản phẩm "${productName}" lỗi`,
+            (error as Error).stack,
+          );
         }
         errors.push({
           rows: group.rowNumbers,
           product: productName,
-          messages: [error instanceof HttpException ? error.message : 'Lỗi hệ thống khi tạo sản phẩm'],
+          messages: [
+            error instanceof HttpException
+              ? error.message
+              : 'Lỗi hệ thống khi tạo sản phẩm',
+          ],
         });
       }
     }

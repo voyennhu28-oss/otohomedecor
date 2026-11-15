@@ -66,7 +66,10 @@ export interface RecalculateOptions {
 }
 
 /** Sản phẩm "active" (hiện cho khách) phải có ít nhất 1 variant đang bán. */
-const assertCanBeActive = (status: ProductStatus | undefined, sellingVariants: number) => {
+const assertCanBeActive = (
+  status: ProductStatus | undefined,
+  sellingVariants: number,
+) => {
   if (status === ProductStatus.active && sellingVariants === 0) {
     throw new BadRequestException(
       'Sản phẩm phải có ít nhất 1 variant đang bán mới chuyển sang "active" được',
@@ -92,7 +95,8 @@ export class ProductsService extends PrismaBaseService<'product'> {
 
     let categoryIDs: string[] | undefined;
     if (category) {
-      categoryIDs = await this.categoriesService.getActiveIDsWithDescendants(category);
+      categoryIDs =
+        await this.categoriesService.getActiveIDsWithDescendants(category);
       if (!categoryIDs.length) return emptyPage(); // danh mục không tồn tại / đang ẩn
     }
 
@@ -107,7 +111,11 @@ export class ProductsService extends PrismaBaseService<'product'> {
       }),
       this.extended.count({ where }), // PHẢI dùng cùng where với findMany
     ]);
-    return { list, totalItems, totalPages: Math.ceil(totalItems / itemPerPage) };
+    return {
+      list,
+      totalItems,
+      totalPages: Math.ceil(totalItems / itemPerPage),
+    };
   }
 
   /** GET /products/featured */
@@ -127,7 +135,8 @@ export class ProductsService extends PrismaBaseService<'product'> {
   async getFilterOptions(categorySlug?: string) {
     let categoryIDs: string[] | undefined;
     if (categorySlug) {
-      categoryIDs = await this.categoriesService.getActiveIDsWithDescendants(categorySlug);
+      categoryIDs =
+        await this.categoriesService.getActiveIDsWithDescendants(categorySlug);
     }
 
     const products = await this.extended.findMany({
@@ -156,10 +165,15 @@ export class ProductsService extends PrismaBaseService<'product'> {
       rooms: ROOMS.filter((r) => usedRooms.has(r)),
       styles: STYLES.filter((s) => usedStyles.has(s)),
       materials: MATERIALS.filter((m) => usedMaterials.has(m)),
-      colors: [...used((p) => p.colors)].sort((a, b) => a.localeCompare(b, 'vi')),
+      colors: [...used((p) => p.colors)].sort((a, b) =>
+        a.localeCompare(b, 'vi'),
+      ),
       price: products.length
         ? {
-            min: products.reduce((min, p) => Math.min(min, p.minPrice), Infinity),
+            min: products.reduce(
+              (min, p) => Math.min(min, p.minPrice),
+              Infinity,
+            ),
             max: products.reduce((max, p) => Math.max(max, p.maxPrice), 0),
           }
         : { min: 0, max: 0 },
@@ -242,7 +256,11 @@ export class ProductsService extends PrismaBaseService<'product'> {
       }),
       this.extended.count({ where }),
     ]);
-    return { list, totalItems, totalPages: Math.ceil(totalItems / itemPerPage) };
+    return {
+      list,
+      totalItems,
+      totalPages: Math.ceil(totalItems / itemPerPage),
+    };
   }
 
   /** GET /admin/products/:id: đầy đủ, gồm cả variant đang tắt. */
@@ -265,7 +283,10 @@ export class ProductsService extends PrismaBaseService<'product'> {
   async create(dto: CreateProductDto) {
     const { variants, ...productData } = dto;
 
-    assertCanBeActive(productData.status, variants.filter((v) => v.isActive).length);
+    assertCanBeActive(
+      productData.status,
+      variants.filter((v) => v.isActive).length,
+    );
     await this.categoriesService.ensureExists(productData.categoryID);
     await assertSkusAvailable(
       this.prismaService,
@@ -300,7 +321,8 @@ export class ProductsService extends PrismaBaseService<'product'> {
     if (!current) throw new NotFoundException('Không tìm thấy sản phẩm');
 
     assertCanBeActive(dto.status, current._count.variants);
-    if (dto.categoryID) await this.categoriesService.ensureExists(dto.categoryID);
+    if (dto.categoryID)
+      await this.categoriesService.ensureExists(dto.categoryID);
     if (dto.slug && dto.slug !== current.slug) {
       await this.assertSlugAvailable(dto.slug, id);
     }
@@ -412,13 +434,19 @@ export class ProductsService extends PrismaBaseService<'product'> {
    * Cộng (hoặc trừ khi quantity âm) lượt bán `soldCount` theo các dòng đơn hàng.
    * Dùng client gốc trong tx: product đã xóa vẫn được cập nhật cho đúng thống kê.
    */
-  async addSoldCount(items: { productID: string; quantity: number }[], tx: Prisma.TransactionClient) {
+  async addSoldCount(
+    items: { productID: string; quantity: number }[],
+    tx: Prisma.TransactionClient,
+  ) {
     const byProduct = new Map<string, number>();
     for (const { productID, quantity } of items) {
       byProduct.set(productID, (byProduct.get(productID) ?? 0) + quantity);
     }
     for (const [id, quantity] of byProduct) {
-      await tx.product.updateMany({ where: { id }, data: { soldCount: { increment: quantity } } });
+      await tx.product.updateMany({
+        where: { id },
+        data: { soldCount: { increment: quantity } },
+      });
     }
   }
 
@@ -438,10 +466,17 @@ export class ProductsService extends PrismaBaseService<'product'> {
   appendImages(productID: string, images: { url: string; publicID: string }[]) {
     // Transaction: 2 lần upload song song không bị trùng sortOrder (lần sau xung đột và chạy lại)
     return this.updateImages(productID, (current) => {
-      const nextOrder = current.reduce((max, img) => Math.max(max, img.sortOrder + 1), 0);
+      const nextOrder = current.reduce(
+        (max, img) => Math.max(max, img.sortOrder + 1),
+        0,
+      );
       return [
         ...current,
-        ...images.map((img, i) => ({ ...img, alt: null, sortOrder: nextOrder + i })),
+        ...images.map((img, i) => ({
+          ...img,
+          alt: null,
+          sortOrder: nextOrder + i,
+        })),
       ];
     });
   }
@@ -464,7 +499,10 @@ export class ProductsService extends PrismaBaseService<'product'> {
    * Đọc - sửa - ghi lại cả mảng ảnh trong 1 transaction (Prisma không có `pull` cho composite list).
    * Request khác ghi chen vào giữa → xung đột P2034 → withRetry chạy lại với dữ liệu mới.
    */
-  private updateImages(productID: string, change: (current: ImageItem[]) => ImageItem[]) {
+  private updateImages(
+    productID: string,
+    change: (current: ImageItem[]) => ImageItem[],
+  ) {
     return withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
         const product = await tx.product.findFirst({
@@ -486,7 +524,9 @@ export class ProductsService extends PrismaBaseService<'product'> {
   /** Dùng client gốc vì index @unique của slug tính cả bản ghi đã xóa. */
   private async assertSlugAvailable(slug: string, exceptID?: string) {
     if (RESERVED_SLUGS.includes(slug)) {
-      throw new BadRequestException(`Slug "${slug}" là đường dẫn hệ thống, hãy chọn slug khác`);
+      throw new BadRequestException(
+        `Slug "${slug}" là đường dẫn hệ thống, hãy chọn slug khác`,
+      );
     }
     const existed = await this.client.findUnique({
       where: { slug },
@@ -510,5 +550,4 @@ export class ProductsService extends PrismaBaseService<'product'> {
       RESERVED_SLUGS,
     );
   }
-
 }

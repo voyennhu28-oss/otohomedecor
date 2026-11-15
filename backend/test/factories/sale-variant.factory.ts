@@ -25,7 +25,9 @@ export const makeSaleVariant = (
     id: 'p1',
     name: 'Sofa Japandi',
     slug: 'sofa-japandi',
-    images: [{ url: 'https://cdn/p1.jpg', publicID: null, alt: null, sortOrder: 0 }],
+    images: [
+      { url: 'https://cdn/p1.jpg', publicID: null, alt: null, sortOrder: 0 },
+    ],
     status: ProductStatus.active,
     allowBackorder: false,
     requiresAssembly: false,

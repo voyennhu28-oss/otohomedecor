@@ -50,7 +50,10 @@ export const getDescendantIDs = <T extends TreeItem>(
   const childrenOf = new Map<string, string[]>();
   for (const item of items) {
     if (!item.parentID) continue;
-    childrenOf.set(item.parentID, [...(childrenOf.get(item.parentID) ?? []), item.id]);
+    childrenOf.set(item.parentID, [
+      ...(childrenOf.get(item.parentID) ?? []),
+      item.id,
+    ]);
   }
   const result: string[] = [];
   const queue = [rootID];

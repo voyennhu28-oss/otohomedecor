@@ -6,7 +6,10 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import request from 'supertest';
 import { IS_PUBLIC } from '../../common/decorators/public.decorator';
 import { ReviewImagesController } from './review-images.controller';
-import { MAX_IMAGES_PER_REVIEW, ReviewImagesService } from './review-images.service';
+import {
+  MAX_IMAGES_PER_REVIEW,
+  ReviewImagesService,
+} from './review-images.service';
 
 const R = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const URL = `/reviews/${R}/images`;
@@ -27,7 +30,11 @@ describe('ReviewImagesController', () => {
           provide: APP_GUARD,
           useValue: {
             canActivate: (ctx: ExecutionContext) => {
-              ctx.switchToHttp().getRequest().user = { userID: 'u1', userEmail: 'a@b.c', role: 'customer' };
+              ctx.switchToHttp().getRequest().user = {
+                userID: 'u1',
+                userEmail: 'a@b.c',
+                role: 'customer',
+              };
               return true;
             },
           },
@@ -46,8 +53,12 @@ describe('ReviewImagesController', () => {
   });
 
   it('cần đăng nhập (không @Public)', () => {
-    expect(Reflect.getMetadata(IS_PUBLIC, ReviewImagesController)).toBeUndefined();
-    expect(Reflect.getMetadata(IS_PUBLIC, ReviewImagesController.prototype.upload)).toBeUndefined();
+    expect(
+      Reflect.getMetadata(IS_PUBLIC, ReviewImagesController),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(IS_PUBLIC, ReviewImagesController.prototype.upload),
+    ).toBeUndefined();
   });
 
   it('upload: userID lấy từ token, chuyển file cho service', async () => {
@@ -58,13 +69,19 @@ describe('ReviewImagesController', () => {
     expect(res.status).toBe(201);
     const [userID, reviewID, files] = service.upload.mock.calls[0];
     expect([userID, reviewID]).toEqual(['u1', R]);
-    expect(files.map((f: { originalname: string }) => f.originalname)).toEqual(['a.jpg', 'b.webp']);
+    expect(files.map((f: { originalname: string }) => f.originalname)).toEqual([
+      'a.jpg',
+      'b.webp',
+    ]);
   });
 
   it(`quá ${MAX_IMAGES_PER_REVIEW} ảnh một lần → 400`, async () => {
     let req = request(app.getHttpServer()).post(URL);
     for (let i = 0; i <= MAX_IMAGES_PER_REVIEW; i++) {
-      req = req.attach('files', JPG, { filename: `${i}.jpg`, contentType: 'image/jpeg' });
+      req = req.attach('files', JPG, {
+        filename: `${i}.jpg`,
+        contentType: 'image/jpeg',
+      });
     }
     expect((await req).status).toBe(400);
     expect(service.upload).not.toHaveBeenCalled();
@@ -75,7 +92,9 @@ describe('ReviewImagesController', () => {
     ['gif', 'a.gif', 'image/gif'],
     ['pdf', 'a.pdf', 'application/pdf'],
   ])('file %s → 400', async (_name, filename, contentType) => {
-    const res = await request(app.getHttpServer()).post(URL).attach('files', JPG, { filename, contentType });
+    const res = await request(app.getHttpServer())
+      .post(URL)
+      .attach('files', JPG, { filename, contentType });
     expect(res.status).toBe(400);
     expect(service.upload).not.toHaveBeenCalled();
   });

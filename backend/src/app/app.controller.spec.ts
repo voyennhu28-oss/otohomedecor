@@ -27,19 +27,26 @@ describe('AppController', () => {
 
   describe('health', () => {
     it('public (nền tảng deploy gọi không có token)', () => {
-      expect(Reflect.getMetadata(IS_PUBLIC, AppController.prototype.health)).toBe(true);
+      expect(
+        Reflect.getMetadata(IS_PUBLIC, AppController.prototype.health),
+      ).toBe(true);
     });
 
     it('ping được MongoDB → ok', async () => {
       prisma.$runCommandRaw.mockResolvedValue({ ok: 1 });
-      await expect(appController.health()).resolves.toMatchObject({ status: 'ok', database: 'up' });
+      await expect(appController.health()).resolves.toMatchObject({
+        status: 'ok',
+        database: 'up',
+      });
       expect(prisma.$runCommandRaw).toHaveBeenCalledWith({ ping: 1 });
     });
 
     it('MongoDB lỗi → 503 (nền tảng biết để restart / không chuyển traffic)', async () => {
       jest.spyOn(Logger.prototype, 'error').mockImplementation();
       prisma.$runCommandRaw.mockRejectedValue(new Error('timeout'));
-      await expect(appController.health()).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await expect(appController.health()).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
     });
   });
 });

@@ -1,7 +1,11 @@
 import { ProductStatus } from '@prisma/client';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { MATERIALS, ROOMS, STYLES } from '../../../common/constants/catalog.const';
+import {
+  MATERIALS,
+  ROOMS,
+  STYLES,
+} from '../../../common/constants/catalog.const';
 import { objectId, slugSchema } from '../../../common/dto/param.dto';
 import {
   booleanQuery,
@@ -13,7 +17,12 @@ import {
 const commaList = <T extends readonly [string, ...string[]]>(values: T) =>
   z
     .string()
-    .transform((s) => s.split(',').map((v) => v.trim()).filter(Boolean))
+    .transform((s) =>
+      s
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean),
+    )
     .pipe(z.array(z.enum(values)).min(1));
 
 const price = z.coerce.number().int().min(0);
@@ -49,8 +58,14 @@ export class ProductListQueryDto extends createZodDto(
       itemPerPage: itemPerPage(60, 20),
     })
     .refine(
-      (q) => q.minPrice === undefined || q.maxPrice === undefined || q.minPrice <= q.maxPrice,
-      { message: 'minPrice phải nhỏ hơn hoặc bằng maxPrice', path: ['minPrice'] },
+      (q) =>
+        q.minPrice === undefined ||
+        q.maxPrice === undefined ||
+        q.minPrice <= q.maxPrice,
+      {
+        message: 'minPrice phải nhỏ hơn hoặc bằng maxPrice',
+        path: ['minPrice'],
+      },
     ),
 ) {}
 

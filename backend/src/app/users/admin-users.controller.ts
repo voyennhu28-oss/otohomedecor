@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { User, type UserInfo } from '../../common/decorators/user.decorator';
@@ -30,7 +39,11 @@ export class AdminUsersController {
   }
 
   @Patch(':id')
-  update(@User() user: UserInfo, @Param() { id }: IDDto, @Body() dto: UpdateUserDto) {
+  update(
+    @User() user: UserInfo,
+    @Param() { id }: IDDto,
+    @Body() dto: UpdateUserDto,
+  ) {
     return this.usersService.update(user, id, dto);
   }
 

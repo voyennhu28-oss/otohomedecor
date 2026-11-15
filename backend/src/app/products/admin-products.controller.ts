@@ -19,7 +19,10 @@ import { IDDto } from '../../common/dto/param.dto';
 import { ExportProductsDto } from './dto/export-products.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { AdminProductListQueryDto } from './dto/product-query.dto';
-import { EXCEL_UPLOAD_OPTIONS, XLSX_MIME_TYPE } from './excel/products-excel.const';
+import {
+  EXCEL_UPLOAD_OPTIONS,
+  XLSX_MIME_TYPE,
+} from './excel/products-excel.const';
 import { ProductsExcelService } from './excel/products-excel.service';
 import { ProductsService } from './products.service';
 

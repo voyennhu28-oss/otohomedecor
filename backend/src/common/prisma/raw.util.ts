@@ -13,7 +13,8 @@ export const rawNumber = (value: RawValue): number => {
   if (typeof value === 'number') return value;
   if (value && typeof value === 'object') {
     const v = value as Record<string, unknown>;
-    const inner = v.$numberLong ?? v.$numberInt ?? v.$numberDouble ?? v.$numberDecimal;
+    const inner =
+      v.$numberLong ?? v.$numberInt ?? v.$numberDouble ?? v.$numberDecimal;
     if (inner !== undefined) return Number(inner);
   }
   return 0;
@@ -21,6 +22,7 @@ export const rawNumber = (value: RawValue): number => {
 
 /** ObjectId trong kết quả thô: { $oid } hoặc chuỗi → chuỗi 24 ký tự hex. */
 export const rawId = (value: RawValue): string => {
-  if (value && typeof value === 'object' && '$oid' in value) return String((value as { $oid: unknown }).$oid);
+  if (value && typeof value === 'object' && '$oid' in value)
+    return String((value as { $oid: unknown }).$oid);
   return String(value ?? '');
 };

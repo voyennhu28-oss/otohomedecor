@@ -1,10 +1,14 @@
 import { buildPublicProductWhere, PRODUCT_ORDER_BY } from './product-filter';
 
-const NOT_DELETED = { OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }] };
+const NOT_DELETED = {
+  OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
+};
 
 describe('buildPublicProductWhere', () => {
   it('không có bộ lọc: chỉ lấy sản phẩm đang bán', () => {
-    expect(buildPublicProductWhere({})).toEqual({ AND: [{ status: 'active' }] });
+    expect(buildPublicProductWhere({})).toEqual({
+      AND: [{ status: 'active' }],
+    });
   });
 
   it('đủ mọi bộ lọc của plan mục 8', () => {
@@ -34,7 +38,11 @@ describe('buildPublicProductWhere', () => {
       {
         OR: [
           { allowBackorder: true },
-          { variants: { some: { isActive: true, stock: { gt: 0 }, ...NOT_DELETED } } },
+          {
+            variants: {
+              some: { isActive: true, stock: { gt: 0 }, ...NOT_DELETED },
+            },
+          },
         ],
       },
     ]);

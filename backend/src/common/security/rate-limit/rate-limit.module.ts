@@ -9,7 +9,9 @@ import { RateLimitEnvs, THROTTLE_DEFAULT } from './rate-limit.const';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [
         {
-          ttl: Number(config.get(RateLimitEnvs.THROTTLE_TTL) ?? THROTTLE_DEFAULT.ttl),
+          ttl: Number(
+            config.get(RateLimitEnvs.THROTTLE_TTL) ?? THROTTLE_DEFAULT.ttl,
+          ),
           limit: Number(
             config.get(RateLimitEnvs.THROTTLE_LIMIT) ?? THROTTLE_DEFAULT.limit,
           ),

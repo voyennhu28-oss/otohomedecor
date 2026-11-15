@@ -174,7 +174,10 @@ export const groupRowsByProduct = (rows: ExcelRow[]) => {
  * Dựng dữ liệu tạo sản phẩm (chưa validate) từ 1 nhóm dòng.
  * Kết quả đưa qua CreateProductDto.schema để kiểm tra như khi gọi API.
  */
-export const toCreateProductInput = (group: ProductRowGroup, categoryID: string | undefined) => {
+export const toCreateProductInput = (
+  group: ProductRowGroup,
+  categoryID: string | undefined,
+) => {
   const [first] = group.rows;
   return {
     name: cellText(first.name),
@@ -193,8 +196,14 @@ export const toCreateProductInput = (group: ProductRowGroup, categoryID: string 
     warrantyMonths: cellNumber(first.warrantyMonths),
     isFeatured: cellBoolean(first.isFeatured),
     variants: group.rows.map((row) => {
-      const [lengthCm, widthCm, heightCm] = [row.lengthCm, row.widthCm, row.heightCm].map(cellNumber);
-      const hasDimensions = [lengthCm, widthCm, heightCm].some((n) => n !== undefined);
+      const [lengthCm, widthCm, heightCm] = [
+        row.lengthCm,
+        row.widthCm,
+        row.heightCm,
+      ].map(cellNumber);
+      const hasDimensions = [lengthCm, widthCm, heightCm].some(
+        (n) => n !== undefined,
+      );
       return {
         sku: cellText(row.sku),
         name: cellText(row.variantName),

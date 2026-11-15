@@ -28,9 +28,14 @@ describe('ProductsController (public)', () => {
   it('route "featured" và "filters" khai báo trước ":slug"', () => {
     const getPaths = Object.getOwnPropertyNames(ProductsController.prototype)
       .map((name) => (ProductsController.prototype as any)[name])
-      .filter((handler) => Reflect.getMetadata(METHOD_METADATA, handler) === RequestMethod.GET)
+      .filter(
+        (handler) =>
+          Reflect.getMetadata(METHOD_METADATA, handler) === RequestMethod.GET,
+      )
       .map((handler) => Reflect.getMetadata(PATH_METADATA, handler));
-    expect(getPaths.indexOf('featured')).toBeLessThan(getPaths.indexOf(':slug'));
+    expect(getPaths.indexOf('featured')).toBeLessThan(
+      getPaths.indexOf(':slug'),
+    );
     expect(getPaths.indexOf('filters')).toBeLessThan(getPaths.indexOf(':slug'));
   });
 
@@ -66,15 +71,27 @@ describe('AdminProductsController', () => {
   });
 
   it('@AdminOnly() ở cấp class, không route nào @Public', () => {
-    expect(Reflect.getMetadata(IS_ADMIN_ONLY, AdminProductsController)).toBe(true);
-    for (const name of Object.getOwnPropertyNames(AdminProductsController.prototype)) {
-      expect(Reflect.getMetadata(IS_PUBLIC, (AdminProductsController.prototype as any)[name])).toBeUndefined();
+    expect(Reflect.getMetadata(IS_ADMIN_ONLY, AdminProductsController)).toBe(
+      true,
+    );
+    for (const name of Object.getOwnPropertyNames(
+      AdminProductsController.prototype,
+    )) {
+      expect(
+        Reflect.getMetadata(
+          IS_PUBLIC,
+          (AdminProductsController.prototype as any)[name],
+        ),
+      ).toBeUndefined();
     }
   });
 
   it('chuyển đúng tham số cho service', async () => {
     await controller.findList({ page: 1, itemPerPage: 20 });
-    expect(service.findAdminList).toHaveBeenCalledWith({ page: 1, itemPerPage: 20 });
+    expect(service.findAdminList).toHaveBeenCalledWith({
+      page: 1,
+      itemPerPage: 20,
+    });
 
     await controller.findOne({ id: ID });
     expect(service.findAdminByID).toHaveBeenCalledWith(ID);
