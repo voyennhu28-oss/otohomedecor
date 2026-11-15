@@ -12,8 +12,21 @@ export const NOT_DELETED = {
   OR: [{ deletedAt: null }, { deletedAt: { isSet: false } }],
 };
 
-const withNotDeleted = (model: string, where: any = {}) => {
-  if (!SOFT_DELETE_MODELS.includes(model)) return where;
+const SOFT_DELETE_MODEL_SET = new Set(SOFT_DELETE_MODELS);
+
+/** Các lệnh ĐỌC được tự thêm điều kiện "chưa xóa". Lệnh ghi (update / delete...) giữ nguyên. */
+const READ_OPERATIONS = new Set([
+  'findUnique',
+  'findUniqueOrThrow',
+  'findFirst',
+  'findFirstOrThrow',
+  'findMany',
+  'count',
+  'aggregate',
+  'groupBy',
+]);
+
+const withNotDeleted = (where: any = {}) => {
   const and = where.AND ? [].concat(where.AND) : [];
   return { ...where, AND: [...and, NOT_DELETED] };
 };
@@ -22,18 +35,10 @@ const extend = (client: PrismaClient) =>
   client.$extends({
     query: {
       $allModels: {
-        findUnique: ({ model, args, query }) =>
-          query({ ...args, where: withNotDeleted(model, args.where) }),
-        findUniqueOrThrow: ({ model, args, query }) =>
-          query({ ...args, where: withNotDeleted(model, args.where) }),
-        findFirst: ({ model, args, query }) =>
-          query({ ...args, where: withNotDeleted(model, args.where) }),
-        findFirstOrThrow: ({ model, args, query }) =>
-          query({ ...args, where: withNotDeleted(model, args.where) }),
-        findMany: ({ model, args, query }) =>
-          query({ ...args, where: withNotDeleted(model, args.where) }),
-        count: ({ model, args, query }) =>
-          query({ ...args, where: withNotDeleted(model, args.where) }),
+        $allOperations: ({ model, operation, args, query }) =>
+          SOFT_DELETE_MODEL_SET.has(model) && READ_OPERATIONS.has(operation)
+            ? query({ ...args, where: withNotDeleted((args as any).where) })
+            : query(args),
       },
     },
     model: {

@@ -1,0 +1,29 @@
+{
+  "name": "otohomedecor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Home decor e-commerce: NestJS backend + Next.js frontend",
+  "scripts": {
+    "prepare": "husky",
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "dev:backend": "npm --prefix backend run start:dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "lint": "npm --prefix backend run lint && npm --prefix frontend run lint",
+    "test": "npm --prefix backend test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/voyennhu28-oss/otohomedecor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/voyennhu28-oss/otohomedecor/issues"
+  },
+  "homepage": "https://github.com/voyennhu28-oss/otohomedecor#readme",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@commitlint/cli": "19.8.1",
+    "@commitlint/config-conventional": "19.8.1",
+    "husky": "9.1.7"
+  }
+}

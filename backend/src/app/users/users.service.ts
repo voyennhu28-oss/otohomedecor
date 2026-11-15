@@ -27,8 +27,27 @@ const SENSITIVE_FIELDS = {
   tokenVersion: true,
 } satisfies Prisma.UserOmit;
 
+/** Bỏ các field nhạy cảm khỏi user đã đọc kèm password (vd từ `findForAuth`), không cần query lại. */
+export const omitSensitive = <T extends Record<keyof typeof SENSITIVE_FIELDS, unknown>>({
+  password: _password,
+  resetPasswordToken: _resetPasswordToken,
+  resetPasswordExp: _resetPasswordExp,
+  tokenVersion: _tokenVersion,
+  ...rest
+}: T): Omit<T, keyof typeof SENSITIVE_FIELDS> => rest;
+
 /** Tăng tokenVersion → mọi refresh token đã phát mất hiệu lực (field thiếu = 0). */
 const nextTokenVersion = (current?: number | null) => (current ?? 0) + 1;
+
+const userNotFound = () => new NotFoundException('Không tìm thấy tài khoản');
+
+/** `update` không khớp bản ghi nào (không tồn tại / đã soft delete) → 404 với câu thông báo riêng. */
+const rethrowNotFound = (error: unknown): never => {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    throw userNotFound();
+  }
+  throw error;
+};
 
 @Injectable()
 export class UsersService extends PrismaBaseService<'user'> {
@@ -47,17 +66,19 @@ export class UsersService extends PrismaBaseService<'user'> {
       where: { id: userID },
       omit: SENSITIVE_FIELDS,
     });
-    if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
+    if (!user) throw userNotFound();
     return user;
   }
 
-  async updateMe(userID: string, dto: UpdateMeDto) {
-    await this.ensureExists(userID);
-    return this.extended.update({
-      where: { id: userID },
-      data: dto,
-      omit: SENSITIVE_FIELDS,
-    });
+  /** 1 lệnh: `where` kèm NOT_DELETED nên tài khoản đã xóa không khớp → P2025 → 404. */
+  updateMe(userID: string, dto: UpdateMeDto) {
+    return this.extended
+      .update({
+        where: { id: userID, ...NOT_DELETED },
+        data: dto,
+        omit: SENSITIVE_FIELDS,
+      })
+      .catch(rethrowNotFound);
   }
 
   // ───────────── /me/wishlist ─────────────
@@ -77,10 +98,11 @@ export class UsersService extends PrismaBaseService<'user'> {
   }
 
   async addToWishlist(userID: string, productID: string) {
-    await this.ensureExists(userID);
     await this.productsService.ensureActive(productID);
 
-    // Atomic: chỉ push khi chưa có, nên gọi 2 lần cũng không bị trùng
+    // Atomic: chỉ push khi chưa có, nên gọi 2 lần cũng không bị trùng.
+    // Không cần kiểm tra user trước: user đã xóa không khớp NOT_DELETED (không ghi gì),
+    // và getWishlistIDs ngay sau đó ném 404.
     await this.extended.updateMany({
       where: {
         id: userID,
@@ -102,7 +124,7 @@ export class UsersService extends PrismaBaseService<'user'> {
           where: { id: userID, ...NOT_DELETED },
           select: { wishlistProductIDs: true },
         });
-        if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
+        if (!user) throw userNotFound();
 
         const next = user.wishlistProductIDs.filter((id) => id !== productID);
         if (next.length !== user.wishlistProductIDs.length) {
@@ -149,17 +171,21 @@ export class UsersService extends PrismaBaseService<'user'> {
   }
 
   async findOne(id: string) {
-    const user = await this.extended.findUnique({
-      where: { id },
-      omit: SENSITIVE_FIELDS,
-      include: {
-        addresses: { orderBy: { isDefault: 'desc' } },
-        _count: { select: { orders: true, reviews: true } },
-      },
-    });
-    if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
+    // Chạy song song: tổng chi tiêu không phụ thuộc kết quả đọc user (user không có thì bỏ đi)
+    const [user, totalSpent] = await Promise.all([
+      this.extended.findUnique({
+        where: { id },
+        omit: SENSITIVE_FIELDS,
+        include: {
+          addresses: { orderBy: { isDefault: 'desc' } },
+          _count: { select: { orders: true, reviews: true } },
+        },
+      }),
+      this.ordersService.totalSpent(id),
+    ]);
+    if (!user) throw userNotFound();
 
-    return { ...user, totalSpent: await this.ordersService.totalSpent(id) };
+    return { ...user, totalSpent };
   }
 
   async create(dto: CreateUserDto) {
@@ -216,8 +242,9 @@ export class UsersService extends PrismaBaseService<'user'> {
         'Không thể tự xóa tài khoản của chính mình',
       );
     }
-    await this.ensureExists(id);
-    await this.extended.softDelete({ id });
+    // 1 lệnh, atomic: chỉ xóa khi chưa bị xóa; không khớp bản ghi nào → 404
+    const { count } = await this.extended.softDelete({ id, ...NOT_DELETED });
+    if (!count) throw userNotFound();
     return { id };
   }
 
@@ -276,7 +303,7 @@ export class UsersService extends PrismaBaseService<'user'> {
       where: { id },
       select: { id: true, status: true, tokenVersion: true },
     });
-    if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
+    if (!user) throw userNotFound();
     return user;
   }
 
@@ -285,7 +312,7 @@ export class UsersService extends PrismaBaseService<'user'> {
       where: { id: userID },
       select: { wishlistProductIDs: true },
     });
-    if (!user) throw new NotFoundException('Không tìm thấy tài khoản');
+    if (!user) throw userNotFound();
     return user.wishlistProductIDs;
   }
 }

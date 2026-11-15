@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, Transporter } from 'nodemailer';
 
@@ -10,7 +10,7 @@ export interface SendMailParams {
 }
 
 @Injectable()
-export class MailUtilService {
+export class MailUtilService implements OnModuleDestroy {
   private readonly logger = new Logger(MailUtilService.name);
   private readonly transporter?: Transporter;
   private readonly from: string;
@@ -26,6 +26,10 @@ export class MailUtilService {
     if (host) {
       const port = Number(config.get<string>('MAIL_PORT') ?? 587);
       this.transporter = createTransport({
+        // Giữ kết nối SMTP để dùng lại: không phải bắt tay TLS + đăng nhập lại cho từng email
+        // (đặt đơn, đổi trạng thái... gửi liên tục). Kết nối rảnh tự đóng, cần thì mở lại.
+        pool: true,
+        maxConnections: 3,
         host,
         port,
         secure: port === 465,
@@ -48,5 +52,9 @@ export class MailUtilService {
       return;
     }
     await this.transporter.sendMail({ from: this.from, to, subject, html, text });
+  }
+
+  onModuleDestroy() {
+    this.transporter?.close();
   }
 }

@@ -11,9 +11,10 @@ import { Role, User, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 import { UserInfo } from '../../common/decorators/user.decorator';
+import { parseOrigins } from '../../common/middlewares/csrf.middleware';
 import { MailUtilService } from '../../common/utils/mail-util/mail-util.service';
 import { safeHtml } from '../../common/utils/string-util/html.util';
-import { SALT_ROUNDS, UsersService } from '../users/users.service';
+import { omitSensitive, SALT_ROUNDS, UsersService } from '../users/users.service';
 import {
   ACCESS_TOKEN_TTL,
   JwtPayload,
@@ -55,9 +56,8 @@ export class AuthService {
     config: ConfigService,
   ) {
     this.refreshSecret = config.getOrThrow<string>(JWTEnvs.JWT_REFRESH_SECRET);
-    this.feUrl = (config.get<string>('FE_URL') ?? 'http://localhost:3000')
-      .split(',')[0]
-      .trim();
+    // Link trong email trỏ về FE đầu tiên, chuẩn hóa giống CORS ("https://a.com/" → "https://a.com")
+    this.feUrl = parseOrigins(config.get<string>('FE_URL'))[0] ?? 'http://localhost:3000';
   }
 
   async signUp(dto: SignUpDto) {
@@ -78,10 +78,8 @@ export class AuthService {
     if (user.status !== UserStatus.active) {
       throw new ForbiddenException('Tài khoản đã bị khóa');
     }
-    return {
-      user: await this.usersService.getMe(user.id),
-      ...(await this.createTokens(user)),
-    };
+    // Đã có đủ dữ liệu user: bỏ field nhạy cảm tại chỗ, không query lại DB
+    return { user: omitSensitive(user), ...(await this.createTokens(user)) };
   }
 
   async refreshToken(refreshToken?: string) {

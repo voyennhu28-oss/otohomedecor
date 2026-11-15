@@ -51,7 +51,7 @@ describe('AuthService', () => {
   let jwt: JwtService;
   let user: TestUser | null;
   let users: Record<
-    'create' | 'findForAuth' | 'getMe' | 'setResetPasswordToken' | 'findByResetPasswordToken' | 'updatePassword',
+    'create' | 'findForAuth' | 'setResetPasswordToken' | 'findByResetPasswordToken' | 'updatePassword',
     jest.Mock
   >;
   let mail: { send: jest.Mock };
@@ -63,7 +63,6 @@ describe('AuthService', () => {
     users = {
       create: jest.fn(async (dto) => ({ id: 'new-id', ...dto, password: undefined })),
       findForAuth: jest.fn(async () => user),
-      getMe: jest.fn(async (id: string) => ({ id, email: user?.email })),
       setResetPasswordToken: jest.fn().mockResolvedValue(undefined),
       findByResetPasswordToken: jest.fn(),
       updatePassword: jest.fn(async (target: TestUser, plain: string) => {
@@ -105,10 +104,14 @@ describe('AuthService', () => {
   });
 
   describe('signIn', () => {
-    it('đúng thông tin: trả user (không có password) + token', async () => {
+    it('đúng thông tin: trả user (không có field nhạy cảm, không query lại DB) + token', async () => {
+      user!.tokenVersion = 2;
       const result = await signIn();
-      expect(users.getMe).toHaveBeenCalledWith(user!.id);
-      expect(result.user).toEqual({ id: user!.id, email: user!.email });
+      expect(users.findForAuth).toHaveBeenCalledTimes(1);
+      const { password: _p, tokenVersion: _v, ...publicUser } = user!;
+      expect(result.user).toEqual(publicUser);
+      expect(result.user).not.toHaveProperty('password');
+      expect(result.user).not.toHaveProperty('tokenVersion');
       expect(jwt.verify<JwtPayload>(result.accessToken)).toMatchObject({
         userID: user!.id,
         userEmail: user!.email,

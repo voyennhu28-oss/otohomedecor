@@ -22,8 +22,7 @@
     "db:push": "prisma db push",
     "db:reset": "prisma db push --force-reset",
     "db:seed": "ts-node prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "prepare-husky": "npx husky init"
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@nestjs/cache-manager": "3.0.1",
@@ -53,8 +52,6 @@
     "zod-prisma-types": "3.2.4"
   },
   "devDependencies": {
-    "@commitlint/cli": "19.8.1",
-    "@commitlint/config-conventional": "19.8.1",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
@@ -72,9 +69,9 @@
     "eslint-config-prettier": "10.0.1",
     "eslint-plugin-prettier": "5.2.2",
     "globals": "^16.0.0",
-    "husky": "9.1.7",
     "jest": "^30.0.0",
     "nestjs-zod-cli": "1.0.4",
+    "oxlint": "^1.93.0",
     "prettier": "^3.4.2",
     "prisma": "6.19.0",
     "prisma-generator-fake-data": "^0.17.0",

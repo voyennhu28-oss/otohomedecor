@@ -39,6 +39,7 @@ const removeFieldsAndRelations = (document: any) => {
 
     schema.properties = newProps;
 
+    // Quan hệ `user` ở trên sinh ra `userID` → xóa lại các audit field
     auditFields.forEach((k) => delete schema.properties[k]);
 
     const schemaRequired = schema.required;

@@ -107,15 +107,17 @@ async function seedCategories() {
       create: { name: parentName, slug: slugify(parentName), sortOrder: sortOrder++ },
       update: {},
     });
-    count++;
-    for (const [i, name] of children.entries()) {
-      await prisma.category.upsert({
-        where: { slug: slugify(name) },
-        create: { name, slug: slugify(name), parentID: parent.id, sortOrder: i },
-        update: {},
-      });
-      count++;
-    }
+    // Các danh mục con độc lập với nhau → upsert song song (slug khác nhau, không đụng index)
+    await Promise.all(
+      children.map((name, i) =>
+        prisma.category.upsert({
+          where: { slug: slugify(name) },
+          create: { name, slug: slugify(name), parentID: parent.id, sortOrder: i },
+          update: {},
+        }),
+      ),
+    );
+    count += 1 + children.length;
   }
   console.log(`• ${count} danh mục (${Object.keys(CATEGORY_TREE).length} danh mục cha)`);
 }
