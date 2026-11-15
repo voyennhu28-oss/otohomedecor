@@ -1,0 +1,16 @@
+# Build và cache
+.next/
+out/
+build/
+coverage/
+node_modules/
+
+# File sinh tự động
+next-env.d.ts
+*.tsbuildinfo
+package-lock.json
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/

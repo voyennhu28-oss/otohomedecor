@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -127,7 +127,9 @@
   html {
     @apply font-sans;
   }
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     @apply font-heading;
   }
 }

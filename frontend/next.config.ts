@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
-import path from "node:path";
+import type { NextConfig } from 'next';
+import path from 'node:path';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -8,9 +8,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
     rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
+      '*.css': {
+        loaders: ['@tailwindcss/turbopack'],
+        as: '*.css',
       },
     },
   },

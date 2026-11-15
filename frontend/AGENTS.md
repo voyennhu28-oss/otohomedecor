@@ -13,6 +13,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Project
 
 Frontend cho website bán đồ nội thất / trang trí của **một cửa hàng**. Gồm 2 phía trong cùng một app Next.js:
+
 - **Shop**: khách xem sản phẩm, giỏ hàng, đặt hàng, tài khoản.
 - **Admin** (`/admin/...`): quản lý sản phẩm, đơn hàng, khuyến mãi, user, dashboard.
 
@@ -20,19 +21,19 @@ Backend NestJS nằm ở `../backend`. Quy tắc nghiệp vụ ở [`../backend/
 
 ## Môi trường
 
-| | Trong repo | Ghi chú |
-|---|---|---|
-| Next.js | **16.4.6**, App Router | Turbopack là mặc định. `next.config.ts` bật `cacheComponents` và `partialPrefetching`: cách cache khác bản cũ, đọc docs trong `node_modules/next/dist/docs/` trước khi viết code lấy dữ liệu |
-| React | 19.3 | |
-| TypeScript | 5, `strict` | Alias `@/*` → `src/*`. Luôn import bằng `@/...`, không dùng `../../` |
-| Tailwind | **4.3**, nạp qua `@tailwindcss/turbopack` (loader trong `next.config.ts`) | Không có `postcss.config` và `tailwind.config`. Không tự thêm, không đổi sang `@tailwindcss/postcss` khi chưa hỏi |
-| shadcn | 4.23, style `base-maia` (đã chỉnh sang gần vuông, xem mục Component và giao diện), base color `neutral` | Component dựng trên **Base UI** (`@base-ui/react`), **không phải Radix** |
-| Icon | `@hugeicons/react` (bộ icon của shadcn), `lucide-react` cũng có cài | Component mới dùng hugeicons. Không trộn 2 bộ trong cùng một màn hình |
-| Form | `react-hook-form` + `zod` **4** + `@hookform/resolvers` | Backend dùng zod **3**: không import schema từ backend sang |
-| Dữ liệu từ API | `@tanstack/react-query` 5 | |
-| State toàn cục | `zustand` 5 | |
-| Khác | `date-fns` 4, `next-themes`, `sonner` (toast) | |
-| Lint / format | ESLint 9 (`npm run lint`), Prettier + `prettier-plugin-tailwindcss` | Chưa có test |
+|                | Trong repo                                                                                              | Ghi chú                                                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js        | **16.4.6**, App Router                                                                                  | Turbopack là mặc định. `next.config.ts` bật `cacheComponents` và `partialPrefetching`: cách cache khác bản cũ, đọc docs trong `node_modules/next/dist/docs/` trước khi viết code lấy dữ liệu |
+| React          | 19.3                                                                                                    |                                                                                                                                                                                              |
+| TypeScript     | 5, `strict`                                                                                             | Alias `@/*` → `src/*`. Luôn import bằng `@/...`, không dùng `../../`                                                                                                                         |
+| Tailwind       | **4.3**, nạp qua `@tailwindcss/turbopack` (loader trong `next.config.ts`)                               | Không có `postcss.config` và `tailwind.config`. Không tự thêm, không đổi sang `@tailwindcss/postcss` khi chưa hỏi                                                                            |
+| shadcn         | 4.23, style `base-maia` (đã chỉnh sang gần vuông, xem mục Component và giao diện), base color `neutral` | Component dựng trên **Base UI** (`@base-ui/react`), **không phải Radix**                                                                                                                     |
+| Icon           | `@hugeicons/react` (bộ icon của shadcn), `lucide-react` cũng có cài                                     | Component mới dùng hugeicons. Không trộn 2 bộ trong cùng một màn hình                                                                                                                        |
+| Form           | `react-hook-form` + `zod` **4** + `@hookform/resolvers`                                                 | Backend dùng zod **3**: không import schema từ backend sang                                                                                                                                  |
+| Dữ liệu từ API | `@tanstack/react-query` 5                                                                               |                                                                                                                                                                                              |
+| State toàn cục | `zustand` 5                                                                                             |                                                                                                                                                                                              |
+| Khác           | `date-fns` 4, `next-themes`, `sonner` (toast)                                                           |                                                                                                                                                                                              |
+| Lint / format  | ESLint 9 (`npm run lint`), Prettier + `prettier-plugin-tailwindcss`                                     | Chưa có test                                                                                                                                                                                 |
 
 Trước khi cài thư viện mới, kiểm tra `package.json` xem đã có thứ tương đương chưa.
 
@@ -84,6 +85,7 @@ src/
 ## Gọi API backend
 
 **Format response**: mọi response được bọc thành `{ errors, data, message }`.
+
 - Thành công: `{ errors: null, data: ..., message: 'OK' }`. Code FE lấy `data` ra.
 - Lỗi: `{ errors: [{ message }], data: null, message: 'ERROR' }`. Hiện `errors[0].message` (bằng toast hoặc `setError` của form).
 - API có phân trang trả kèm `totalPages`, `totalItems`: xem đúng shape trong `../backend/src/common/utils/pagination-util` trước khi viết type.
@@ -91,15 +93,18 @@ src/
 **Một client duy nhất**: mọi request đi qua `src/lib/api-client.ts`, không rải `fetch` khắp nơi. Base URL lấy từ `NEXT_PUBLIC_API_URL` (vd `http://localhost:5000/api`).
 
 **Auth bằng cookie httpOnly** (backend set): `accessToken` sống 15 phút, `refreshToken` sống 7 ngày (path `/api/auth`).
+
 - FE **không** đọc, không lưu token (không localStorage, không state). Mọi request gửi `credentials: 'include'`.
 - Gặp 401: gọi `POST /auth/refresh-token` **một lần** rồi gửi lại request. Nhiều request cùng 401 thì dùng chung một promise refresh. Refresh thất bại: xóa user khỏi state, chuyển về `/login`.
 - Biết ai đang đăng nhập bằng `GET /me`. Chặn trang admin (`app/admin/layout.tsx`) theo `role === 'admin'` từ `/me`. Bảo vệ thật nằm ở backend (`@AdminOnly`). Không dựa vào `proxy.ts` để check đăng nhập, vì ở production cookie thuộc domain API nên FE có thể không đọc được.
 
 **Chống CSRF và loại body** (backend chặn):
+
 - Request ghi dữ liệu phải gửi từ trình duyệt ở `FE_URL`. Body phải là JSON (`Content-Type: application/json`) hoặc multipart. Form-urlencoded / text-plain bị trả 415.
 - Không submit `<form action="...">` thẳng sang API. Luôn gọi qua `api-client`.
 
 **Server hay client lấy dữ liệu**:
+
 - Dữ liệu public (sản phẩm, danh mục, bộ lọc) lấy ở Server Component để tốt cho SEO.
 - Dữ liệu riêng của user (giỏ hàng, `/me`, đơn hàng, toàn bộ admin) lấy ở client bằng React Query, có `credentials: 'include'`.
 
