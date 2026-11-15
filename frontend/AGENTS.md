@@ -53,15 +53,16 @@ Backend chạy ở `http://localhost:5000`, prefix `/api` (`cd ../backend && npm
 ```
 src/
   app/
-    (shop)/                 layout có header, footer, giỏ hàng
-      page.tsx              → /
-      shop/                 → /shop (danh sách + lọc)
-      product/[slug]/       → /product/:slug
-      checkout/
-      account/              → /account/orders, addresses, wishlist...
-    (auth)/                 login, register, forgot-password, reset-password
-    (admin)/admin/          layout có sidebar → /admin/...
-    layout.tsx, globals.css
+    layout.tsx, globals.css   root layout: font, providers
+    (shop)/                   layout có SiteHeader + SiteFooter
+      page.tsx                → /            landing page
+      products/               → /products, /products/[slug]
+      about/  contact/        → /about, /contact
+      blog/                   → /blog, /blog/[slug]  (backend CHƯA có API blog)
+      account/                → /account (+ orders, orders/[orderNumber], addresses, wishlist), layout có AccountNav
+    (auth)/                   layout căn giữa, không header/footer
+      sign-in/  sign-up/      → /sign-in, /sign-up
+    admin/                    → /admin/... layout có AdminSidebar, không dùng header/footer của shop
   components/
     ui/                     component shadcn (sinh bằng CLI)
     layout/                 Header, Footer, Sidebar, CartSheet...
@@ -76,7 +77,8 @@ src/
 ```
 
 - Chỉ folder có `page.tsx` / `route.ts` mới thành URL. Component chỉ dùng cho một route thì để trong `_components/` cạnh route đó.
-- `(shop)`, `(auth)`, `(admin)` là route group, không xuất hiện trên URL.
+- `(shop)`, `(auth)` là route group, không xuất hiện trên URL. `admin/` là folder thường vì URL cần có `/admin`. Trang khách hàng nằm trong `(shop)/account` để giữ header/footer của shop.
+- Tên route khớp với backend: `/products/[slug]`, `/sign-in`, `/sign-up`, `/account/orders/[orderNumber]`.
 - `src/app/api/` chỉ dùng cho việc nhỏ. Logic nghiệp vụ nằm ở backend.
 
 ## Gọi API backend
@@ -91,7 +93,7 @@ src/
 **Auth bằng cookie httpOnly** (backend set): `accessToken` sống 15 phút, `refreshToken` sống 7 ngày (path `/api/auth`).
 - FE **không** đọc, không lưu token (không localStorage, không state). Mọi request gửi `credentials: 'include'`.
 - Gặp 401: gọi `POST /auth/refresh-token` **một lần** rồi gửi lại request. Nhiều request cùng 401 thì dùng chung một promise refresh. Refresh thất bại: xóa user khỏi state, chuyển về `/login`.
-- Biết ai đang đăng nhập bằng `GET /me`. Chặn trang admin theo `role === 'admin'` từ `/me`. Bảo vệ thật nằm ở backend (`@AdminOnly`). Không dựa vào `proxy.ts` để check đăng nhập, vì ở production cookie thuộc domain API nên FE có thể không đọc được.
+- Biết ai đang đăng nhập bằng `GET /me`. Chặn trang admin (`app/admin/layout.tsx`) theo `role === 'admin'` từ `/me`. Bảo vệ thật nằm ở backend (`@AdminOnly`). Không dựa vào `proxy.ts` để check đăng nhập, vì ở production cookie thuộc domain API nên FE có thể không đọc được.
 
 **Chống CSRF và loại body** (backend chặn):
 - Request ghi dữ liệu phải gửi từ trình duyệt ở `FE_URL`. Body phải là JSON (`Content-Type: application/json`) hoặc multipart. Form-urlencoded / text-plain bị trả 415.
