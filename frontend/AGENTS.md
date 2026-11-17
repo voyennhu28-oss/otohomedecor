@@ -95,7 +95,7 @@ src/
 **Auth bằng cookie httpOnly** (backend set): `accessToken` sống 15 phút, `refreshToken` sống 7 ngày (path `/api/auth`).
 
 - FE **không** đọc, không lưu token (không localStorage, không state). Mọi request gửi `credentials: 'include'`.
-- Gặp 401: gọi `POST /auth/refresh-token` **một lần** rồi gửi lại request. Nhiều request cùng 401 thì dùng chung một promise refresh. Refresh thất bại: xóa user khỏi state, chuyển về `/login`.
+- Gặp 401: gọi `POST /auth/refresh-token` **một lần** rồi gửi lại request. Nhiều request cùng 401 thì dùng chung một promise refresh. Refresh thất bại: xóa user khỏi state (cache `['me']` của React Query); nếu đang ở `/account` hoặc `/admin` thì chuyển về `/sign-in?next=...`. Trang công khai không chuyển hướng.
 - Biết ai đang đăng nhập bằng `GET /me`. Chặn trang admin (`app/admin/layout.tsx`) theo `role === 'admin'` từ `/me`. Bảo vệ thật nằm ở backend (`@AdminOnly`). Không dựa vào `proxy.ts` để check đăng nhập, vì ở production cookie thuộc domain API nên FE có thể không đọc được.
 
 **Chống CSRF và loại body** (backend chặn):

@@ -22,7 +22,7 @@ export function SiteHeader() {
           href='/'
           className='justify-self-center font-heading text-2xl uppercase'
         >
-          Oto Home Decor
+          O The o
         </Link>
         <div className='flex gap-6 justify-self-end text-sm'>
           {/* TODO: đổi theo trạng thái đăng nhập (GET /me) + nút giỏ hàng (Sheet) */}
