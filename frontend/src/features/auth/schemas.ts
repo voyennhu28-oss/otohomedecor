@@ -13,6 +13,17 @@ const emailField = z
   .min(1, 'Nhập email')
   .pipe(z.email('Email không hợp lệ'));
 
+const passwordField = z
+  .string()
+  .min(8, 'Mật khẩu cần ít nhất 8 ký tự')
+  .refine(
+    (value) => new TextEncoder().encode(value).length <= PASSWORD_MAX_BYTES,
+    'Mật khẩu quá dài (tối đa 72 byte, chữ có dấu tính 2–3 byte)',
+  );
+
+/** Token trong link email: chuỗi hex 64 ký tự (giống ResetPasswordDto). */
+export const RESET_TOKEN_PATTERN = /^[a-f\d]{64}$/i;
+
 export const signInSchema = z.object({
   email: emailField,
   password: z.string().min(1, 'Nhập mật khẩu'),
@@ -33,14 +44,25 @@ export const signUpSchema = z.object({
       (value) => value === '' || PHONE_PATTERN.test(value),
       'Số điện thoại gồm 10 số, bắt đầu bằng 0 hoặc +84',
     ),
-  password: z
-    .string()
-    .min(8, 'Mật khẩu cần ít nhất 8 ký tự')
-    .refine(
-      (value) => new TextEncoder().encode(value).length <= PASSWORD_MAX_BYTES,
-      'Mật khẩu quá dài (tối đa 72 byte, chữ có dấu tính 2–3 byte)',
-    ),
+  password: passwordField,
 });
+
+export const forgotPasswordSchema = z.object({
+  email: emailField,
+});
+
+/** `confirmPassword` chỉ kiểm tra ở FE, không gửi lên backend. */
+export const resetPasswordSchema = z
+  .object({
+    newPassword: passwordField,
+    confirmPassword: z.string().min(1, 'Nhập lại mật khẩu mới'),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    message: 'Mật khẩu nhập lại không khớp',
+    path: ['confirmPassword'],
+  });
 
 export type SignInValues = z.infer<typeof signInSchema>;
 export type SignUpValues = z.infer<typeof signUpSchema>;
+export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;

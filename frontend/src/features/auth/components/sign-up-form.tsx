@@ -14,12 +14,13 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useAuthSuccess } from '@/features/auth/hooks/use-auth-success';
 import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
 import { setServerErrors } from '@/lib/form-errors';
 import { authService } from '@/services/auth.service';
 
+import { FormAlert } from './form-alert';
 import { PasswordInput } from './password-input';
-import { useAuthSuccess } from '@/features/auth/hooks/use-auth-success';
 
 const FIELDS = ['fullName', 'email', 'phone', 'password'] as const;
 
@@ -123,19 +124,14 @@ export function SignUpForm() {
         </Field>
 
         {errors.root?.server && (
-          <p
-            role='alert'
-            className='border-l-2 border-destructive py-1 pl-3 text-sm text-destructive'
-          >
-            {errors.root.server.message}
-          </p>
+          <FormAlert>{errors.root.server.message}</FormAlert>
         )}
 
         <Button
           type='submit'
           size='lg'
           disabled={signUp.isPending || signUp.isSuccess}
-          className='h-11 w-full'
+          className='h-14 w-full rounded-sm label-caps'
         >
           {signUp.isPending ? 'Đang tạo tài khoản…' : 'Tạo tài khoản'}
         </Button>

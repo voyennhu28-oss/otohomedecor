@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Tạo tài khoản' };
 export default function SignUpPage() {
   return (
     <>
-      <h1 className='text-5xl leading-none uppercase'>Tạo tài khoản</h1>
+      <h1 className='text-5xl leading-tight font-medium'>Tạo tài khoản</h1>
       <p className='mt-4 text-sm text-muted-foreground'>
         Đã có tài khoản?{' '}
         <Link

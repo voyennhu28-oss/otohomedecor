@@ -1,3 +1,5 @@
+import { ShoppingBag02Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 
 import { formatVND } from '@/lib/format';
@@ -8,55 +10,45 @@ import type { PlaceholderProduct } from './placeholder-data';
 
 type ProductTileProps = {
   product: PlaceholderProduct;
-  size?: 'default' | 'large';
   className?: string;
 };
 
-export function ProductTile({
-  product,
-  size = 'default',
-  className,
-}: ProductTileProps) {
+/**
+ * Thẻ sản phẩm: ảnh bo nhẹ, tên, mô tả ngắn in hoa, giá.
+ * Ô vuông màu cát bên phải chỉ là dấu hiệu "chọn mẫu để mua": phải chọn variant ở
+ * trang chi tiết trước khi thêm vào giỏ, nên cả thẻ dẫn sang trang sản phẩm.
+ */
+export function ProductTile({ product, className }: ProductTileProps) {
   return (
     <Link
       href={`/products/${product.slug}`}
       className={cn(
-        'group flex flex-col gap-4 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4',
+        'group flex flex-col gap-5 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4',
         className,
       )}
     >
       <ImagePlaceholder
         label={product.photo}
-        tone={size === 'large' ? 'mid' : 'light'}
-        className={
-          size === 'large' ? 'aspect-square md:aspect-8/9' : 'aspect-square'
-        }
+        className='aspect-square rounded-lg'
       />
-      <div
-        className={cn(
-          'flex items-start justify-between gap-4',
-          size === 'default' && 'flex-col gap-2 lg:flex-row lg:gap-4',
-        )}
-      >
+      <div className='grid grid-cols-[1fr_auto] items-start gap-4'>
         <div className='min-w-0'>
-          <p
-            className={cn(
-              'font-medium underline-offset-4 group-hover:underline',
-              size === 'large' ? 'text-lg' : 'text-sm',
-            )}
-          >
+          <p className='font-heading text-xl leading-snug font-semibold underline-offset-4 group-hover:underline'>
             {product.name}
           </p>
-          <p className='mt-1 text-sm text-muted-foreground'>{product.detail}</p>
+          <p className='mt-1.5 text-[11px] tracking-[0.14em] text-muted-foreground uppercase'>
+            {product.detail}
+          </p>
+          <p className='mt-3 text-base tabular-nums'>
+            {formatVND(product.price)}
+          </p>
         </div>
-        <p
-          className={cn(
-            'shrink-0 tabular-nums',
-            size === 'large' ? 'text-lg' : 'text-sm',
-          )}
+        <span
+          aria-hidden
+          className='flex size-12 items-center justify-center rounded-sm bg-secondary transition-colors group-hover:bg-primary group-hover:text-primary-foreground motion-reduce:transition-none md:size-14'
         >
-          {formatVND(product.price)}
-        </p>
+          <HugeiconsIcon icon={ShoppingBag02Icon} size={20} strokeWidth={1.5} />
+        </span>
       </div>
     </Link>
   );

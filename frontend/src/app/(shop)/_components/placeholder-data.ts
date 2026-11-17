@@ -14,18 +14,18 @@ export type PlaceholderProduct = {
 
 export const FEATURED_PRODUCTS: PlaceholderProduct[] = [
   {
-    slug: 'den-ngu-so-diep-tron',
-    name: 'Đèn ngủ sò điệp tròn',
+    slug: 'den-so-diep-tron',
+    name: 'Đèn sò điệp tròn',
     detail: 'Vỏ sò điệp, đế gỗ',
     price: 890_000,
-    photo: 'Ảnh sản phẩm: đèn ngủ sò điệp dáng tròn, đang bật',
+    photo: 'Ảnh sản phẩm: đèn sò điệp dáng tròn, đang bật',
   },
   {
-    slug: 'den-ngu-vo-oc-xoan',
-    name: 'Đèn ngủ vỏ ốc xoắn',
+    slug: 'den-vo-oc-xoan',
+    name: 'Đèn vỏ ốc xoắn',
     detail: 'Vỏ ốc, đế gỗ',
     price: 650_000,
-    photo: 'Ảnh sản phẩm: đèn ngủ vỏ ốc xoắn',
+    photo: 'Ảnh sản phẩm: đèn vỏ ốc xoắn',
   },
   {
     slug: 'den-ban-xa-cu',
@@ -35,11 +35,11 @@ export const FEATURED_PRODUCTS: PlaceholderProduct[] = [
     photo: 'Ảnh sản phẩm: đèn bàn chao ghép mảnh xà cừ',
   },
   {
-    slug: 'den-ngu-vo-trai',
-    name: 'Đèn ngủ vỏ trai',
+    slug: 'den-vo-trai',
+    name: 'Đèn vỏ trai',
     detail: 'Vỏ trai, đế gỗ',
     price: 720_000,
-    photo: 'Ảnh sản phẩm: đèn ngủ vỏ trai đặt nghiêng',
+    photo: 'Ảnh sản phẩm: đèn vỏ trai đặt nghiêng',
   },
   {
     slug: 'den-treo-so-diep',

@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: 'Đăng nhập' };
 export default function SignInPage() {
   return (
     <>
-      <h1 className='text-5xl leading-none uppercase'>Đăng nhập</h1>
+      <h1 className='text-5xl leading-tight font-medium'>Đăng nhập</h1>
       <p className='mt-4 text-sm text-muted-foreground'>
         Chưa có tài khoản?{' '}
         <Link

@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
@@ -12,12 +13,13 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useAuthSuccess } from '@/features/auth/hooks/use-auth-success';
 import { signInSchema, type SignInValues } from '@/features/auth/schemas';
 import { setServerErrors } from '@/lib/form-errors';
 import { authService } from '@/services/auth.service';
 
+import { FormAlert } from './form-alert';
 import { PasswordInput } from './password-input';
-import { useAuthSuccess } from '@/features/auth/hooks/use-auth-success';
 
 export function SignInForm() {
   const onSuccess = useAuthSuccess();
@@ -57,7 +59,15 @@ export function SignInForm() {
         </Field>
 
         <Field data-invalid={!!errors.password}>
-          <FieldLabel htmlFor='password'>Mật khẩu</FieldLabel>
+          <div className='flex items-baseline justify-between gap-4'>
+            <FieldLabel htmlFor='password'>Mật khẩu</FieldLabel>
+            <Link
+              href='/forgot-password'
+              className='text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:underline'
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
           <PasswordInput
             id='password'
             autoComplete='current-password'
@@ -69,19 +79,14 @@ export function SignInForm() {
         </Field>
 
         {errors.root?.server && (
-          <p
-            role='alert'
-            className='border-l-2 border-destructive py-1 pl-3 text-sm text-destructive'
-          >
-            {errors.root.server.message}
-          </p>
+          <FormAlert>{errors.root.server.message}</FormAlert>
         )}
 
         <Button
           type='submit'
           size='lg'
           disabled={signIn.isPending || signIn.isSuccess}
-          className='h-11 w-full'
+          className='h-14 w-full rounded-sm label-caps'
         >
           {signIn.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </Button>

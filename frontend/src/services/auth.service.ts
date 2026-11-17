@@ -24,4 +24,15 @@ export const authService = {
     api.post<{ message: string }>('/auth/logout', undefined, {
       skipAuthRefresh: true,
     }),
+
+  /** Luôn trả cùng một câu, email có tồn tại hay không (chống dò email). */
+  forgotPassword: (body: { email: string }) =>
+    api.post<{ message: string }>('/auth/forgot-password', body, {
+      skipAuthRefresh: true,
+    }),
+
+  resetPassword: (body: { token: string; newPassword: string }) =>
+    api.post<{ message: string }>('/auth/reset-password', body, {
+      skipAuthRefresh: true,
+    }),
 };

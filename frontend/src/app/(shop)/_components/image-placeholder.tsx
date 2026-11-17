@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
 
+// Các sắc độ màu cát nhạt (token muted / secondary)
 const TONES = {
-  light: 'bg-foreground/4',
-  mid: 'bg-foreground/7',
-  deep: 'bg-foreground/10',
+  light: 'bg-secondary/45',
+  mid: 'bg-secondary/70',
+  deep: 'bg-secondary',
 } as const;
 
 type ImagePlaceholderProps = {
@@ -14,8 +15,8 @@ type ImagePlaceholderProps = {
 };
 
 /**
- * Khối giữ chỗ cho ảnh. Vuông góc, không bo, nền xám nhạt.
- * Đặt tỉ lệ bằng `className` (vd `aspect-4/5`).
+ * Khối giữ chỗ cho ảnh, nền màu cát nhạt.
+ * Đặt tỉ lệ và bo góc bằng `className` (vd `aspect-4/5 rounded-lg`).
  */
 export function ImagePlaceholder({
   label,

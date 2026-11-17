@@ -13,7 +13,7 @@ const ITEMS = [
 export function AdminSidebar() {
   return (
     <aside className='flex w-56 shrink-0 flex-col gap-1 border-r p-4 text-sm'>
-      <Link href='/admin' className='mb-4 font-heading text-xl uppercase'>
+      <Link href='/admin' className='mb-4 font-heading text-2xl font-semibold'>
         Quản trị
       </Link>
       {ITEMS.map((item) => (

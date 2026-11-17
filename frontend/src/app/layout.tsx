@@ -1,20 +1,30 @@
 import type { Metadata } from 'next';
-import { Geist_Mono, Inter, Oswald } from 'next/font/google';
+import {
+  Be_Vietnam_Pro,
+  Cormorant_Garamond,
+  Geist_Mono,
+} from 'next/font/google';
 
 import { Providers } from '@/components/providers';
 import { cn } from '@/lib/utils';
 
 import './globals.css';
 
-// Nội dung: Inter. Tiêu đề: Oswald (chữ cao, hẹp). Cả hai đều có bộ chữ tiếng Việt.
-const inter = Inter({
-  variable: '--font-sans',
+// Tiêu đề: Cormorant Garamond. Serif nét thanh kiểu Garamond, chữ hoa giãn rộng
+// cùng tinh thần với chữ khắc trong logo; bản nghiêng mềm như ánh đèn.
+const cormorant = Cormorant_Garamond({
+  variable: '--font-cormorant',
   subsets: ['latin', 'vietnamese'],
+  weight: ['500', '600'],
+  style: ['normal', 'italic'],
 });
 
-const oswald = Oswald({
-  variable: '--font-display',
+// Nội dung, nút, nhãn: Be Vietnam Pro. Thiết kế riêng cho dấu tiếng Việt, đọc rõ ở cỡ nhỏ;
+// in hoa giãn chữ giống dòng tagline "LIGHT WHAT YOU FEEL" của logo.
+const beVietnam = Be_Vietnam_Pro({
+  variable: '--font-be-vietnam',
   subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '600'],
 });
 
 const geistMono = Geist_Mono({
@@ -24,10 +34,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Oto Home Decor',
-    template: '%s | Oto Home Decor',
+    default: 'O The o',
+    template: '%s | O The o',
   },
-  description: 'Đèn ngủ vỏ sò làm thủ công và đồ trang trí nhỏ.',
+  description: 'Đèn trang trí làm từ vỏ sò, ghép tay từng chiếc.',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
@@ -36,8 +46,8 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       lang='vi'
       className={cn(
         'h-full font-sans antialiased',
-        inter.variable,
-        oswald.variable,
+        cormorant.variable,
+        beVietnam.variable,
         geistMono.variable,
       )}
     >
