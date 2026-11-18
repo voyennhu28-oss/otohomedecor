@@ -1,12 +1,19 @@
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Tổng quan' };
+import { AdminPageHeader } from '@/components/layout/admin-page-header';
+
+import { ComingSoon } from '@/app/admin/_components/coming-soon';
+
+export const metadata: Metadata = { title: 'Bảng điều khiển' };
 
 export default function AdminDashboardPage() {
   return (
-    <section className='container mx-auto px-6 py-16'>
-      <h1 className='text-5xl font-medium'>Tổng quan</h1>
-      <p className='mt-4 text-muted-foreground'>GET /admin/dashboard.</p>
-    </section>
+    <>
+      <AdminPageHeader
+        title='Bảng điều khiển'
+        description='Doanh thu, đơn hàng và việc cần xử lý.'
+      />
+      <ComingSoon phase='Giai đoạn 3' endpoints={['GET /admin/dashboard']} />
+    </>
   );
 }

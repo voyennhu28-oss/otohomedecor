@@ -1,12 +1,31 @@
 import type { Metadata } from 'next';
 
+import { AdminPageHeader } from '@/components/layout/admin-page-header';
+
+import { ComingSoon } from '@/app/admin/_components/coming-soon';
+
 export const metadata: Metadata = { title: 'Sản phẩm' };
 
 export default function AdminProductsPage() {
   return (
-    <section className='container mx-auto px-6 py-16'>
-      <h1 className='text-5xl font-medium'>Sản phẩm</h1>
-      <p className='mt-4 text-muted-foreground'>CRUD /admin/products.</p>
-    </section>
+    <>
+      <AdminPageHeader
+        title='Sản phẩm'
+        description='Sản phẩm, biến thể, tồn kho và ảnh.'
+      />
+      <ComingSoon
+        phase='Giai đoạn 1'
+        endpoints={[
+          'GET /admin/products',
+          'POST /admin/products',
+          'PATCH /admin/products/:id',
+          'DELETE /admin/products/:id',
+          '/admin/products/:productID/variants',
+          'PATCH /admin/variants/:variantID/stock',
+          '/admin/products/:productID/images',
+          'POST /admin/products/export | import',
+        ]}
+      />
+    </>
   );
 }

@@ -24,5 +24,10 @@ export function useMe() {
       }
     },
     staleTime: 5 * 60_000,
+    // Không thử lại: header đang chờ kết quả này để hiện "Đăng nhập" / "Tài khoản".
+    // Thử lại khi backend không phản hồi làm header trống thêm vài giây (1s + 2s).
+    // Lỗi thì header coi như chưa đăng nhập; React Query tự hỏi lại khi có mạng
+    // lại hoặc khi người dùng quay lại tab.
+    retry: false,
   });
 }

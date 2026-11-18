@@ -1,12 +1,27 @@
 import type { Metadata } from 'next';
 
+import { AdminPageHeader } from '@/components/layout/admin-page-header';
+
+import { ComingSoon } from '@/app/admin/_components/coming-soon';
+
 export const metadata: Metadata = { title: 'Khuyến mãi' };
 
 export default function AdminPromotionsPage() {
   return (
-    <section className='container mx-auto px-6 py-16'>
-      <h1 className='text-5xl font-medium'>Khuyến mãi</h1>
-      <p className='mt-4 text-muted-foreground'>CRUD /admin/promotions.</p>
-    </section>
+    <>
+      <AdminPageHeader
+        title='Khuyến mãi'
+        description='Mã giảm giá áp dụng khi thanh toán.'
+      />
+      <ComingSoon
+        phase='Giai đoạn 4'
+        endpoints={[
+          'GET /admin/promotions',
+          'POST /admin/promotions',
+          'PATCH /admin/promotions/:id',
+          'DELETE /admin/promotions/:id',
+        ]}
+      />
+    </>
   );
 }

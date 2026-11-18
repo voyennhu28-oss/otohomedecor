@@ -17,7 +17,7 @@ Frontend cho website bán đồ nội thất / trang trí của **một cửa h�
 - **Shop**: khách xem sản phẩm, giỏ hàng, đặt hàng, tài khoản.
 - **Admin** (`/admin/...`): quản lý sản phẩm, đơn hàng, khuyến mãi, user, dashboard.
 
-Backend NestJS nằm ở `../backend`. Quy tắc nghiệp vụ ở [`../backend/AGENTS.md`](../backend/AGENTS.md), danh sách API ở [`../home-decor-api-plan.md`](../home-decor-api-plan.md) mục 7. **Không tự đoán endpoint, field hay format response.** Đọc plan, code controller/DTO trong `../backend/src/app/<module>`, hoặc Swagger tại `http://localhost:5000/api` (khi backend đang chạy).
+Backend NestJS nằm ở `../backend`. Quy tắc nghiệp vụ ở [`../backend/AGENTS.md`](../backend/AGENTS.md), spec API ở [`../docs/api-docs/`](../docs/api-docs/README.md) (viết theo code thực tế), lộ trình nối API ở [`../docs/frontend-roadmap.md`](../docs/frontend-roadmap.md). **Không tự đoán endpoint, field hay format response.** Đọc plan, code controller/DTO trong `../backend/src/app/<module>`, hoặc Swagger tại `http://localhost:5000/api` (khi backend đang chạy).
 
 ## Môi trường
 
@@ -145,6 +145,8 @@ src/
     - Sản phẩm dạng băng trượt ngang có thanh tiến độ (`ProductRail`).
     - Khoảng trắng rộng.
 - Admin: dùng chung token với shop, nhưng dày hơn: `size="sm"`, bảng padding nhỏ, tiêu đề cỡ vừa (không dùng tiêu đề hero cỡ lớn).
+  - Khung: `AdminShell` = shadcn `Sidebar` (thu gọn thành icon, Ctrl+B) + `AdminTopbar` (breadcrumb, nút xem cửa hàng). Menu tài khoản / đăng xuất ở chân sidebar.
+  - Thêm trang mới: khai báo mục menu trong `components/layout/admin-nav.ts` (breadcrumb đọc tên trang từ đây). Mỗi trang mở đầu bằng `AdminPageHeader` (tiêu đề, mô tả, nút thao tác).
 - Giỏ hàng dạng panel trượt ra dùng component `Sheet`. Thông báo dùng `sonner`.
 - Chữ trên giao diện bằng **tiếng Việt**. Ngày giờ format bằng `date-fns` với locale `vi`.
 

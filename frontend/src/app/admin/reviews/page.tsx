@@ -1,12 +1,26 @@
 import type { Metadata } from 'next';
 
+import { AdminPageHeader } from '@/components/layout/admin-page-header';
+
+import { ComingSoon } from '@/app/admin/_components/coming-soon';
+
 export const metadata: Metadata = { title: 'Đánh giá' };
 
 export default function AdminReviewsPage() {
   return (
-    <section className='container mx-auto px-6 py-16'>
-      <h1 className='text-5xl font-medium'>Đánh giá</h1>
-      <p className='mt-4 text-muted-foreground'>GET /admin/reviews.</p>
-    </section>
+    <>
+      <AdminPageHeader
+        title='Đánh giá'
+        description='Duyệt, ẩn đánh giá sản phẩm của khách.'
+      />
+      <ComingSoon
+        phase='Giai đoạn 5'
+        endpoints={[
+          'GET /admin/reviews',
+          'PATCH /admin/reviews/:id/status',
+          'DELETE /admin/reviews/:id/images/:publicID',
+        ]}
+      />
+    </>
   );
 }

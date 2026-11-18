@@ -1,12 +1,27 @@
 import type { Metadata } from 'next';
 
+import { AdminPageHeader } from '@/components/layout/admin-page-header';
+
+import { ComingSoon } from '@/app/admin/_components/coming-soon';
+
 export const metadata: Metadata = { title: 'Danh mục' };
 
 export default function AdminCategoriesPage() {
   return (
-    <section className='container mx-auto px-6 py-16'>
-      <h1 className='text-5xl font-medium'>Danh mục</h1>
-      <p className='mt-4 text-muted-foreground'>CRUD /admin/categories.</p>
-    </section>
+    <>
+      <AdminPageHeader
+        title='Danh mục'
+        description='Cây danh mục sản phẩm hiển thị ở cửa hàng.'
+      />
+      <ComingSoon
+        phase='Giai đoạn 1'
+        endpoints={[
+          'GET /admin/categories',
+          'POST /admin/categories',
+          'PATCH /admin/categories/:id',
+          'DELETE /admin/categories/:id',
+        ]}
+      />
+    </>
   );
 }
