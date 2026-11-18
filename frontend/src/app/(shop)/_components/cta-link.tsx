@@ -8,7 +8,6 @@ type CtaLinkProps = React.ComponentProps<typeof Link> & {
   variant?: 'solid' | 'outline';
 };
 
-/** Nút điều hướng lớn: chữ hẹp in hoa bên trái, mũi tên bên phải. */
 export function CtaLink({
   variant = 'solid',
   className,

@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils';
 
-/** Lỗi chung của form (không thuộc riêng ô nào), vd "Email hoặc mật khẩu không đúng". */
 export function FormAlert({
   children,
   className,

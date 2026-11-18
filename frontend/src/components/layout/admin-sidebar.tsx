@@ -28,7 +28,6 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
 
-  // Mobile: sidebar là Sheet, bấm link xong thì đóng lại
   const closeOnMobile = () => {
     if (isMobile) setOpenMobile(false);
   };
@@ -49,7 +48,6 @@ export function AdminSidebar() {
           <span className='rounded-sm bg-sidebar-accent px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground group-data-[collapsible=icon]:hidden'>
             Quản trị
           </span>
-          {/* Thu gọn: không đủ chỗ cho logo, chỉ hiện icon */}
           <span className='hidden size-8 items-center justify-center rounded-sm bg-sidebar-accent group-data-[collapsible=icon]:flex'>
             <HugeiconsIcon icon={Store01Icon} strokeWidth={1.75} />
             <span className='sr-only'>Trang quản trị</span>
@@ -61,7 +59,6 @@ export function AdminSidebar() {
         {ADMIN_NAV.map((group, index) => (
           <SidebarGroup
             key={group.label ?? index}
-            // Thu gọn: cột 48px, chừa px-2 để nút icon 32px nằm giữa
             className='px-3 py-0 not-first:mt-5 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:not-first:mt-2'
           >
             {group.label && (
@@ -85,7 +82,6 @@ export function AdminSidebar() {
                             aria-current={active ? 'page' : undefined}
                           />
                         }
-                        // Chữ đậm màu chính, icon xám; mục đang mở: nền cát + icon đậm
                         className='h-8 gap-2.5 rounded-sm px-2.5 text-sidebar-foreground/85 hover:text-sidebar-foreground data-active:text-sidebar-foreground [&_svg]:text-muted-foreground data-active:[&_svg]:text-sidebar-foreground'
                       >
                         <HugeiconsIcon icon={item.icon} strokeWidth={1.75} />

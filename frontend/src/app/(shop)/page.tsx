@@ -20,7 +20,6 @@ export const metadata: Metadata = {
     'Đèn trang trí ghép tay từ vỏ sò thật. Khi bật, ánh sáng đi qua lớp vỏ mỏng và hiện rõ từng đường vân.',
 };
 
-/** Các loại vỏ dùng làm đèn. Bản nháp: chỉnh theo loại vỏ cửa hàng dùng thật. */
 const SHELLS = [
   { name: 'Sò điệp', photo: 'Ảnh cận: vỏ sò điệp xếp lớp' },
   { name: 'Vỏ ốc', photo: 'Ảnh cận: vỏ ốc xoắn dưới ánh đèn' },
@@ -30,11 +29,6 @@ const SHELLS = [
 export default function HomePage() {
   return (
     <>
-      {/*
-        Hero chia 6:4: banner 60% bên trái (sát mép màn hình), chữ 40% bên phải.
-        Banner giữ nguyên khung 16:9, không cắt, vì ảnh có sẵn chữ thương hiệu ở nửa phải.
-        Mobile: banner ở trên, chữ ở dưới.
-      */}
       <section className='grid lg:grid-cols-[3fr_2fr] lg:items-center'>
         <Image
           src='/images/oto_banner.png'
@@ -71,10 +65,8 @@ export default function HomePage() {
         ]}
       />
 
-      {/* Bật / tắt đèn: điểm nhấn của trang */}
       <LampSwitch />
 
-      {/* Sản phẩm nổi bật: tiêu đề bên trái, băng sản phẩm trượt ngang bên phải */}
       <section
         aria-labelledby='noi-bat-title'
         className='container mx-auto grid gap-12 px-6 py-20 md:py-28 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.3fr)] lg:items-center lg:gap-16'
@@ -95,7 +87,6 @@ export default function HomePage() {
         <ProductRail products={FEATURED_PRODUCTS} label='Sản phẩm nổi bật' />
       </section>
 
-      {/* Cách làm: đúng là một quy trình nên đánh số */}
       <section
         aria-labelledby='cach-lam-title'
         className='container mx-auto px-6 py-20 md:py-28'
@@ -133,7 +124,6 @@ export default function HomePage() {
         </ol>
       </section>
 
-      {/* Câu chuyện vỏ sò: ảnh các loại vỏ bên trái, chữ bên phải */}
       <section
         aria-labelledby='cau-chuyen-title'
         className='container mx-auto grid gap-12 px-6 py-20 md:py-28 lg:grid-cols-12 lg:items-center lg:gap-10'

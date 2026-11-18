@@ -54,10 +54,6 @@
   --radius-4xl: var(--radius);
 }
 
-/*
- * Nền trắng. Chữ gần đen ngả ấm, bề mặt phụ màu cát nhạt (màu vỏ sò).
- * Không có màu nhấn rực: ảnh sản phẩm và ánh đèn là điểm màu.
- */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.23 0.012 75);
@@ -82,8 +78,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.25rem; /* gần vuông: nút, ô nhập, card tối đa 4px */
-  /* Sidebar admin: trắng ngả cát rất nhẹ để tách khỏi vùng nội dung trắng */
+  --radius: 0.25rem;
   --sidebar: oklch(0.985 0.005 80);
   --sidebar-foreground: oklch(0.23 0.012 75);
   --sidebar-primary: oklch(0.23 0.012 75);
@@ -145,7 +140,6 @@
   }
 }
 
-/* Nhãn nhỏ in hoa giãn chữ (nút, nhãn, tiêu đề cột footer): giống tagline của logo */
 @utility label-caps {
   font-family: var(--font-be-vietnam);
   font-size: 0.75rem;
@@ -155,7 +149,6 @@
   text-transform: uppercase;
 }
 
-/* Chữ hoa serif giãn rộng như chữ "O T H E o" trong logo. Cỡ chữ đặt riêng. */
 @utility display-caps {
   font-family: var(--font-cormorant);
   letter-spacing: 0.14em;

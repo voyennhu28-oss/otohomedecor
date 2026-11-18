@@ -28,13 +28,11 @@ import { UserAvatar } from '@/features/auth/components/user-avatar';
 import { useLogout } from '@/features/auth/hooks/use-logout';
 import { useMe } from '@/features/auth/hooks/use-me';
 
-/** Tài khoản admin ở chân sidebar: tên, email, đăng xuất. */
 export function AdminUserMenu() {
   const { data: user } = useMe();
   const logout = useLogout();
   const { isMobile, state } = useSidebar();
 
-  // Layout admin nằm trong AuthGuard nên lúc này user luôn có
   if (!user) return null;
 
   const avatar = <UserAvatar user={user} shape='square' />;

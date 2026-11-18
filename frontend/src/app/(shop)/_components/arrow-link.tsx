@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 
 type ArrowLinkProps = React.ComponentProps<typeof Link>;
 
-/** Link điều hướng kiểu chữ + mũi tên. */
 export function ArrowLink({ className, children, ...props }: ArrowLinkProps) {
   return (
     <Link

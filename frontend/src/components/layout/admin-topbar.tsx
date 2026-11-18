@@ -28,17 +28,12 @@ import { findAdminNavEntry } from './admin-nav';
 
 type Crumb = { label: string; href?: string };
 
-// Đoạn đường dẫn con có tên cố định; còn lại (ID, mã đơn...) hiện "Chi tiết"
 const SEGMENT_LABELS: Record<string, string> = {
   new: 'Thêm mới',
   edit: 'Chỉnh sửa',
   import: 'Nhập Excel',
 };
 
-/**
- * Nhóm › Trang › Trang con. Không có gốc "Quản trị" (đã có cạnh logo).
- * Nhóm chỉ để định hướng, không phải trang nên không có link.
- */
 function buildCrumbs(pathname: string): Crumb[] {
   const entry = findAdminNavEntry(pathname);
   if (!entry) return [{ label: 'Bảng điều khiển' }];
@@ -57,7 +52,6 @@ function buildCrumbs(pathname: string): Crumb[] {
     crumbs.push({ label: SEGMENT_LABELS[segment] ?? 'Chi tiết', href });
   }
 
-  // Mục cuối là trang hiện tại, không cần link
   delete crumbs[crumbs.length - 1].href;
   return crumbs;
 }
@@ -97,7 +91,6 @@ export function AdminTopbar() {
                   <BreadcrumbSeparator className='hidden sm:block' />
                 )}
                 <BreadcrumbItem
-                  // Mobile chỉ hiện trang hiện tại cho khỏi tràn
                   className={cn('min-w-0', !isLast && 'hidden sm:inline-flex')}
                 >
                   {crumb.href ? (

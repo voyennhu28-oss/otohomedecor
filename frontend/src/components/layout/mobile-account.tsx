@@ -18,7 +18,6 @@ import { ACCOUNT_NAV } from './nav-items';
 const rowClass =
   'flex items-center gap-3 py-2.5 text-[15px] outline-none focus-visible:underline disabled:opacity-50';
 
-/** Khối tài khoản ở cuối menu mobile. `onNavigate` để đóng menu sau khi bấm. */
 export function MobileAccount({ onNavigate }: { onNavigate: () => void }) {
   const { data: user, isPending } = useMe();
   const logout = useLogout();

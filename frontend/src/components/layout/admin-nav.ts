@@ -18,15 +18,10 @@ export type AdminNavItem = {
 };
 
 export type AdminNavGroup = {
-  /** Bỏ trống: nhóm không có tiêu đề (mục đứng đầu như "Bảng điều khiển"). */
   label?: string;
   items: AdminNavItem[];
 };
 
-/**
- * Menu trang quản trị. Mỗi nhóm nên có từ 2 mục trở lên, tránh nhóm 1 mục làm menu vụn.
- * Breadcrumb trên topbar cũng đọc tên nhóm / trang từ đây.
- */
 export const ADMIN_NAV: AdminNavGroup[] = [
   {
     items: [
@@ -66,7 +61,6 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
 ];
 
-/** `/admin` chỉ active khi đúng trang đó; mục khác active cả ở trang con (`/admin/orders/123`). */
 export function isAdminNavActive(href: string, pathname: string) {
   if (href === '/admin') return pathname === '/admin';
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -76,7 +70,6 @@ const ADMIN_NAV_ENTRIES = ADMIN_NAV.flatMap((group) =>
   group.items.map((item) => ({ item, group })),
 ).sort((a, b) => b.item.href.length - a.item.href.length);
 
-/** Mục menu (kèm nhóm) ứng với đường dẫn hiện tại, đường dẫn dài nhất khớp trước. */
 export function findAdminNavEntry(pathname: string) {
   return ADMIN_NAV_ENTRIES.find(({ item }) =>
     isAdminNavActive(item.href, pathname),

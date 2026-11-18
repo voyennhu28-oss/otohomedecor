@@ -2,10 +2,6 @@ type MarqueeProps = {
   items: string[];
 };
 
-/**
- * Dải chữ lớn chạy ngang. Nội dung lặp 2 lần để chạy liền mạch;
- * bản lặp ẩn với trình đọc màn hình. Tắt chuyển động khi người dùng bật giảm chuyển động.
- */
 export function Marquee({ items }: MarqueeProps) {
   const row = (hidden: boolean) => (
     <ul

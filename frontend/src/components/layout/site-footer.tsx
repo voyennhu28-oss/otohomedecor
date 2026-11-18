@@ -13,7 +13,6 @@ const ACCOUNT_LINKS = [
 const linkClass =
   'text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:underline';
 
-// TODO: thông tin liên hệ (địa chỉ, số điện thoại), mạng xã hội
 export function SiteFooter() {
   return (
     <footer className='border-t'>

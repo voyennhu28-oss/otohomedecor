@@ -14,10 +14,6 @@ type ProductRailProps = {
   label: string;
 };
 
-/**
- * Băng sản phẩm trượt ngang (kéo / cuộn / nút trước-sau), có thanh tiến độ
- * cho biết đang xem tới đâu.
- */
 export function ProductRail({ products, label }: ProductRailProps) {
   const listRef = useRef<HTMLUListElement>(null);
   const [progress, setProgress] = useState({ start: 0, size: 1 });

@@ -30,12 +30,10 @@ import { ACCOUNT_NAV } from './nav-items';
 
 const itemClass = 'rounded-sm py-2.5';
 
-/** Tài khoản trên header (desktop): chưa đăng nhập → link "Đăng nhập"; đã đăng nhập → dropdown. */
 export function HeaderUserMenu({ className }: { className?: string }) {
   const { data: user, isPending } = useMe();
   const logout = useLogout();
 
-  // Giữ chỗ khi đang tải để header không nhảy
   if (isPending) {
     return <div aria-hidden className={cn('h-9 w-28', className)} />;
   }

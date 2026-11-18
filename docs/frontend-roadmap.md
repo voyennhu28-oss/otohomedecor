@@ -23,7 +23,7 @@ Thứ tự admin theo phụ thuộc dữ liệu: có danh mục → có sản ph
 - [x] Layout admin: sidebar thu gọn được (Ctrl+B, nhớ trạng thái bằng cookie), topbar có breadcrumb, menu tài khoản, `AdminPageHeader`.
 - [ ] `types/api.ts`: `Page<T> = { list, totalItems, totalPages }`; enum dùng chung (`OrderStatus`, `PaymentStatus`, `PaymentMethod`, `ProductStatus`, `ReviewStatus`...) theo `models.md`.
 - [ ] `api-client`: thêm hàm tải file (blob + tên file từ `Content-Disposition`) cho các route export Excel.
-- [ ] Bộ component bảng dùng chung: bảng + phân trang + ô tìm kiếm + bộ lọc, đồng bộ với URL search params (`page`, `q`, `status`...) để F5 / chia sẻ link giữ nguyên bộ lọc.
+- [x] Bộ component bảng dùng chung: `useUrlFilters`, `SearchInput`, `DataTablePagination`, `DataTableState` / `DataTableSkeleton` (lọc lưu trên URL để F5 / chia sẻ link giữ nguyên).
 - [ ] `StatusBadge` (nhãn tiếng Việt cho trạng thái đơn, thanh toán, sản phẩm...), dialog xác nhận xóa, trạng thái rỗng / lỗi / đang tải.
 - [ ] shadcn cần thêm: `table`, `select`, `tabs`, `textarea`, `switch`, `checkbox`, `alert-dialog`, `popover`, `calendar` (chọn khoảng ngày), `pagination`.
 
@@ -31,11 +31,11 @@ Thứ tự admin theo phụ thuộc dữ liệu: có danh mục → có sản ph
 
 Tài liệu: 05, 06, 07, 08.
 
-- **Danh mục** (`/admin/categories`): bảng dạng cây (cha / con), tạo / sửa trong dialog, xóa có xác nhận.
-- **Sản phẩm** (`/admin/products`): danh sách lọc theo `q`, `status`, `categoryID`, `isFeatured`; trang tạo `/admin/products/new` (form + ít nhất 1 variant), trang sửa `/admin/products/[id]` chia tab: Thông tin / Biến thể / Ảnh.
-- **Variant**: thêm / sửa / xóa trong tab Biến thể; sửa nhanh tồn kho `PATCH /admin/variants/:id/stock`.
-- **Ảnh**: upload multipart field `files` (jpg / png / webp, ≤ 5MB), xóa theo `publicID`.
-- **Excel**: xuất (tải file), nhập (`file` .xlsx) rồi hiện bảng kết quả `created` / `errors` theo số dòng.
+- [x] **Danh mục** (`/admin/categories`): bảng dạng cây (thu gọn / mở nhánh), tìm theo tên / slug (không phân biệt dấu), lọc trạng thái / cấp / thuộc danh mục / số sản phẩm, sắp xếp, phân trang (làm ở client vì API trả cả cây; lưu trên URL), thêm / sửa / thêm danh mục con trong dialog, ẩn / hiện nhanh, xóa có xác nhận (báo trước khi còn danh mục con / sản phẩm). Ảnh nhập bằng URL vì backend chưa có API upload ảnh danh mục.
+- [x] **Sản phẩm** (`/admin/products`): danh sách lọc theo `q`, `status`, `categoryID`, `isFeatured`, phân trang ở server; tạo trong dialog trên trang danh sách (form + ít nhất 1 variant), trang sửa `/admin/products/[id]` chia tab: Thông tin / Biến thể / Ảnh.
+- [x] **Variant**: thêm / sửa / nhân bản / ngừng bán / xóa trong tab Biến thể; điều chỉnh tồn kho `PATCH /admin/variants/:id/stock` (nhập-xuất hoặc kiểm kê).
+- [x] **Ảnh**: upload multipart field `files` (jpg / png / webp, ≤ 5MB, kéo thả), xóa theo `publicID`.
+- [x] **Excel**: xuất (tất cả hoặc các dòng đã chọn), nhập (`file` .xlsx) rồi hiện kết quả `created` / `errors` theo số dòng.
 
 ## GĐ 2: Đơn hàng & thanh toán
 

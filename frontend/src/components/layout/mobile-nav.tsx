@@ -16,7 +16,6 @@ import {
 import { MobileAccount } from './mobile-account';
 import { SHOP_NAV } from './nav-items';
 
-/** Menu cho màn hình nhỏ: panel trượt từ phải, chữ lớn như trang mục lục. */
 export function MobileNav({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);

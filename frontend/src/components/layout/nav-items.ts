@@ -12,7 +12,6 @@ export const SHOP_NAV = [
   { href: '/contact', label: 'Liên hệ' },
 ] as const;
 
-/** Trang khách hàng: dùng ở dropdown tài khoản trên header, menu mobile và AccountNav. */
 export const ACCOUNT_NAV = [
   { href: '/account', label: 'Thông tin tài khoản', icon: UserCircleIcon },
   { href: '/account/orders', label: 'Đơn hàng', icon: PackageIcon },

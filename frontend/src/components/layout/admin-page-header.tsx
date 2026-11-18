@@ -3,12 +3,10 @@ import { cn } from '@/lib/utils';
 type AdminPageHeaderProps = {
   title: string;
   description?: React.ReactNode;
-  /** Nút thao tác bên phải (vd "Thêm sản phẩm", "Xuất Excel"). */
   actions?: React.ReactNode;
   className?: string;
 };
 
-/** Tiêu đề trang admin: cỡ vừa, không dùng tiêu đề hero như shop. */
 export function AdminPageHeader({
   title,
   description,

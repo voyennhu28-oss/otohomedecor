@@ -10,14 +10,9 @@ import type { Role } from '@/features/auth/types';
 
 type AuthGuardProps = {
   children: React.ReactNode;
-  /** Chỉ cho role này vào (vd "admin"). Bỏ trống: chỉ cần đăng nhập. */
   role?: Role;
 };
 
-/**
- * Chặn trang cần đăng nhập ở phía client dựa vào GET /me.
- * Chỉ để giao diện đúng: bảo vệ thật nằm ở backend (@AdminOnly, guard JWT).
- */
 export function AuthGuard({ children, role }: AuthGuardProps) {
   const router = useRouter();
   const { data: user, isPending, isError, refetch } = useMe();

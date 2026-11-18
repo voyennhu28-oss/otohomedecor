@@ -23,7 +23,7 @@ import {
 import { setServerErrors } from '@/lib/form-errors';
 import { authService } from '@/services/auth.service';
 
-import { FormAlert } from './form-alert';
+import { FormAlert } from '@/components/form-alert';
 import { PasswordInput } from './password-input';
 
 const requestAgainLink = (
@@ -35,7 +35,6 @@ const requestAgainLink = (
   </Link>
 );
 
-/** Đọc `?token=` từ link trong email. Trang phải bọc component này trong <Suspense>. */
 export function ResetPasswordForm() {
   const router = useRouter();
   const token = useSearchParams().get('token') ?? '';

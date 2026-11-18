@@ -13,11 +13,6 @@ type ProductTileProps = {
   className?: string;
 };
 
-/**
- * Thẻ sản phẩm: ảnh bo nhẹ, tên, mô tả ngắn in hoa, giá.
- * Ô vuông màu cát bên phải chỉ là dấu hiệu "chọn mẫu để mua": phải chọn variant ở
- * trang chi tiết trước khi thêm vào giỏ, nên cả thẻ dẫn sang trang sản phẩm.
- */
 export function ProductTile({ product, className }: ProductTileProps) {
   return (
     <Link

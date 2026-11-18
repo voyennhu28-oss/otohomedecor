@@ -20,7 +20,7 @@ import {
 import { setServerErrors } from '@/lib/form-errors';
 import { authService } from '@/services/auth.service';
 
-import { FormAlert } from './form-alert';
+import { FormAlert } from '@/components/form-alert';
 
 export function ForgotPasswordForm() {
   const form = useForm<ForgotPasswordValues>({

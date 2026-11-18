@@ -19,7 +19,7 @@ import { signUpSchema, type SignUpValues } from '@/features/auth/schemas';
 import { setServerErrors } from '@/lib/form-errors';
 import { authService } from '@/services/auth.service';
 
-import { FormAlert } from './form-alert';
+import { FormAlert } from '@/components/form-alert';
 import { PasswordInput } from './password-input';
 
 const FIELDS = ['fullName', 'email', 'phone', 'password'] as const;

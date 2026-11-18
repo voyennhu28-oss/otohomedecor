@@ -1,12 +1,6 @@
-// Dữ liệu giữ chỗ cho landing page khi chưa nối API.
-// TODO: thay FEATURED_PRODUCTS bằng GET /products/featured (Server Component).
-// Shape dưới đây KHÔNG phải shape của API: khi nối, đọc DTO trong
-// ../backend/src/app/products rồi viết type ở features/products/types.ts.
-
 export type PlaceholderProduct = {
   slug: string;
   name: string;
-  /** Loại vỏ, chất liệu đế... hiện dưới tên sản phẩm. */
   detail: string;
   price: number;
   photo: string;
@@ -50,7 +44,6 @@ export const FEATURED_PRODUCTS: PlaceholderProduct[] = [
   },
 ];
 
-/** Các bước làm một chiếc đèn. Đây là bản nháp: chỉnh lại cho đúng quy trình thật. */
 export const MAKING_STEPS: { title: string; note: string }[] = [
   {
     title: 'Chọn vỏ',

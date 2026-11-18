@@ -9,11 +9,9 @@ import { SHOP_NAV } from './nav-items';
 
 type NavListProps = {
   className?: string;
-  /** Đường dẫn hiện tại để gạch chân mục đang mở. Bỏ trống: không mục nào active. */
   pathname?: string;
 };
 
-/** Danh sách link menu chính. Không đọc URL, dùng làm fallback khi prerender. */
 export function ShopNavList({ className, pathname }: NavListProps) {
   return (
     <nav aria-label='Menu chính' className={className}>
@@ -39,11 +37,6 @@ export function ShopNavList({ className, pathname }: NavListProps) {
   );
 }
 
-/**
- * Menu chính trên header (desktop), gạch chân trang đang mở.
- * Đọc URL bằng usePathname nên phải bọc trong <Suspense> (route động như /products/[slug]),
- * fallback là <ShopNavList> không active.
- */
 export function ShopNavLinks({ className }: { className?: string }) {
   const pathname = usePathname();
   return <ShopNavList className={className} pathname={pathname} />;

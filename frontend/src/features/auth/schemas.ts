@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-// Rule giữ giống SignUpDto / SignInDto của backend
-// (../backend/src/app/auth/dto/sign.dto.ts và ../backend/src/app/users/dto/user-fields.ts).
-
-/** bcrypt chỉ dùng 72 byte đầu; chữ có dấu chiếm 2–3 byte nên đếm theo byte. */
 const PASSWORD_MAX_BYTES = 72;
 const PHONE_PATTERN = /^(0|\+84)\d{9}$/;
 
@@ -21,7 +17,6 @@ const passwordField = z
     'Mật khẩu quá dài (tối đa 72 byte, chữ có dấu tính 2–3 byte)',
   );
 
-/** Token trong link email: chuỗi hex 64 ký tự (giống ResetPasswordDto). */
 export const RESET_TOKEN_PATTERN = /^[a-f\d]{64}$/i;
 
 export const signInSchema = z.object({
@@ -36,7 +31,6 @@ export const signUpSchema = z.object({
     .min(1, 'Nhập họ và tên')
     .max(100, 'Họ và tên tối đa 100 ký tự'),
   email: emailField,
-  /** Không bắt buộc. Để trống thì không gửi lên backend. */
   phone: z
     .string()
     .trim()
@@ -51,7 +45,6 @@ export const forgotPasswordSchema = z.object({
   email: emailField,
 });
 
-/** `confirmPassword` chỉ kiểm tra ở FE, không gửi lên backend. */
 export const resetPasswordSchema = z
   .object({
     newPassword: passwordField,

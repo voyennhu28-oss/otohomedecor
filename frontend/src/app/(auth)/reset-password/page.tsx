@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 
 import { ResetPasswordForm } from '@/features/auth/components/reset-password-form';
 
-// Backend gửi link `${FE_URL}/reset-password?token=...` (auth.service.ts, sendResetPasswordEmail)
 export const metadata: Metadata = { title: 'Đặt lại mật khẩu' };
 
 export default function ResetPasswordPage() {
@@ -15,7 +14,6 @@ export default function ResetPasswordPage() {
         sẽ phải đăng nhập lại.
       </p>
       <div className='mt-10'>
-        {/* Form đọc ?token= bằng useSearchParams nên cần Suspense */}
         <Suspense
           fallback={<p className='text-sm text-muted-foreground'>Đang tải…</p>}
         >

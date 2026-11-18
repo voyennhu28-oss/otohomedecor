@@ -9,7 +9,6 @@ import { ShopNavLinks, ShopNavList } from './shop-nav-links';
 
 const NAV_CLASS = 'hidden gap-8 text-[15px] md:flex';
 
-// TODO: nút giỏ hàng (CartSheet) đặt cạnh HeaderUserMenu khi có API giỏ hàng
 export function SiteHeader() {
   return (
     <header className='sticky top-0 z-40 border-b bg-background/95 backdrop-blur'>

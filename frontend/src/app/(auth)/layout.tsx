@@ -7,11 +7,6 @@ import { SectionTitle } from '@/components/section-title';
 const logoLinkClass =
   'outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-/**
- * Desktop: bên trái là panel tối có quầng đèn (cùng hình ảnh với phần "Lúc tắt và lúc bật"
- * ở trang chủ) và logo ở góc trên; bên phải là form.
- * Mobile: panel ẩn, logo chuyển lên header sáng phía trên form.
- */
 export default function AuthLayout({
   children,
 }: {

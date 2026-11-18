@@ -8,7 +8,6 @@ import { Toaster } from '@/components/ui/sonner';
 import { ME_QUERY_KEY } from '@/features/auth/hooks/use-me';
 import { ApiError, setAuthFailureHandler } from '@/lib/api-client';
 
-/** Trang cần đăng nhập: hết phiên thì đưa về /sign-in. Trang công khai chỉ xóa user. */
 const PROTECTED_PREFIXES = ['/account', '/admin'];
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -19,7 +18,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 60_000,
-            // Lỗi 4xx (sai quyền, không tìm thấy...) thử lại cũng vô ích
             retry: (failureCount, error) =>
               !(
                 error instanceof ApiError &&

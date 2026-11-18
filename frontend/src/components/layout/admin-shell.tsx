@@ -8,13 +8,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AdminSidebar } from './admin-sidebar';
 import { AdminTopbar } from './admin-topbar';
 
-// Cookie do SidebarProvider tự ghi mỗi lần đóng / mở
 const SIDEBAR_COOKIE = 'sidebar_state';
 
-/**
- * Mở / thu gọn lần trước. Shell chỉ render ở client (nằm sau AuthGuard, chờ GET /me),
- * nên đọc cookie ngay lúc khởi tạo state mà không lệch với HTML từ server.
- */
 function readSidebarOpen() {
   if (typeof document === 'undefined') return true;
   const match = document.cookie.match(
@@ -32,7 +27,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <AdminSidebar />
         <SidebarInset className='min-w-0'>
           <AdminTopbar />
-          {/* Cùng px với topbar để mép trái tiêu đề thẳng breadcrumb; giới hạn bề ngang trên màn rộng */}
           <div className='w-full max-w-screen-2xl flex-1 px-4 py-8 md:px-6'>
             {children}
           </div>

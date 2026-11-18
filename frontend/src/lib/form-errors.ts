@@ -3,16 +3,10 @@ import type { FieldValues, Path, UseFormSetError } from 'react-hook-form';
 import { ApiError } from '@/lib/api-client';
 
 type Options<T extends FieldValues> = {
-  /** Field có trên form. Lỗi backend gắn `fields` khớp tên này sẽ hiện ngay dưới ô đó. */
   fields: readonly Path<T>[];
-  /** Gặp 409 (vd "Email đã được sử dụng") thì gắn lỗi vào field này. */
   conflictField?: Path<T>;
 };
 
-/**
- * Đưa lỗi từ backend vào form: lỗi của từng field hiện dưới ô nhập,
- * còn lại hiện ở `errors.root.server`.
- */
 export function setServerErrors<T extends FieldValues>(
   setError: UseFormSetError<T>,
   error: unknown,

@@ -14,21 +14,16 @@ export class ApiError extends Error {
 
 type RequestOptions = Omit<RequestInit, 'body' | 'method'> & {
   body?: unknown;
-  /** Không tự refresh token khi gặp 401 (dùng cho chính các route auth). */
   skipAuthRefresh?: boolean;
 };
-
-// ---- Refresh token ----------------------------------------------------------
 
 let refreshPromise: Promise<boolean> | null = null;
 let authFailureHandler: (() => void) | null = null;
 
-/** Gọi khi refresh thất bại (hết phiên). Providers đăng ký để xóa user khỏi state. */
 export function setAuthFailureHandler(handler: (() => void) | null) {
   authFailureHandler = handler;
 }
 
-/** Nhiều request cùng gặp 401 thì dùng chung một lần refresh. */
 function refreshSession(): Promise<boolean> {
   refreshPromise ??= fetch(`${BASE_URL}/auth/refresh-token`, {
     method: 'POST',
@@ -42,21 +37,16 @@ function refreshSession(): Promise<boolean> {
   return refreshPromise;
 }
 
-// ---- Request ----------------------------------------------------------------
-
 function send(method: string, path: string, options: RequestOptions) {
-  // `skipAuthRefresh` chỉ dùng trong request(); để lọt vào init thì fetch cũng bỏ qua.
   const { body, headers, ...init } = options;
   const isFormData = body instanceof FormData;
 
   return fetch(`${BASE_URL}${path}`, {
     ...init,
     method,
-    // Token nằm trong cookie httpOnly do backend set, FE không đọc / lưu token.
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      // Backend chỉ nhận JSON hoặc multipart (FormData tự đặt Content-Type kèm boundary).
       ...(body !== undefined && !isFormData
         ? { 'Content-Type': 'application/json' }
         : {}),
@@ -71,11 +61,11 @@ const NETWORK_ERROR = new ApiError(0, [
   { message: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.' },
 ]);
 
-async function request<T>(
+async function sendWithRefresh(
   method: string,
   path: string,
-  options: RequestOptions = {},
-): Promise<T> {
+  options: RequestOptions,
+): Promise<Response> {
   let res: Response;
   try {
     res = await send(method, path, options);
@@ -95,7 +85,27 @@ async function request<T>(
       { message: 'Bạn thử quá nhiều lần. Đợi 1 phút rồi thử lại.' },
     ]);
   }
+  return res;
+}
 
+async function toApiError(res: Response) {
+  const payload = (await res
+    .json()
+    .catch(() => null)) as ApiResponse<unknown> | null;
+  return new ApiError(
+    res.status,
+    payload?.errors?.length
+      ? payload.errors
+      : [{ message: 'Có lỗi xảy ra, vui lòng thử lại' }],
+  );
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const res = await sendWithRefresh(method, path, options);
   const payload = (await res.json().catch(() => null)) as ApiResponse<T> | null;
 
   if (!res.ok || !payload || payload.errors?.length) {
@@ -106,8 +116,6 @@ async function request<T>(
         : [{ message: 'Có lỗi xảy ra, vui lòng thử lại' }],
     );
   }
-  // Backend bọc mọi response thành công (FormatResponseInterceptor). Thiếu `data` nghĩa là
-  // backend chạy bản cũ / sai địa chỉ: báo lỗi thay vì trả `undefined` (React Query không nhận).
   if (!('data' in payload) || payload.data === undefined) {
     throw new ApiError(res.status, [
       { message: 'Phản hồi từ máy chủ không đúng định dạng' },
@@ -116,7 +124,40 @@ async function request<T>(
   return payload.data as T;
 }
 
+export type DownloadedFile = { blob: Blob; filename: string | null };
+
+async function download(
+  method: string,
+  path: string,
+  options: RequestOptions = {},
+): Promise<DownloadedFile> {
+  const res = await sendWithRefresh(method, path, {
+    ...options,
+    headers: { Accept: '*/*', ...options.headers },
+  });
+  if (!res.ok) throw await toApiError(res);
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  return {
+    blob: await res.blob(),
+    filename: match ? decodeURIComponent(match[1]) : null,
+  };
+}
+
+export function saveFile({ blob }: DownloadedFile, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export const api = {
+  download: (path: string, body?: unknown, options?: RequestOptions) =>
+    download('POST', path, { ...options, body }),
   get: <T>(path: string, options?: RequestOptions) =>
     request<T>('GET', path, options),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>

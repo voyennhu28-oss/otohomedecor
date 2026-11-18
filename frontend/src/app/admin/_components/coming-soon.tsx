@@ -1,11 +1,8 @@
 type ComingSoonProps = {
-  /** Giai đoạn trong kế hoạch (docs/admin-api-roadmap.md). */
   phase: string;
-  /** Endpoint backend trang này sẽ dùng. */
   endpoints: string[];
 };
 
-/** Khung tạm cho trang admin chưa nối API. Xóa khi làm xong trang. */
 export function ComingSoon({ phase, endpoints }: ComingSoonProps) {
   return (
     <div className='rounded-lg border border-dashed bg-muted/40 p-6'>

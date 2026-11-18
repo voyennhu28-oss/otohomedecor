@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-/** Ô mật khẩu có nút hiện / ẩn. */
 export function PasswordInput({
   className,
   ...props

@@ -9,10 +9,6 @@ import { cn } from '@/lib/utils';
 
 import { ImagePlaceholder } from './image-placeholder';
 
-/**
- * Cho khách xem đèn lúc tắt và lúc bật. Bấm nút thì cả khối chuyển sang nền
- * tối, ảnh đổi sang đèn đang sáng. Chỉ đổi khi khách bấm.
- */
 export function LampSwitch() {
   const [on, setOn] = useState(false);
 
@@ -70,7 +66,6 @@ export function LampSwitch() {
               on ? 'opacity-100' : 'opacity-0',
             )}
           >
-            {/* Quầng sáng giữ chỗ, thay bằng ảnh thật chụp lúc đèn bật */}
             <LampGlow />
             <span className='absolute bottom-3 left-3 text-xs text-background/60'>
               Ảnh đèn lúc bật trong phòng tối

@@ -1,10 +1,6 @@
 import { AccountNav } from '@/components/layout/account-nav';
 import { AuthGuard } from '@/features/auth/components/auth-guard';
 
-/**
- * Chưa đăng nhập thì AuthGuard chuyển về /sign-in?next=...
- * Giống khu admin: MỖI page.tsx bên dưới phải có `export const instant = false`.
- */
 export default function AccountLayout({ children }: LayoutProps<'/account'>) {
   return (
     <AuthGuard>

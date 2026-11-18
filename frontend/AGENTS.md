@@ -124,6 +124,7 @@ src/
 
 ## Component và giao diện
 
+- **Không viết comment giải thích trong code** (`//`, `/** */`, `{/* */}`). Lý do thiết kế, quy tắc ngầm, TODO ghi vào `docs/` (thư mục frontend, xem `docs/README.md`). Chỉ giữ directive có tác dụng (`eslint-disable...`, `@ts-...`).
 - Mặc định là Server Component. Chỉ thêm `"use client"` khi cần state / event / hook trình duyệt, và giữ phần client nhỏ nhất có thể.
 - Component shadcn thêm bằng CLI. Được sửa trong `components/ui/`, nhưng sửa ít và có lý do.
 - **Base UI khác Radix**: ví dụ shadcn cũ dùng `asChild`, còn Base UI dùng prop `render`. Code copy từ tutorial Radix phải chuyển lại cho đúng.
@@ -148,6 +149,8 @@ src/
 - Admin: dùng chung token với shop, nhưng dày hơn: `size="sm"`, bảng padding nhỏ, tiêu đề cỡ vừa (không dùng tiêu đề hero cỡ lớn).
   - Khung: `AdminShell` = shadcn `Sidebar` (thu gọn thành icon, Ctrl+B) + `AdminTopbar` (breadcrumb, nút xem cửa hàng). Menu tài khoản / đăng xuất ở chân sidebar.
   - Thêm trang mới: khai báo mục menu trong `components/layout/admin-nav.ts` (breadcrumb đọc tên trang từ đây). Mỗi trang mở đầu bằng `AdminPageHeader` (tiêu đề, mô tả, nút thao tác).
+  - Trang danh sách: tìm / lọc / sắp xếp / trang lưu trên URL bằng `useUrlFilters` (`hooks/use-url-filters.ts`, component phải nằm trong `<Suspense>`), dùng chung `SearchInput` (có debounce), `DataTablePagination`, `DataTableState` / `DataTableSkeleton` trong `components/admin/`. Mẫu: `features/admin-categories`.
+  - Dialog có form dài: header / footer cố định, chỉ thân form cuộn và ẩn thanh cuộn (`no-scrollbar`).
 - Giỏ hàng dạng panel trượt ra dùng component `Sheet`. Thông báo dùng `sonner`.
 - Chữ trên giao diện bằng **tiếng Việt**. Ngày giờ format bằng `date-fns` với locale `vi`.
 

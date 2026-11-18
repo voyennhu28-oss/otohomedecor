@@ -9,10 +9,6 @@ function subscribe(onChange: () => void) {
   return () => mql.removeEventListener('change', onChange);
 }
 
-/**
- * Màn hình nhỏ hơn 768px. Sinh bởi shadcn rồi viết lại bằng useSyncExternalStore
- * (bản gốc gọi setState trong effect, bị rule react-hooks/set-state-in-effect chặn).
- */
 export function useIsMobile() {
   return useSyncExternalStore(
     subscribe,

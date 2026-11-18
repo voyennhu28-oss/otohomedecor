@@ -10,8 +10,6 @@ import { cn } from '@/lib/utils';
 
 import './globals.css';
 
-// Tiêu đề: Cormorant Garamond. Serif nét thanh kiểu Garamond, chữ hoa giãn rộng
-// cùng tinh thần với chữ khắc trong logo; bản nghiêng mềm như ánh đèn.
 const cormorant = Cormorant_Garamond({
   variable: '--font-cormorant',
   subsets: ['latin', 'vietnamese'],
@@ -19,8 +17,6 @@ const cormorant = Cormorant_Garamond({
   style: ['normal', 'italic'],
 });
 
-// Nội dung, nút, nhãn: Be Vietnam Pro. Thiết kế riêng cho dấu tiếng Việt, đọc rõ ở cỡ nhỏ;
-// in hoa giãn chữ giống dòng tagline "LIGHT WHAT YOU FEEL" của logo.
 const beVietnam = Be_Vietnam_Pro({
   variable: '--font-be-vietnam',
   subsets: ['latin', 'vietnamese'],

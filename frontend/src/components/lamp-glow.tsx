@@ -1,9 +1,5 @@
 import { cn } from '@/lib/utils';
 
-/**
- * Quầng sáng của đèn trên nền tối. Chỉ dùng token màu (đen trắng), không thêm màu nhấn:
- * khi có ảnh thật chụp lúc đèn bật, ánh đèn trong ảnh sẽ là màu duy nhất.
- */
 export function LampGlow({ className }: { className?: string }) {
   return (
     <div
