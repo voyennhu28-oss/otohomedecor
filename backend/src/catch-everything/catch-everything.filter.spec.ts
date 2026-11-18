@@ -46,7 +46,6 @@ describe('CatchEverythingFilter', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
-  /** Gọi filter, trả về [status, body] đã gửi cho client. */
   const handle = (exception: unknown) => {
     filter.catch(exception, host);
     const [, body, status] = reply.mock.calls[0];

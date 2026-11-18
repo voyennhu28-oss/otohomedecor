@@ -9,7 +9,6 @@ import { ShippingZonesModule } from '../shipping-zones/shipping-zones.module';
 import { CheckoutController } from './checkout.controller';
 import { CheckoutService } from './checkout.service';
 
-/** Không có collection riêng: điều phối các module khác qua service (chung 1 transaction). */
 @Module({
   imports: [
     CartsModule,
@@ -17,8 +16,8 @@ import { CheckoutService } from './checkout.service';
     ProductVariantsModule,
     ShippingZonesModule,
     PromotionsModule,
-    OrdersModule, // tạo đơn + email đặt hàng
-    PaymentsModule, // thông tin chuyển khoản SePay
+    OrdersModule,
+    PaymentsModule,
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],

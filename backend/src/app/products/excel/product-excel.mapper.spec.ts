@@ -45,11 +45,11 @@ describe('đọc giá trị ô Excel', () => {
 describe('groupRowsByProduct', () => {
   it('nhóm theo slug, không có slug thì theo name; báo dòng thiếu cả hai', () => {
     const { groups, rowsWithoutProduct } = groupRowsByProduct([
-      { name: 'Sofa A', slug: 'sofa-a', sku: 'A1' }, // dòng 2
-      { name: 'Sofa A', slug: 'sofa-a', sku: 'A2' }, // dòng 3
-      { name: 'Đèn B', sku: 'B1' }, //                dòng 4
-      { sku: 'C1' }, //                               dòng 5
-      { name: 'Đèn B', sku: 'B2' }, //                dòng 6
+      { name: 'Sofa A', slug: 'sofa-a', sku: 'A1' },
+      { name: 'Sofa A', slug: 'sofa-a', sku: 'A2' },
+      { name: 'Đèn B', sku: 'B1' },
+      { sku: 'C1' },
+      { name: 'Đèn B', sku: 'B2' },
     ]);
     expect(groups.map((g) => g.rowNumbers)).toEqual([
       [2, 3],

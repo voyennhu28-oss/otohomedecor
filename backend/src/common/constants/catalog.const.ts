@@ -1,8 +1,3 @@
-/**
- * Giá trị cho các field lọc của Product (plan mục 3.2).
- * Dùng trong Zod (z.enum) để dữ liệu nhập vào luôn đồng nhất.
- */
-
 export const ROOMS = [
   'living-room',
   'bedroom',
@@ -48,25 +43,15 @@ export const MATERIALS = [
   'jute',
 ] as const;
 
-/**
- * Tên option của variant được coi là "màu" (so sánh sau khi bỏ dấu, viết thường).
- * Vd variant có option { name: 'Màu', value: 'Xám' } → product.colors chứa 'Xám'.
- */
 export const COLOR_OPTION_NAMES = ['mau', 'mau-sac', 'color'];
 
-/**
- * 34 tỉnh / thành phố từ 01/07/2025 (Nghị quyết 202/2025/QH15). Dùng chung cho validate
- * địa chỉ, vùng giao hàng và seed. Địa chỉ lưu đúng chuỗi trong danh sách này.
- */
 export const PROVINCES = [
-  // 6 thành phố trực thuộc trung ương
   'Hà Nội',
   'Hải Phòng',
   'Huế',
   'Đà Nẵng',
   'Hồ Chí Minh',
   'Cần Thơ',
-  // 28 tỉnh
   'Lai Châu',
   'Điện Biên',
   'Sơn La',

@@ -30,7 +30,7 @@ import { ImageUploadService } from './image-upload.service';
             const ext = extname(file.originalname).toLowerCase();
             let destination =
               configService.get<string>(FileEnvs.MULTER_DESTINATION_FILE) ??
-              './uploads'; // .env không khai báo thì join(undefined) sẽ văng lỗi
+              './uploads';
             for (const [folder, extensions] of Object.entries(
               UPLOADS_GROUP_FILE,
             )) {

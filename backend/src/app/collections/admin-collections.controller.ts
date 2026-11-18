@@ -19,10 +19,6 @@ import { CollectionImageService } from './collection-image.service';
 import { CollectionsService } from './collections.service';
 import { CreateCollectionDto, UpdateCollectionDto } from './dto/collection.dto';
 
-/**
- * Gán / gỡ sản phẩm: POST, DELETE /admin/collections/:collectionID/products (module products).
- * Danh sách sản phẩm của bộ sưu tập: GET /admin/products?collectionID=
- */
 @ApiTags('Admin / Collections')
 @AdminOnly()
 @Controller('admin/collections')
@@ -57,7 +53,6 @@ export class AdminCollectionsController {
     return this.collectionsService.remove(id);
   }
 
-  /** multipart/form-data, field "file". Thay ảnh bìa hiện tại (ảnh cũ bị xóa trên Cloudinary). */
   @Post(':id/image')
   @ApiConsumes('multipart/form-data')
   @ApiBody({

@@ -5,10 +5,6 @@ import { vnDateQuery } from '../../../common/dto/query.dto';
 export const MAX_RANGE_DAYS = 366;
 const DAY_MS = 86_400_000;
 
-/**
- * GET /admin/dashboard?from=2026-11-01&to=2026-11-30&lowStockThreshold=5&topLimit=10
- * Ngày tính theo giờ Việt Nam. Không gửi from / to: 30 ngày gần nhất (gồm hôm nay).
- */
 export class DashboardQueryDto extends createZodDto(
   z
     .object({

@@ -5,7 +5,6 @@ import { ProductVariantsModule } from '../product-variants/product-variants.modu
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { DashboardService } from './dashboard.service';
 
-/** Chỉ có phía admin, không có collection riêng. */
 @Module({
   imports: [OrdersModule, ProductVariantsModule, PaymentsModule],
   controllers: [AdminDashboardController],

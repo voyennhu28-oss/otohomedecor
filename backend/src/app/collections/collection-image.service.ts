@@ -5,7 +5,6 @@ import {
 } from '../../common/utils/file-util/image-upload.service';
 import { CollectionsService } from './collections.service';
 
-/** Ảnh bìa bộ sưu tập: mỗi bộ sưu tập 1 ảnh, upload ảnh mới thì ảnh cũ bị xóa. */
 @Injectable()
 export class CollectionImageService {
   constructor(
@@ -13,7 +12,6 @@ export class CollectionImageService {
     private readonly imageUpload: ImageUploadService,
   ) {}
 
-  /** Upload lên Cloudinary, lưu vào DB, rồi mới xóa ảnh cũ (lỗi lưu DB thì ảnh mới bị xóa). */
   async upload(id: string, file: UploadedImage | undefined) {
     const { collection, previous } = await this.imageUpload.upload(
       file ? [file] : undefined,

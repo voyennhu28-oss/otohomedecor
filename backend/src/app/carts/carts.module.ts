@@ -4,9 +4,9 @@ import { CartsController } from './carts.controller';
 import { CartsService } from './carts.service';
 
 @Module({
-  imports: [ProductVariantsModule], // đọc giá / tồn kho hiện tại của variant
+  imports: [ProductVariantsModule],
   controllers: [CartsController],
   providers: [CartsService],
-  exports: [CartsService], // checkout đọc và xóa giỏ trong transaction
+  exports: [CartsService],
 })
 export class CartsModule {}

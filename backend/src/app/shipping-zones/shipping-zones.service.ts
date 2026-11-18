@@ -19,9 +19,6 @@ export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
     super(prismaService, 'shippingZone');
   }
 
-  // ───────────── public ─────────────
-
-  /** GET /shipping-zones/provinces: 34 tỉnh, đánh dấu tỉnh đang giao được (cho dropdown địa chỉ). */
   async listProvinces() {
     const zones = await this.extended.findMany({
       where: { isActive: true },
@@ -30,8 +27,6 @@ export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
     const supported = new Set(zones.flatMap((z) => z.provinces));
     return PROVINCES.map((name) => ({ name, supported: supported.has(name) }));
   }
-
-  // ───────────── admin ─────────────
 
   findAll() {
     return this.extended.findMany({
@@ -59,16 +54,12 @@ export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
     return this.extended.update({ where: { id }, data: dto });
   }
 
-  /** Xóa cứng: đơn hàng cũ đã lưu sẵn phí ship nên không bị ảnh hưởng. */
   async remove(id: string) {
     await this.findOne(id);
     await this.extended.delete({ where: { id } });
     return { id };
   }
 
-  // ───────────── dùng cho checkout ─────────────
-
-  /** Vùng đang hoạt động chứa tỉnh này. Không có thì 400 (chưa giao tới). */
   async findForProvince(
     province: string,
     db: Prisma.TransactionClient = this.prismaService,
@@ -81,9 +72,6 @@ export class ShippingZonesService extends PrismaBaseService<'shippingZone'> {
     return zone;
   }
 
-  // ───────────── helpers ─────────────
-
-  /** Một tỉnh chỉ được thuộc 1 vùng đang hoạt động, nếu không sẽ không biết tính phí theo vùng nào. */
   private async assertNoOverlap(provinces: string[], exceptID?: string) {
     const others = await this.extended.findMany({
       where: {

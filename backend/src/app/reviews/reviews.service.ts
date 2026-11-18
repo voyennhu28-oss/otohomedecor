@@ -31,7 +31,6 @@ const REVIEW_ORDER_BY: Record<
   rating_asc: [{ rating: 'asc' }, { createdAt: 'desc' }],
 };
 
-/** Review công khai: tên + ảnh đại diện người viết, KHÔNG lộ email / userID / orderID. */
 const PUBLIC_REVIEW_SELECT = {
   id: true,
   rating: true,
@@ -42,12 +41,6 @@ const PUBLIC_REVIEW_SELECT = {
   user: { select: { fullName: true, avatarUrl: true } },
 } satisfies Prisma.ReviewSelect;
 
-/**
- * Quy tắc:
- *  - Chỉ viết review khi có đơn ĐÃ GIAO chứa sản phẩm; mỗi đơn 1 review (unique userID + productID + orderID).
- *  - Mọi thay đổi review (thêm / sửa / xóa / đổi trạng thái) tính lại ratingAvg, ratingCount của
- *    product TRONG CÙNG transaction. Chỉ review "approved" được tính và hiển thị.
- */
 @Injectable()
 export class ReviewsService extends PrismaBaseService<'review'> {
   constructor(
@@ -59,9 +52,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
     super(prismaService, 'review');
   }
 
-  // ───────────── public ─────────────
-
-  /** GET /products/:productID/reviews: review đã duyệt + thống kê số sao (luôn tính trên mọi review đã duyệt). */
   async findPublic(
     productID: string,
     { rating, sort, ...pagination }: ReviewListQueryDto,
@@ -99,8 +89,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
     };
   }
 
-  // ───────────── của tôi ─────────────
-
   async create(user: UserInfo, productID: string, dto: CreateReviewDto) {
     await this.productsService.findOneOrThrow(productID);
     try {
@@ -123,7 +111,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
         });
       });
     } catch (error) {
-      // 2 request cùng lúc cho cùng đơn: index unique chặn bản thứ 2
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
@@ -147,7 +134,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
     );
   }
 
-  /** Xóa review, rồi xóa ảnh của nó trên Cloudinary (chạy nền, sau khi DB đã xóa). */
   async removeMine(userID: string, id: string) {
     const review = await this.findMineOrThrow(userID, id);
     await this.inTransaction(review.productID, (tx) =>
@@ -156,8 +142,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
     this.imageUpload.destroyQuietly(review.images.map((img) => img.publicID));
     return { id };
   }
-
-  // ───────────── admin ─────────────
 
   async findAdminList({
     status,
@@ -185,7 +169,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
     return toPage(list, totalItems, pagination.itemPerPage);
   }
 
-  /** Ẩn / duyệt review: review không còn "approved" thì không tính vào điểm và không hiển thị. */
   async updateStatus(id: string, status: ReviewStatus) {
     const review = await this.extended.findUnique({
       where: { id },
@@ -197,12 +180,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
     );
   }
 
-  // ───────────── helpers ─────────────
-
-  /**
-   * Đơn dùng để viết review: đơn đã giao chứa sản phẩm và chưa có review của user.
-   * Gửi orderID thì phải là 1 trong các đơn đó; không gửi thì lấy đơn giao gần nhất chưa đánh giá.
-   */
   private async pickOrderToReview(
     userID: string,
     productID: string,
@@ -250,11 +227,6 @@ export class ReviewsService extends PrismaBaseService<'review'> {
     return review;
   }
 
-  /**
-   * Ghi review rồi tính lại điểm của product trong 1 transaction. Bước tính lại ghi vào
-   * document product, nên 2 review cùng lúc cho 1 sản phẩm sẽ xung đột và chạy lại tuần tự
-   * → ratingAvg / ratingCount luôn đúng.
-   */
   private inTransaction<T>(
     productID: string,
     write: (tx: Prisma.TransactionClient) => Promise<T>,

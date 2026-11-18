@@ -6,7 +6,6 @@ export class ForgotPasswordDto extends createZodDto(
   z.object({ email: emailSchema }),
 ) {}
 
-/** Token là chuỗi hex 64 ký tự trong link gửi qua email. */
 export class ResetPasswordDto extends createZodDto(
   z.object({
     token: z.string().regex(/^[a-f\d]{64}$/i, 'Token không hợp lệ'),

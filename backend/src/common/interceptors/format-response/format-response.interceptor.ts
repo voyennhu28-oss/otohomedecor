@@ -10,11 +10,6 @@ import { Observable, map } from 'rxjs';
 import { SKIP_FORMAT_RESPONSE } from '../../decorators/skip-format-response.decorator';
 import { ApiUtilService } from '../../utils/api-util/api-util.service';
 
-/**
- * Bọc mọi response thành công thành `{ errors: null, data, message }` (đăng ký global ở AppModule).
- * Lỗi do CatchEverythingFilter định dạng, không đi qua đây.
- * Bỏ qua: file (`StreamableFile`) và route gắn `@SkipFormatResponse()`.
- */
 @Injectable()
 export class FormatResponseInterceptor implements NestInterceptor {
   constructor(

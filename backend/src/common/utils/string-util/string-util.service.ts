@@ -28,9 +28,9 @@ export class StringUtilService {
   toSlug(text: string): string {
     return kebabCase(
       text
-        .normalize('NFD') // tách dấu tiếng Việt
-        .replace(/[\u0300-\u036f]/g, '') // xóa dấu
-        .replace(/[đĐ]/g, 'd'), // chuyển đ -> d
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd'),
     );
   }
 }

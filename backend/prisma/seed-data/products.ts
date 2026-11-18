@@ -1,8 +1,3 @@
-/**
- * Sản phẩm mẫu cho `npm run db:seed` (plan mục 13): đèn trang trí làm từ vỏ sò, vỏ điệp, xà cừ, vỏ ốc.
- * 27 sản phẩm, 1–6 variant mỗi sản phẩm.
- * `category` là slug danh mục con đã seed (den-tha, den-chum, den-ban...).
- */
 import type { Material, Room, Style } from '../../src/common/constants/catalog.const';
 
 export interface SeedVariant {
@@ -33,14 +28,8 @@ export interface SeedProduct {
   variants: SeedVariant[];
 }
 
-/** [nhãn kích thước, giá, [dài, rộng, cao] cm, cân nặng kg] */
 type Size = [label: string, price: number, dims: [number, number, number], weightKg: number];
 
-/**
- * Sinh variant từ tổ hợp kích thước × màu.
- * Vd matrix('THA-HALONG', [['Ø30', ...], ['Ø40', ...]], ['Trắng tự nhiên', 'Ánh ngọc trai']) → 4 variant.
- * Không có kích thước thì truyền [['', giá, dims, kg]]; không có màu thì truyền [].
- */
 const matrix = (skuPrefix: string, sizes: Size[], colors: string[], stock = 12): SeedVariant[] => {
   const colorList = colors.length ? colors : [''];
   return sizes.flatMap(([size, price, [l, w, h], weightKg], sizeIndex) =>
@@ -63,7 +52,6 @@ const matrix = (skuPrefix: string, sizes: Size[], colors: string[], stock = 12):
   );
 };
 
-/** Màu vỏ dùng chung cho nhiều mẫu */
 const SHELL = {
   natural: 'Trắng tự nhiên',
   pearl: 'Ánh ngọc trai',
@@ -72,7 +60,6 @@ const SHELL = {
 } as const;
 
 export const SEED_PRODUCTS: SeedProduct[] = [
-  // ── Đèn trần ──
   {
     name: 'Đèn thả vỏ điệp Hạ Long',
     category: 'den-tha',
@@ -155,7 +142,6 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     variants: matrix('OPTRAN-SONGBIEN', [['Ø45', 1_650_000, [47, 47, 14], 2.4]], []),
   },
 
-  // ── Đèn tường ──
   {
     name: 'Đèn vách vỏ điệp Vầng Trăng',
     category: 'den-vach',
@@ -181,7 +167,6 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     variants: matrix('GUONG-LUMI', [['40cm', 1_350_000, [40, 8, 8], 0.9], ['60cm', 1_750_000, [60, 8, 8], 1.2]], []),
   },
 
-  // ── Đèn bàn & đèn cây ──
   {
     name: 'Đèn bàn vỏ điệp Nấm Biển',
     category: 'den-ban',
@@ -231,7 +216,6 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     variants: matrix('CAY-HAIDANG', [['Cao 150cm', 3_200_000, [45, 45, 150], 6], ['Cao 170cm', 3_600_000, [45, 45, 170], 6.8]], [SHELL.natural, SHELL.pearl]),
   },
 
-  // ── Đèn trang trí ──
   {
     name: 'Đèn lồng vỏ điệp Phố Hội',
     category: 'den-long',
@@ -285,7 +269,6 @@ export const SEED_PRODUCTS: SeedProduct[] = [
     variants: matrix('NGOAI-CHUONGGIO', [['', 450_000, [20, 20, 60], 0.7]], [], 14),
   },
 
-  // ── Phụ kiện đèn ──
   {
     name: 'Chụp đèn vỏ điệp tròn đuôi E27',
     category: 'chup-den-thay-the',

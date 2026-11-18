@@ -8,7 +8,6 @@ interface GenerateExcelParams {
   }[];
 }
 
-// type File = Express.Multer.File;
 type File = any;
 
 export type { GenerateExcelParams, File };

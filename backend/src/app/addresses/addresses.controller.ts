@@ -13,7 +13,6 @@ import { IDDto } from '../../common/dto/param.dto';
 import { AddressesService } from './addresses.service';
 import { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
 
-/** Sổ địa chỉ của người đang đăng nhập. userID luôn lấy từ token. */
 @ApiTags('Me / Addresses')
 @Controller('me/addresses')
 export class AddressesController {

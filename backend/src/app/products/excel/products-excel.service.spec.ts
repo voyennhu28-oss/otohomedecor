@@ -65,11 +65,11 @@ describe('ProductsExcelService', () => {
     it('tạo từng sản phẩm, gom variant theo tên; báo lỗi theo số dòng; luôn xóa file tạm', async () => {
       excel.read.mockResolvedValue({
         Products: [
-          row('Sofa A', 'A1'), //                               dòng 2
-          row('Sofa A', 'A2'), //                               dòng 3
-          row('Đèn B', 'B1', { categorySlug: 'khong-co' }), //  dòng 4: sai danh mục
-          row('Kệ C', 'C1', { price: 'abc' }), //               dòng 5: sai giá
-          row('Gương D', 'D1'), //                              dòng 6: SKU trùng DB
+          row('Sofa A', 'A1'),
+          row('Sofa A', 'A2'),
+          row('Đèn B', 'B1', { categorySlug: 'khong-co' }),
+          row('Kệ C', 'C1', { price: 'abc' }),
+          row('Gương D', 'D1'),
         ],
       });
       products.create.mockImplementation(({ name }) =>
@@ -80,7 +80,7 @@ describe('ProductsExcelService', () => {
 
       const result = await service.import(file);
 
-      expect(products.create).toHaveBeenCalledTimes(2); // Sofa A + Gương D
+      expect(products.create).toHaveBeenCalledTimes(2);
       expect(
         products.create.mock.calls[0][0].variants.map(
           (v: { sku: string }) => v.sku,
@@ -105,7 +105,6 @@ describe('ProductsExcelService', () => {
     });
 
     it('BUG-04: sản phẩm "active" mà mọi variant đều tắt → nằm trong errors đúng các dòng, không trong created', async () => {
-      // Dùng ProductsService thật (prisma mock) để chạy đúng rule của create()
       const productModel = {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn(({ data }) => Promise.resolve(data)),
@@ -135,9 +134,9 @@ describe('ProductsExcelService', () => {
       );
       excel.read.mockResolvedValue({
         Products: [
-          row('Sofa A', 'A1', { status: 'active', variantActive: false }), // dòng 2
-          row('Sofa A', 'A2', { status: 'active', variantActive: false }), // dòng 3
-          row('Kệ B', 'B1', { status: 'active' }), //                         dòng 4: hợp lệ
+          row('Sofa A', 'A1', { status: 'active', variantActive: false }),
+          row('Sofa A', 'A2', { status: 'active', variantActive: false }),
+          row('Kệ B', 'B1', { status: 'active' }),
         ],
       });
 

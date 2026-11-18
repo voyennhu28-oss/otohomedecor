@@ -25,7 +25,6 @@ const validSchedule = (
   }
 };
 
-/** POST /admin/collections. Không gửi slug thì tự sinh từ name. Ảnh bìa upload riêng. */
 export class CreateCollectionDto extends createZodDto(
   z
     .object({
@@ -42,10 +41,6 @@ export class CreateCollectionDto extends createZodDto(
     .superRefine(validSchedule),
 ) {}
 
-/**
- * PATCH /admin/collections/:id. Đổi name KHÔNG tự đổi slug.
- * startsAt / endsAt gửi null để bỏ giới hạn. Kiểm tra khoảng thời gian với giá trị đang lưu ở service.
- */
 export class UpdateCollectionDto extends createZodDto(
   z
     .object({
@@ -62,7 +57,6 @@ export class UpdateCollectionDto extends createZodDto(
     .superRefine(validSchedule),
 ) {}
 
-/** GET /collections?featured=true */
 export class CollectionListQueryDto extends createZodDto(
   z.object({ featured: booleanQuery.optional() }),
 ) {}

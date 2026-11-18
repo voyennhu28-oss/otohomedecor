@@ -7,10 +7,6 @@ import { SepayWebhookDto } from './dto/payment.dto';
 import { PaymentsService } from './payments.service';
 import { SepayWebhookGuard } from './sepay-webhook.guard';
 
-/**
- * SePay gọi khi tài khoản nhận tiền có biến động. Không đăng nhập (xác thực bằng chữ ký HMAC hoặc API key),
- * không giới hạn tần suất (SePay gửi lại tối đa 7 lần khi lỗi).
- */
 @ApiTags('Payments')
 @Public()
 @SkipThrottle()
@@ -18,11 +14,6 @@ import { SepayWebhookGuard } from './sepay-webhook.guard';
 export class SepayWebhookController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  /**
-   * SePay chỉ coi là thành công khi HTTP 200 + đúng body `{ "success": true }`.
-   * Giao dịch bỏ qua / trùng vẫn trả thành công; lỗi hệ thống → 5xx để SePay gửi lại.
-   * Vì vậy không bọc qua format response chung.
-   */
   @Post('webhook')
   @HttpCode(200)
   @SkipFormatResponse()

@@ -36,7 +36,7 @@ export type MailOrder = Pick<
 
 export interface MailContext {
   customerName: string;
-  orderUrl: string; // trang chi tiết đơn trên frontend
+  orderUrl: string;
 }
 
 const vnd = (n: number) => `${new Intl.NumberFormat('vi-VN').format(n)}đ`;
@@ -52,8 +52,6 @@ const dateTime = (d: Date) =>
     timeStyle: 'short',
   }).format(d);
 
-// ───────────── khối dùng chung ─────────────
-
 const layout = (title: string, body: string, ctx: MailContext) =>
   safeHtml`<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#222;line-height:1.5">
 <h2 style="margin:0 0 16px">${title}</h2>
@@ -68,7 +66,6 @@ const row = (label: string, value: string, bold = false) =>
     safeHtml`<tr><td style="padding:2px 0">${label}</td><td style="padding:2px 0;text-align:right${bold ? ';font-weight:bold' : ''}">${value}</td></tr>`,
   );
 
-/** Bảng sản phẩm + tiền. */
 const orderSummary = (o: MailOrder) => {
   const items = o.items.map((i) =>
     raw(safeHtml`<tr>
@@ -115,9 +112,6 @@ const itemsText = (o: MailOrder) =>
     `Tổng cộng: ${vnd(o.total)}`,
   ].join('\n');
 
-// ───────────── các loại email ─────────────
-
-/** Email xác nhận đặt hàng (gửi ngay sau checkout). */
 export const buildOrderPlacedEmail = (
   o: MailOrder,
   ctx: MailContext,
@@ -149,7 +143,6 @@ ${raw(payment)}${raw(delivery)}${raw(orderSummary(o))}`,
   };
 };
 
-/** Nội dung theo trạng thái; null = trạng thái này không gửi email (pending, processing). */
 const statusContent = (
   o: MailOrder,
 ): { title: string; message: string } | null => {
@@ -203,7 +196,6 @@ const statusContent = (
   }
 };
 
-/** Email khi đơn đổi trạng thái (gồm cả khi SePay báo đã nhận tiền). */
 export const buildStatusEmail = (
   o: MailOrder,
   ctx: MailContext,

@@ -18,13 +18,11 @@ import {
   ReviewImagesService,
 } from './review-images.service';
 
-/** Ảnh của review, chỉ chủ review. Tạo review (JSON) trước, rồi upload ảnh. */
 @ApiTags('Reviews')
 @Controller('reviews/:id/images')
 export class ReviewImagesController {
   constructor(private readonly reviewImagesService: ReviewImagesService) {}
 
-  /** multipart/form-data, field "files": jpg / png / webp, 5MB mỗi ảnh, tối đa 5 ảnh mỗi review. */
   @Post()
   @ApiConsumes('multipart/form-data')
   @ApiBody({

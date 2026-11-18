@@ -28,13 +28,11 @@ import { OrdersService } from './orders.service';
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  /** Lọc theo trạng thái, khoảng ngày, mã đơn, email, phương thức / trạng thái thanh toán. */
   @Get()
   findList(@Query() query: AdminOrderListQueryDto) {
     return this.ordersService.findAdminList(query);
   }
 
-  /** Tải file Excel, body là bộ lọc giống GET /admin/orders (bỏ trống = tất cả). */
   @Post('export')
   @HttpCode(200)
   async exportExcel(@Body() filter: ExportOrdersDto) {
@@ -52,7 +50,6 @@ export class AdminOrdersController {
     return this.ordersService.findAdminByID(id);
   }
 
-  /** Chỉ cho bước chuyển hợp lệ (plan mục 11). Hủy đơn: hoàn kho + trả lượt mã giảm giá. */
   @Patch(':id/status')
   updateStatus(
     @User() admin: UserInfo,
@@ -62,10 +59,6 @@ export class AdminOrdersController {
     return this.ordersService.updateStatus(admin, id, dto);
   }
 
-  /**
-   * Xác nhận đã nhận chuyển khoản thủ công: khách ghi sai nội dung, chuyển nhiều lần...
-   * (đối soát ở GET /admin/payments?status=failed). Đơn chờ xác nhận → "Đã xác nhận".
-   */
   @Post(':id/mark-paid')
   @HttpCode(200)
   markPaid(

@@ -21,7 +21,6 @@ const assertRoom = (current: number, adding: number) => {
   }
 };
 
-/** Ảnh của review (mảng `images` nhúng trong Review). Ảnh lưu trên Cloudinary. */
 @Injectable()
 export class ReviewImagesService {
   constructor(
@@ -29,10 +28,6 @@ export class ReviewImagesService {
     private readonly imageUpload: ImageUploadService,
   ) {}
 
-  /**
-   * Chủ review thêm ảnh. Kiểm tra số ảnh 2 lần: trước khi upload (không upload thừa) và trong
-   * transaction lúc lưu (2 lần upload song song không vượt giới hạn; vượt thì ảnh vừa upload bị xóa).
-   */
   upload(userID: string, reviewID: string, files: UploadedImage[] | undefined) {
     return this.imageUpload.upload(files, {
       publicIDPrefix: `hd-review-${reviewID}`,
@@ -63,12 +58,10 @@ export class ReviewImagesService {
     });
   }
 
-  /** Chủ review gỡ ảnh. */
   removeMine(userID: string, reviewID: string, publicID: string) {
     return this.remove(reviewID, publicID, userID);
   }
 
-  /** Admin gỡ ảnh không phù hợp (không cần là chủ review). */
   removeAsAdmin(reviewID: string, publicID: string) {
     return this.remove(reviewID, publicID);
   }
@@ -84,10 +77,6 @@ export class ReviewImagesService {
     return images;
   }
 
-  /**
-   * Đọc - sửa - ghi lại mảng ảnh trong transaction (Prisma không có `pull` cho composite list).
-   * Có userID thì chỉ chủ review mới sửa được; review của người khác → 404.
-   */
   private updateImages(
     reviewID: string,
     userID: string | undefined,

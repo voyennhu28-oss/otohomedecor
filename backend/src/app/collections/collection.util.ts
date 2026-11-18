@@ -1,6 +1,5 @@
 import { Prisma } from '@prisma/client';
 
-/** Field chưa có trong document cũ cũng tính như null (giống NOT_DELETED). */
 const unsetOr = (
   field: 'startsAt' | 'endsAt',
   condition: Prisma.DateTimeNullableFilter,
@@ -12,7 +11,6 @@ const unsetOr = (
   ],
 });
 
-/** Bộ sưu tập khách được thấy: đang bật và `now` nằm trong khoảng [startsAt, endsAt). */
 export const visibleCollectionWhere = (
   now: Date,
 ): Prisma.CollectionWhereInput => ({
@@ -23,7 +21,6 @@ export const visibleCollectionWhere = (
   ],
 });
 
-/** Trả về thông báo lỗi nếu khoảng thời gian sai, null nếu hợp lệ. */
 export const scheduleError = (
   startsAt: Date | null | undefined,
   endsAt: Date | null | undefined,

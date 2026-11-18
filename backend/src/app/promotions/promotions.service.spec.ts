@@ -181,7 +181,7 @@ describe('PromotionsService', () => {
       expect(promotion.findFirst).toHaveBeenCalledWith({
         where: { code: 'WELCOME10', ...NOT_DELETED },
       });
-      expect(countUserUsage).not.toHaveBeenCalled(); // mã không giới hạn theo user
+      expect(countUserUsage).not.toHaveBeenCalled();
     });
 
     it('findApplicable: mã không tồn tại → 400', async () => {

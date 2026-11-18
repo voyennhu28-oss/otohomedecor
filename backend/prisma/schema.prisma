@@ -22,8 +22,6 @@ generator custom_generator {
   output   = "../src/generated/faker/data.ts"
 }
 
-// ───────────── ENUMS ─────────────
-
 enum Role {
   admin
   customer
@@ -41,18 +39,18 @@ enum ProductStatus {
 }
 
 enum OrderStatus {
-  pending // vừa đặt, chờ xác nhận / chờ thanh toán
-  confirmed // shop đã xác nhận (hoặc đã thanh toán online)
-  processing // đang chuẩn bị / đang sản xuất (hàng đặt làm)
-  shipping // đang giao
-  delivered // đã giao
+  pending
+  confirmed
+  processing
+  shipping
+  delivered
   cancelled
   returned
 }
 
 enum PaymentMethod {
   cod
-  bank_transfer // chuyển khoản VietQR, SePay xác nhận qua webhook
+  bank_transfer
 }
 
 enum PaymentStatus {
@@ -74,8 +72,6 @@ enum ReviewStatus {
   hidden
 }
 
-// ───────────── EMBEDDED TYPES ─────────────
-
 type Dimensions {
   lengthCm Float
   widthCm  Float
@@ -84,14 +80,14 @@ type Dimensions {
 
 type ImageItem {
   url       String
-  publicID  String? // Cloudinary public_id, để xóa ảnh
+  publicID  String?
   alt       String?
   sortOrder Int
 }
 
 type VariantOption {
-  name  String // "Màu", "Kích thước", "Chất liệu"
-  value String // "Xám", "3 chỗ", "Gỗ sồi"
+  name  String
+  value String
 }
 
 type CartItem {
@@ -110,9 +106,7 @@ type OrderItem {
   unitPrice   Int
   quantity    Int
   lineTotal   Int
-  assemblyFee Int // phí lắp đặt cho dòng này (0 nếu không lắp)
-  // Đã trừ kho lúc đặt hay chưa (false: hàng đặt làm allowBackorder). Hủy đơn chỉ hoàn kho dòng true,
-  // không phụ thuộc allowBackorder hiện tại của product (admin có thể đã đổi).
+  assemblyFee Int
   stockReserved Boolean
 }
 
@@ -120,7 +114,7 @@ type ShippingAddress {
   fullName String
   phone    String
   province String
-  district String? // từ 01/07/2025 không còn cấp huyện, giữ cho địa chỉ cũ
+  district String?
   ward     String
   street   String
 }
@@ -128,11 +122,9 @@ type ShippingAddress {
 type OrderStatusLog {
   status    OrderStatus
   note      String?
-  changedBy String? // email người thao tác hoặc "system". KHÔNG đặt tên `by`: zod-prisma-types crash
+  changedBy String?
   at        DateTime
 }
-
-// ───────────── MODELS ─────────────
 
 model User {
   id                 String     @id @default(auto()) @map("_id") @db.ObjectId
@@ -144,10 +136,8 @@ model User {
   role               Role       @default(customer)
   status             UserStatus @default(active)
   wishlistProductIDs String[]   @db.ObjectId
-  resetPasswordToken String? // lưu dạng hash
+  resetPasswordToken String?
   resetPasswordExp   DateTime?
-  // Tăng lên khi đổi / reset mật khẩu hoặc bị khóa → mọi refresh token đã phát mất hiệu lực.
-  // Optional (thiếu = 0) để document cũ chưa có field này vẫn đọc được, không cần migrate.
   tokenVersion       Int?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
@@ -165,7 +155,7 @@ model Address {
   fullName  String
   phone     String
   province  String
-  district  String? // từ 01/07/2025 không còn cấp huyện, giữ cho địa chỉ cũ
+  district  String?
   ward      String
   street    String
   isDefault Boolean  @default(false)
@@ -190,7 +180,6 @@ model Category {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  // MongoDB: quan hệ tự trỏ bắt buộc NoAction
   parent   Category?  @relation("CategoryTree", fields: [parentID], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children Category[] @relation("CategoryTree")
   products Product[]
@@ -198,19 +187,17 @@ model Category {
   @@index([parentID])
 }
 
-/// Bộ sưu tập (theo chủ đề / mùa / chiến dịch). Một sản phẩm thuộc được nhiều bộ sưu tập:
-/// quan hệ lưu ở Product.collectionIDs (mảng ID, không khai báo relation của Prisma).
 model Collection {
   id          String     @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   slug        String     @unique
   description String?
-  image       ImageItem? // ảnh bìa
+  image       ImageItem?
   isActive    Boolean    @default(true)
   isFeatured  Boolean    @default(false)
   sortOrder   Int        @default(0)
-  startsAt    DateTime? // bỏ trống = hiển thị ngay
-  endsAt      DateTime? // bỏ trống = không hết hạn
+  startsAt    DateTime?
+  endsAt      DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   deletedAt   DateTime?
@@ -223,26 +210,24 @@ model Product {
   name             String
   slug             String      @unique
   shortDescription String?
-  description      String? // HTML / markdown
+  description      String?
   categoryID       String      @db.ObjectId
-  collectionIDs    String[]    @db.ObjectId // nhiều bộ sưu tập, có thể còn ID của bộ sưu tập đã xóa
+  collectionIDs    String[]    @db.ObjectId
   images           ImageItem[]
 
-  // Các field để lọc. Giá trị lấy từ hằng số (mục 3.2)
-  rooms     String[] // "living-room", "bedroom"...
-  styles    String[] // "scandinavian", "japandi"...
-  materials String[] // "oak", "rattan"...
-  colors    String[] // tổng hợp từ các variant
+  rooms     String[]
+  styles    String[]
+  materials String[]
+  colors    String[]
   tags      String[]
 
-  // Giá hiển thị: tính lại mỗi khi sửa variant
   minPrice Int @default(0)
   maxPrice Int @default(0)
 
   requiresAssembly Boolean @default(false)
-  assemblyFee      Int     @default(0) // VND / sản phẩm
-  allowBackorder   Boolean @default(false) // hàng đặt làm: cho đặt khi hết kho
-  leadTimeDays     Int     @default(0) // thời gian sản xuất nếu đặt làm
+  assemblyFee      Int     @default(0)
+  allowBackorder   Boolean @default(false)
+  leadTimeDays     Int     @default(0)
   warrantyMonths   Int     @default(0)
 
   isFeatured  Boolean       @default(false)
@@ -264,15 +249,14 @@ model Product {
   @@index([status, isFeatured])
 }
 
-/// Mọi sản phẩm có ít nhất 1 variant (variant mặc định), nên giỏ hàng và đơn hàng luôn trỏ tới variant.
 model ProductVariant {
   id             String          @id @default(auto()) @map("_id") @db.ObjectId
   productID      String          @db.ObjectId
-  sku            String          @unique // BẮT BUỘC (xem lưu ý mục 9)
-  name           String // "Sofa 3 chỗ - Xám"
+  sku            String          @unique
+  name           String
   options        VariantOption[]
   price          Int
-  compareAtPrice Int? // giá gạch ngang
+  compareAtPrice Int?
   stock          Int             @default(0)
   dimensions     Dimensions?
   weightKg       Float           @default(0)
@@ -331,20 +315,17 @@ model Order {
 
   @@index([userID, createdAt])
   @@index([status, createdAt])
-  @@index([promotionID, userID]) // đếm lượt dùng mã của 1 user (perUserLimit)
+  @@index([promotionID, userID])
 }
 
-/// 1 giao dịch tiền vào do SePay báo qua webhook (plan mục 12).
-/// status: paid = giao dịch này đã thanh toán đơn; failed = tiền đã vào nhưng KHÔNG dùng cho đơn
-/// (sai số tiền, đơn đã hủy / đã trả) → admin đối soát, hoàn tiền thủ công.
 model Payment {
   id            String        @id @default(auto()) @map("_id") @db.ObjectId
   orderID       String        @db.ObjectId
   method        PaymentMethod
-  amount        Int // số tiền thực nhận
+  amount        Int
   status        PaymentStatus
-  transactionID String        @unique // `id` giao dịch của SePay: chặn xử lý trùng khi webhook gửi lại
-  rawResponse   Json? // payload webhook gốc, để đối soát
+  transactionID String        @unique
+  rawResponse   Json?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -360,10 +341,10 @@ model Promotion {
   name          String
   description   String?
   type          PromotionType
-  value         Int // % (1–100) hoặc số tiền VND
-  maxDiscount   Int? // trần giảm cho loại percentage
+  value         Int
+  maxDiscount   Int?
   minOrderValue Int           @default(0)
-  usageLimit    Int? // tổng lượt dùng
+  usageLimit    Int?
   usedCount     Int           @default(0)
   perUserLimit  Int?
   startsAt      DateTime
@@ -379,7 +360,7 @@ model Review {
   productID String       @db.ObjectId
   userID    String       @db.ObjectId
   orderID   String       @db.ObjectId
-  rating    Int // 1–5
+  rating    Int
   comment   String?
   images    ImageItem[]
   status    ReviewStatus @default(approved)
@@ -395,13 +376,13 @@ model Review {
 
 model ShippingZone {
   id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  name              String // "Nội thành HCM", "Miền Bắc"...
-  provinces         String[] // danh sách tỉnh thuộc vùng
-  baseFee           Int // phí cho khối lượng đầu
-  baseWeightKg      Float // vd 5kg
-  feePerKg          Int // phí mỗi kg tiếp theo
-  bulkySurcharge    Int      @default(0) // phụ phí hàng cồng kềnh
-  freeShipThreshold Int? // đơn >= giá trị này thì free ship (trừ hàng cồng kềnh)
+  name              String
+  provinces         String[]
+  baseFee           Int
+  baseWeightKg      Float
+  feePerKg          Int
+  bulkySurcharge    Int      @default(0)
+  freeShipThreshold Int?
   estimatedDays     Int
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())

@@ -43,7 +43,7 @@ describe('computeProductSummary', () => {
         { name: 'Kích thước', value: '3 chỗ' },
       ]),
       variant(1, [{ name: 'màu sắc', value: 'Be' }]),
-      variant(1, [{ name: 'Color', value: 'xám' }]), // trùng "Xám"
+      variant(1, [{ name: 'Color', value: 'xám' }]),
       variant(1, [{ name: 'Chất liệu', value: 'Gỗ sồi' }]),
     ]);
     expect(summary.colors).toEqual(['Xám', 'Be']);

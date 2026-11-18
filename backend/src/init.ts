@@ -39,7 +39,6 @@ const removeFieldsAndRelations = (document: any) => {
 
     schema.properties = newProps;
 
-    // Quan hệ `user` ở trên sinh ra `userID` → xóa lại các audit field
     auditFields.forEach((k) => delete schema.properties[k]);
 
     const schemaRequired = schema.required;
@@ -68,10 +67,6 @@ const initOpenAPI = (app: INestApplication) => {
   SwaggerModule.setup(APP_PREFIX, app, cleanupOpenApiDoc(openApiDoc));
 };
 
-/**
- * - bodyParser: false → tắt parser mặc định (có urlencoded); `applyMiddlewares` chỉ bật lại parser JSON
- * - rawBody: true → giữ body gốc ở `req.rawBody` để kiểm tra chữ ký HMAC của webhook SePay
- */
 const NEST_APP_OPTIONS = {
   bodyParser: false,
   rawBody: true,
@@ -83,14 +78,10 @@ const initApp = (app: NestExpressApplication) => {
     FE_URL = 'http://localhost:3000',
     TRUST_PROXY = '0',
   } = process.env;
-  // Sau reverse proxy (Render, Railway, Nginx): tin X-Forwarded-For của N proxy gần nhất để req.ip
-  // là IP thật của khách (rate limit theo IP). KHÔNG bật khi không có proxy: client sẽ giả được IP.
   const proxyHops = Number(TRUST_PROXY);
   if (proxyHops > 0) app.set('trust proxy', proxyHops);
-  // FE_URL có thể chứa nhiều địa chỉ, cách nhau bằng dấu phẩy
   const allowedOrigins = parseOrigins(FE_URL);
   app.setGlobalPrefix(APP_PREFIX);
-  // Auth dùng cookie nên phải bật credentials, và khi đó origin KHÔNG được là '*'.
   app.enableCors({ origin: allowedOrigins, credentials: true });
   applyMiddlewares(app, allowedOrigins);
   initOpenAPI(app);

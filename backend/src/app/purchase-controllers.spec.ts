@@ -1,8 +1,3 @@
-/**
- * Controller của giai đoạn 3 (mua hàng) chỉ chuyển tiếp sang service. Test khóa 2 điều dễ sai:
- *  - phân quyền: route /me/... cần đăng nhập (không @Public), route /admin/... có @AdminOnly
- *  - userID luôn lấy từ token (@User), không từ body / param
- */
 import { Role } from '@prisma/client';
 import { AutoMockingModule } from '../../test/auto-mocking/auto-mocking.module';
 import { IS_ADMIN_ONLY } from '../common/decorators/admin-only.decorator';
@@ -309,7 +304,6 @@ describe('Controller giai đoạn 3', () => {
     });
 
     it('promotions / shipping zones: chuyển tiếp đúng tham số', async () => {
-      // Mỗi controller 1 module: AutoMockingModule tạo mock riêng cho từng nơi inject
       const promoModule = await AutoMockingModule.createTestingModule({
         controllers: [AdminPromotionsController],
       });

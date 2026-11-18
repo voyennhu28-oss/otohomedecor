@@ -24,10 +24,6 @@ import {
   SaleStatus,
 } from './sale-status';
 
-/**
- * Giỏ hàng: 1 document / user, chỉ lưu variantID + số lượng. Giá, tồn kho, trạng thái
- * luôn đọc lại từ DB khi xem giỏ (không lưu giá vào giỏ, không tin giá từ client).
- */
 @Injectable()
 export class CartsService extends PrismaBaseService<'cart'> {
   constructor(
@@ -37,7 +33,6 @@ export class CartsService extends PrismaBaseService<'cart'> {
     super(prismaService, 'cart');
   }
 
-  /** GET /me/cart: kèm giá, tồn kho hiện tại và trạng thái từng dòng. Mới thêm hiện trước. */
   async getCart(userID: string) {
     const items = await this.getItems(userID);
     const variants = await this.productVariantsService.findForSale(
@@ -53,7 +48,7 @@ export class CartsService extends PrismaBaseService<'cart'> {
     return {
       items: lines,
       totalQuantity: purchasable.reduce((sum, l) => sum + l.quantity, 0),
-      subtotal: purchasable.reduce((sum, l) => sum + l.lineTotal, 0), // chỉ tính dòng mua được
+      subtotal: purchasable.reduce((sum, l) => sum + l.lineTotal, 0),
       canCheckout: lines.length > 0 && purchasable.length === lines.length,
     };
   }
@@ -93,7 +88,6 @@ export class CartsService extends PrismaBaseService<'cart'> {
     return this.getCart(userID);
   }
 
-  /** Xóa 1 dòng (không có trong giỏ cũng trả về giỏ hiện tại). */
   async removeItem(userID: string, variantID: string) {
     await this.mutateItems(userID, (items) =>
       items.filter((i) => i.variantID !== variantID),
@@ -105,8 +99,6 @@ export class CartsService extends PrismaBaseService<'cart'> {
     await this.clear(userID);
     return this.getCart(userID);
   }
-
-  // ───────────── dùng cho checkout (nhận tx) ─────────────
 
   async getItems(
     userID: string,
@@ -129,8 +121,6 @@ export class CartsService extends PrismaBaseService<'cart'> {
     });
   }
 
-  // ───────────── helpers ─────────────
-
   private async findPurchasableVariant(variantID: string) {
     const [variant] = await this.productVariantsService.findForSale([
       variantID,
@@ -141,10 +131,6 @@ export class CartsService extends PrismaBaseService<'cart'> {
     return variant;
   }
 
-  /**
-   * Đọc - sửa - ghi lại cả mảng items trong transaction (Prisma không có `pull` cho composite list).
-   * 2 request sửa giỏ cùng lúc → xung đột P2034 → chạy lại, không ghi đè mất thay đổi.
-   */
   private mutateItems(
     userID: string,
     change: (items: CartItem[]) => CartItem[],
@@ -162,7 +148,6 @@ export class CartsService extends PrismaBaseService<'cart'> {
   }
 }
 
-/** Không cho vượt tồn kho (trừ hàng đặt làm) và giới hạn số lượng mỗi dòng. */
 const assertQuantity = (variant: SaleVariant, quantity: number) => {
   if (quantity > MAX_QUANTITY_PER_ITEM) {
     throw new BadRequestException(

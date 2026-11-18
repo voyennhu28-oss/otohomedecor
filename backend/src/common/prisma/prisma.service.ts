@@ -15,7 +15,6 @@ export const NOT_DELETED = {
 
 const SOFT_DELETE_MODEL_SET = new Set(SOFT_DELETE_MODELS);
 
-/** Các lệnh ĐỌC được tự thêm điều kiện "chưa xóa". Lệnh ghi (update / delete...) giữ nguyên. */
 const READ_OPERATIONS = new Set([
   'findUnique',
   'findUniqueOrThrow',
@@ -67,7 +66,7 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  readonly extended = extend(this); // service dùng this.prisma.extended.product.findMany(...)
+  readonly extended = extend(this);
 
   async onModuleInit() {
     await this.$connect();

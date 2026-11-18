@@ -83,7 +83,6 @@ describe('ProductsService', () => {
       productVariant: variant,
       extended: { product, productVariant: variant },
     } as unknown as PrismaService;
-    // $transaction([...]) chạy các thao tác; $transaction(fn) gọi fn với tx = chính mock này
     transaction = jest.fn((arg: unknown) =>
       typeof arg === 'function'
         ? arg(prisma)
@@ -109,8 +108,6 @@ describe('ProductsService', () => {
       collections as unknown as CollectionsService,
     );
   });
-
-  // ───────────── public ─────────────
 
   describe('findPublicList', () => {
     it('phân trang; count dùng cùng where với findMany', async () => {
@@ -246,7 +243,7 @@ describe('ProductsService', () => {
         where: expect.objectContaining({
           id: { in: ['p1', 'p2'] },
           NOT: { collectionIDs: { has: COL } },
-          OR: expect.any(Array), // NOT_DELETED
+          OR: expect.any(Array),
         }),
         data: { collectionIDs: { push: COL } },
       });
@@ -358,12 +355,10 @@ describe('ProductsService', () => {
     });
   });
 
-  // ───────────── admin ─────────────
-
   describe('create', () => {
     beforeEach(() => {
-      variant.findMany.mockResolvedValue([]); // chưa có SKU nào trùng
-      product.findMany.mockResolvedValue([]); // chưa có slug nào trùng
+      variant.findMany.mockResolvedValue([]);
+      product.findMany.mockResolvedValue([]);
       product.create.mockImplementation(({ data }) => data);
     });
 
@@ -498,8 +493,8 @@ describe('ProductsService', () => {
 
     it('đổi sang slug khác: kiểm tra slug mới; trùng sản phẩm khác → 409', async () => {
       product.findUnique
-        .mockResolvedValueOnce(current(1)) // sản phẩm đang sửa
-        .mockResolvedValueOnce({ id: 'other' }); // slug mới đã thuộc sản phẩm khác
+        .mockResolvedValueOnce(current(1))
+        .mockResolvedValueOnce({ id: 'other' });
       await expect(
         service.update('p1', { slug: 'ghe' }),
       ).rejects.toBeInstanceOf(ConflictException);
@@ -630,7 +625,7 @@ describe('ProductsService', () => {
         isActive: true,
         options: [{ name: 'Màu', value: 'Đen' }],
       },
-      { price: 3_000, isActive: false, options: [] }, // đang tắt → không tính
+      { price: 3_000, isActive: false, options: [] },
       { price: 8_000, isActive: true, options: [] },
     ];
 
@@ -747,7 +742,6 @@ describe('ProductsService', () => {
         });
       product.update.mockRejectedValueOnce(conflict).mockResolvedValue({});
 
-      // Lần 2 đọc thấy ảnh vừa upload xong → không bị ghi đè mất
       await expect(service.removeImage('p1', 'a')).resolves.toEqual([
         { publicID: 'moi-upload' },
       ]);

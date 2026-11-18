@@ -6,23 +6,12 @@ import {
   variantInputSchema,
 } from '../../products/dto/variant-input.schema';
 
-/** POST /admin/products/:productID/variants */
 export class CreateVariantDto extends createZodDto(variantInputSchema) {}
 
-/**
- * PATCH /admin/products/:productID/variants/:variantID
- * Không sửa tồn kho ở đây: tồn kho đổi qua PATCH /admin/variants/:variantID/stock.
- * Rule "giá gạch ngang > giá bán" kiểm tra trong service (cần giá trị hiện tại).
- */
 export class UpdateVariantDto extends createZodDto(
   variantFieldsSchema.omit({ stock: true }).partial().strict(),
 ) {}
 
-/**
- * PATCH /admin/variants/:variantID/stock
- *  - { "stock": 20 }   đặt tồn kho = 20 (kiểm kê)
- *  - { "adjust": -3 }  trừ 3 / { "adjust": 5 } cộng 5 (nhập / xuất kho)
- */
 export class UpdateStockDto extends createZodDto(
   z
     .object({

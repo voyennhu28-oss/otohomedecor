@@ -14,14 +14,13 @@ const byStatus = (overrides: Partial<Record<OrderStatus, number>> = {}) =>
 
 describe('dashboard-range', () => {
   it('mặc định: 30 ngày tới hết hôm nay theo giờ VN', () => {
-    // 2026-11-13 18:00 UTC = 2026-11-14 01:00 giờ VN → "hôm nay" là 14/11
     const { from, to } = resolveRange(
       undefined,
       undefined,
       new Date('2026-11-13T18:00:00Z'),
     );
     expect(to.toISOString()).toBe('2026-11-14T16:59:59.999Z');
-    expect(from.toISOString()).toBe('2026-10-15T17:00:00.000Z'); // 00:00 ngày 16/10 giờ VN
+    expect(from.toISOString()).toBe('2026-10-15T17:00:00.000Z');
     expect(listVnDates(from, to)).toHaveLength(30);
   });
 

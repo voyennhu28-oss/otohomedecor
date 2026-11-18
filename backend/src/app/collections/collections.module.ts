@@ -7,10 +7,9 @@ import { CollectionsController } from './collections.controller';
 import { CollectionsService } from './collections.service';
 
 @Module({
-  // FileUtilModule: multer lưu file tạm + ImageUploadService (Cloudinary) cho ảnh bìa
   imports: [StringUtilModule, FileUtilModule],
   controllers: [CollectionsController, AdminCollectionsController],
   providers: [CollectionsService, CollectionImageService],
-  exports: [CollectionsService], // products dùng để lọc theo bộ sưu tập và gán sản phẩm
+  exports: [CollectionsService],
 })
 export class CollectionsModule {}

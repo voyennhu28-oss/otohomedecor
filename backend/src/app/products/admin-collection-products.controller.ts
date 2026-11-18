@@ -15,10 +15,6 @@ class CollectionProductParamDto extends createZodDto(
   z.object({ collectionID: objectId, productID: objectId }),
 ) {}
 
-/**
- * Nằm ở module products vì ghi vào Product.collectionIDs.
- * Xem sản phẩm của bộ sưu tập: GET /admin/products?collectionID=
- */
 @ApiTags('Admin / Collections')
 @AdminOnly()
 @Controller('admin/collections/:collectionID/products')

@@ -64,7 +64,7 @@ describe('sepay.util', () => {
       expect(evaluateTransfer(order(), 500_000)).toBe('paid');
       expect(
         evaluateTransfer(order({ status: OrderStatus.confirmed }), 500_000),
-      ).toBe('paid'); // COD khách chuyển khoản trước
+      ).toBe('paid');
     });
 
     it('thiếu hoặc thừa dù 1đ → amount_mismatch', () => {
@@ -91,9 +91,8 @@ describe('sepay.util', () => {
   describe('verifySepaySignature', () => {
     const secret = 'secret';
     const rawBody = Buffer.from('{"id":1,"content":"Thanh toán"}');
-    const now = 1_763_000_000_000; // ms
+    const now = 1_763_000_000_000;
     const timestamp = String(now / 1000);
-    // Giá trị tính độc lập theo tài liệu SePay: HMAC-SHA256(secret, "<timestamp>.<raw body>"), hex
     const signature = `sha256=${createHmac('sha256', secret).update(`${timestamp}.`).update(rawBody).digest('hex')}`;
     const check = (
       overrides: Partial<Parameters<typeof verifySepaySignature>[0]> = {},

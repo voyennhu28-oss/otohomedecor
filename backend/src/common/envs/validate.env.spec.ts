@@ -23,7 +23,7 @@ describe('validate (env)', () => {
     expect(env).toMatchObject({
       NODE_ENV: 'development',
       PORT: 5000,
-      MAIL_PORT: 587, // để trống → mặc định
+      MAIL_PORT: 587,
       THROTTLE_LIMIT: 50,
       COOKIE_SAME_SITE: 'lax',
       FE_URL: 'http://localhost:3000',
@@ -56,7 +56,7 @@ describe('validate (env)', () => {
     expect(() => validate(baseEnv(noAuth))).toThrow('SEPAY_WEBHOOK_SECRET');
     expect(() =>
       validate(baseEnv({ ...noAuth, NODE_ENV: 'development' })),
-    ).not.toThrow(); // dev chỉ cảnh báo
+    ).not.toThrow();
   });
 
   it('SEPAY_ACCOUNT_NUMBER chỉ gồm chữ và số', () => {

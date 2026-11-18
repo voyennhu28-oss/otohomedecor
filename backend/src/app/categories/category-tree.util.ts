@@ -5,10 +5,6 @@ interface TreeItem {
   parentID: string | null;
 }
 
-/**
- * Dựng cây từ danh sách phẳng (giữ nguyên thứ tự đầu vào).
- * Node có cha không nằm trong danh sách (vd cha đang ẩn) bị bỏ cùng cả nhánh con.
- */
 export const buildTree = <T extends TreeItem>(items: T[]): TreeNode<T>[] => {
   const nodes = new Map<string, TreeNode<T>>(
     items.map((item) => [item.id, { ...item, children: [] }]),
@@ -21,10 +17,6 @@ export const buildTree = <T extends TreeItem>(items: T[]): TreeNode<T>[] => {
   return roots;
 };
 
-/**
- * Chuỗi tổ tiên từ gốc tới cha trực tiếp. Trả null nếu đứt giữa chừng
- * (một tổ tiên không có trong `byID`, vd đang ẩn) hoặc dữ liệu bị vòng lặp.
- */
 export const getAncestors = <T extends TreeItem>(
   item: T,
   byID: Map<string, T>,
@@ -42,7 +34,6 @@ export const getAncestors = <T extends TreeItem>(
   return ancestors;
 };
 
-/** ID của node và toàn bộ con cháu. */
 export const getDescendantIDs = <T extends TreeItem>(
   rootID: string,
   items: T[],

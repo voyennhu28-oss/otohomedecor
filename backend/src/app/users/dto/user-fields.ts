@@ -9,7 +9,6 @@ export const emailSchema = z.string().trim().toLowerCase().email();
 
 export const fullNameSchema = z.string().trim().min(1).max(100);
 
-/** bcrypt chỉ dùng 72 BYTE đầu (chữ có dấu chiếm 2–3 byte) nên giới hạn theo byte, không theo ký tự. */
 export const PASSWORD_MAX_BYTES = 72;
 
 export const passwordSchema = z

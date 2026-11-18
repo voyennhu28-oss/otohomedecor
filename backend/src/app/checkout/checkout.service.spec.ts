@@ -50,7 +50,6 @@ const zone = {
   estimatedDays: 2,
 };
 
-// 2 × đèn 1.5tr (2kg, có sẵn) + 1 × sofa đặt làm 12tr (hết kho, cần lắp 500k, sản xuất 14 ngày)
 const lamp = makeSaleVariant({
   id: 'v-lamp',
   productID: 'p-lamp',
@@ -110,7 +109,7 @@ describe('CheckoutService', () => {
   };
 
   beforeEach(() => {
-    jest.resetAllMocks(); // xóa cả implementation / hàng đợi "Once" của test trước
+    jest.resetAllMocks();
     transaction = jest.fn((fn: (t: unknown) => unknown) => fn(tx));
     deps.carts.getItems.mockResolvedValue(cartItems);
     deps.addresses.findOwned.mockResolvedValue(address);
@@ -141,7 +140,6 @@ describe('CheckoutService', () => {
     expect(deps.carts.clear).not.toHaveBeenCalled();
   };
 
-  // subtotal = 3.000.000 + 12.000.000; 2×2 + 3 = 7kg → 2kg thêm → ship 40.000
   const SUBTOTAL = 15_000_000;
   const SHIPPING = 40_000;
 
@@ -201,7 +199,7 @@ describe('CheckoutService', () => {
         promotionCode: 'WELCOME10',
       });
 
-      expect(result.discount).toBe(500_000); // 10% của 15tr = 1.5tr, trần 500k
+      expect(result.discount).toBe(500_000);
       expect(result.total).toBe(SUBTOTAL + SHIPPING - 500_000);
       expect(result.promotion).toEqual({
         code: 'WELCOME10',
@@ -315,7 +313,7 @@ describe('CheckoutService', () => {
     it('đơn là snapshot: tên, sku, giá, ảnh, địa chỉ, tiền tại lúc đặt', async () => {
       const { order, payment } = await service.checkout(user, dto);
 
-      expect(payment).toBeNull(); // COD: không cần thông tin chuyển khoản
+      expect(payment).toBeNull();
       const [, data, changedBy] = deps.orders.createInTx.mock.calls[0];
       expect(changedBy).toBe('khach@x.com');
       expect(data).toMatchObject({

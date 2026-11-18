@@ -16,7 +16,6 @@ import {
 } from './dto/order.dto';
 import { OrdersService } from './orders.service';
 
-/** Đơn hàng của người đang đăng nhập. userID luôn lấy từ token. */
 @ApiTags('Me / Orders')
 @Controller('me/orders')
 export class OrdersController {
@@ -35,7 +34,6 @@ export class OrdersController {
     return this.ordersService.findMineByNumber(user.userID, orderNumber);
   }
 
-  /** Chỉ hủy được khi đơn còn "Chờ xác nhận". */
   @Post(':orderNumber/cancel')
   @HttpCode(200)
   cancel(

@@ -33,7 +33,6 @@ const SENSITIVE = [
   'tokenVersion',
 ];
 
-/** Mọi lệnh đọc / ghi trả user ra ngoài phải omit đủ các field nhạy cảm. */
 const expectOmitSensitive = (args: { omit?: Record<string, boolean> }) => {
   for (const field of SENSITIVE) expect(args.omit?.[field]).toBe(true);
 };
@@ -58,8 +57,6 @@ describe('UsersService', () => {
       orders as unknown as OrdersService,
     );
   });
-
-  // ───────────── /me ─────────────
 
   describe('getMe / updateMe', () => {
     it('getMe: không trả field nhạy cảm; không có → 404', async () => {
@@ -107,8 +104,6 @@ describe('UsersService', () => {
       );
     });
   });
-
-  // ───────────── wishlist ─────────────
 
   describe('wishlist', () => {
     it('getWishlist: rỗng thì không truy vấn sản phẩm', async () => {
@@ -209,7 +204,7 @@ describe('UsersService', () => {
       );
       user.findFirst
         .mockResolvedValueOnce({ wishlistProductIDs: [P1] })
-        .mockResolvedValueOnce({ wishlistProductIDs: [P1, P2] }); // P2 vừa được thêm
+        .mockResolvedValueOnce({ wishlistProductIDs: [P1, P2] });
       user.update.mockRejectedValueOnce(conflict).mockResolvedValue({});
 
       await expect(service.removeFromWishlist(USER_ID, P1)).resolves.toEqual({
@@ -222,8 +217,6 @@ describe('UsersService', () => {
       });
     });
   });
-
-  // ───────────── admin ─────────────
 
   describe('findAll', () => {
     it('lọc theo role / status / từ khóa, phân trang, count cùng where, không trả field nhạy cảm', async () => {
@@ -419,8 +412,6 @@ describe('UsersService', () => {
       );
     });
   });
-
-  // ───────────── auth ─────────────
 
   describe('dùng cho auth', () => {
     it('omitSensitive: bỏ đủ field nhạy cảm, giữ phần còn lại', () => {

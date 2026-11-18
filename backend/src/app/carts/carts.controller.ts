@@ -16,7 +16,6 @@ import {
   UpdateCartItemDto,
 } from './dto/cart.dto';
 
-/** Giỏ hàng của người đang đăng nhập. Mọi API trả về giỏ hàng mới nhất. */
 @ApiTags('Me / Cart')
 @Controller('me/cart')
 export class CartsController {

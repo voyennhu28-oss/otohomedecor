@@ -9,10 +9,6 @@ import {
 } from './dto/product-query.dto';
 import { ProductsService } from './products.service';
 
-/**
- * Lưu ý thứ tự route: "featured" và "filters" phải khai báo TRƯỚC ":slug",
- * nếu không Express sẽ hiểu "featured" là một slug.
- */
 @ApiTags('Products')
 @Public()
 @Controller('products')

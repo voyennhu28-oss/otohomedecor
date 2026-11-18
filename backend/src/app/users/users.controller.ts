@@ -12,7 +12,6 @@ import { User, type UserInfo } from '../../common/decorators/user.decorator';
 import { ProductIDParamDto, UpdateMeDto } from './dto/update-me.dto';
 import { UsersService } from './users.service';
 
-/** Tài khoản của người đang đăng nhập. userID luôn lấy từ token. */
 @ApiTags('Me')
 @Controller('me')
 export class UsersController {

@@ -13,7 +13,6 @@ import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { JwtPayload, RESET_PASSWORD_TTL, TokenType } from './consts/jwt.const';
 
-// Bọc bcrypt.compare để kiểm tra được lời gọi (namespace import không spyOn được)
 jest.mock('bcrypt', () => {
   const actual = jest.requireActual<typeof import('bcrypt')>('bcrypt');
   return { ...actual, compare: jest.fn(actual.compare) };
@@ -23,7 +22,6 @@ const ACCESS_SECRET = 'access-secret-test';
 const REFRESH_SECRET = 'refresh-secret-test';
 const PASSWORD = 'Password123';
 
-/** Chờ các việc chạy nền (gửi mail fire-and-forget) xong. */
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 interface TestUser {
@@ -63,7 +61,6 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     user = makeUser();
-    // Mock có trạng thái: updatePassword đổi hash và tăng tokenVersion giống UsersService thật
     users = {
       create: jest.fn(async (dto) => ({
         id: 'new-id',
@@ -179,7 +176,6 @@ describe('AuthService', () => {
 
       await expect(noUser).rejects.toBeInstanceOf(UnauthorizedException);
       await expect(noUser).rejects.toThrow(wrongPassword);
-      // so với hash giả có cùng cost (10) với hash thật → thời gian xử lý như nhau
       expect(compare).toHaveBeenCalledWith(
         PASSWORD,
         expect.stringMatching(/^\$2[aby]\$10\$/),
@@ -385,7 +381,7 @@ describe('AuthService', () => {
       expect(createHash('sha256').update(token).digest('hex')).toBe(tokenHash);
       expect(html).toContain(
         `https://shop.example.com/reset-password?token=${token}`,
-      ); // FE_URL đầu tiên
+      );
     });
 
     it('BUG-03: fullName chứa HTML được escape trong email', async () => {
@@ -418,7 +414,7 @@ describe('AuthService', () => {
     });
 
     it('BUG-07: trả lời ngay, không chờ gửi mail (SMTP chậm không làm chậm response)', async () => {
-      mail.send.mockReturnValue(new Promise(() => undefined)); // SMTP treo mãi
+      mail.send.mockReturnValue(new Promise(() => undefined));
       await expect(
         service.forgotPassword({ email: user!.email }),
       ).resolves.toHaveProperty('message');

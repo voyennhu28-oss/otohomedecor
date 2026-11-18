@@ -15,7 +15,6 @@ import { ZodExceptionFilter } from './zod-exception/zod-exception.filter';
 
 type ErrorItem = { message: string; [key: string]: unknown };
 
-/** Lỗi Prisma hay gặp → HTTP status + câu thông báo cho client (không lộ query / tên index). */
 const PRISMA_ERRORS: Record<string, { status: HttpStatus; message: string }> = {
   P2002: { status: HttpStatus.CONFLICT, message: 'Dữ liệu đã tồn tại' },
   P2025: { status: HttpStatus.NOT_FOUND, message: 'Không tìm thấy dữ liệu' },
@@ -26,10 +25,6 @@ const PRISMA_ERRORS: Record<string, { status: HttpStatus; message: string }> = {
   },
 };
 
-/**
- * Field bị trùng của lỗi P2002. MongoDB trả tên index (vd "Product_slug_key"),
- * SQL trả mảng field (vd ["slug"]).
- */
 const duplicatedFields = (target: unknown): string[] => {
   if (Array.isArray(target)) return target.map(String);
   if (typeof target === 'string') {
@@ -54,7 +49,6 @@ export class CatchEverythingFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const { status, errors } = this.resolve(exception);
 
-    // Lỗi 5xx là lỗi của server: ghi log đầy đủ để debug, client chỉ thấy câu chung
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       const req = ctx.getRequest<Request>();
       this.logger.error(
@@ -68,7 +62,6 @@ export class CatchEverythingFilter implements ExceptionFilter {
   }
 
   private resolve(exception: unknown): { status: number; errors: ErrorItem[] } {
-    // Dữ liệu client gửi lên sai schema
     if (exception instanceof ZodValidationException) {
       const zodErrors = this.zodFilter.catch(exception);
       return {
@@ -79,7 +72,6 @@ export class CatchEverythingFilter implements ExceptionFilter {
       };
     }
 
-    // Response của server không khớp schema: lỗi của server
     if (exception instanceof ZodSerializationException) {
       return this.internalError();
     }

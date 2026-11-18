@@ -12,10 +12,6 @@ const P = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const URL = `/admin/products/${P}/images`;
 const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
 
-/**
- * Test qua HTTP để chạy thật ZodValidationPipe (param) và multer (FilesInterceptor + fileFilter).
- * Multer không có storage → giữ file trong bộ nhớ, service được mock.
- */
 describe('AdminProductImagesController', () => {
   let app: INestApplication;
   const imagesService = { upload: jest.fn(), remove: jest.fn() };

@@ -28,7 +28,6 @@ import {
   TransferOutcome,
 } from './sepay.util';
 
-/** Kết quả xử lý 1 webhook. Mọi trường hợp đều trả { success: true } cho SePay. */
 export type WebhookResult =
   | { outcome: TransferOutcome; orderNumber: string }
   | {
@@ -38,7 +37,6 @@ export type WebhookResult =
     }
   | { outcome: 'duplicate' };
 
-/** Giao dịch không tự áp được vào đơn: admin cần đối soát / hoàn tiền (GET /admin/payments?status=failed). */
 const NEEDS_ADMIN: Record<Exclude<TransferOutcome, 'paid'>, string> = {
   amount_mismatch: 'số tiền không khớp tổng đơn',
   already_paid: 'đơn đã được thanh toán trước đó (khách chuyển trùng)',
@@ -73,9 +71,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     );
   }
 
-  // ───────────── thông tin chuyển khoản ─────────────
-
-  /** Gọi TRƯỚC khi tạo đơn bank_transfer: chưa cấu hình tài khoản nhận tiền thì không cho đặt. */
   assertTransferAvailable() {
     if (!this.account) {
       throw new ServiceUnavailableException(
@@ -91,7 +86,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     return buildTransferInfo(this.account!, order, this.unpaidTimeoutMinutes);
   }
 
-  /** GET /me/orders/:orderNumber/payment: chỉ đơn chuyển khoản đang chờ tiền. */
   async getMyTransferInfo(userID: string, orderNumber: string) {
     const order = await this.ordersService.findMineByNumber(
       userID,
@@ -110,13 +104,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     return this.transferInfo(order);
   }
 
-  // ───────────── webhook SePay ─────────────
-
-  /**
-   * Xử lý 1 giao dịch SePay báo về (chữ ký / API key đã được SepayWebhookGuard kiểm tra).
-   * Trong 1 transaction: tìm đơn → đối chiếu → lưu Payment (transactionID @unique chặn trùng)
-   * → khớp thì đánh dấu đơn đã trả tiền. Chỉ ném lỗi khi lỗi hệ thống (để SePay gửi lại).
-   */
   async handleSepayWebhook(payload: SepayWebhookDto): Promise<WebhookResult> {
     const transactionID = String(payload.id);
 
@@ -129,7 +116,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     ) {
       return this.ignore(transactionID, 'other_account');
     }
-    // `code` là mã SePay nhận diện theo cấu hình; không có thì tự tìm trong nội dung chuyển khoản
     const orderNumber =
       findOrderNumberInText(payload.code) ??
       findOrderNumberInText(payload.content);
@@ -179,7 +165,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
         }),
       );
     } catch (error) {
-      // transactionID đã có: SePay gửi lại giao dịch đã xử lý → bỏ qua, vẫn báo thành công
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
@@ -200,8 +185,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     if (confirmedOrderID) this.notifications.statusChanged(confirmedOrderID);
     return result;
   }
-
-  // ───────────── admin ─────────────
 
   async findList({ status, orderNumber, ...pagination }: PaymentListQueryDto) {
     const where: Prisma.PaymentWhereInput = {
@@ -234,10 +217,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
     return toPage(list, totalItems, pagination.itemPerPage);
   }
 
-  /**
-   * Dashboard: số giao dịch tiền vào không áp được vào đơn trong khoảng thời gian (cần đối soát).
-   * Đếm theo khoảng vì Payment "failed" không có trạng thái "đã xử lý".
-   */
   countFailed({ from, to }: { from: Date; to: Date }) {
     return this.extended.count({
       where: {
@@ -246,8 +225,6 @@ export class PaymentsService extends PrismaBaseService<'payment'> {
       },
     });
   }
-
-  // ───────────── helpers ─────────────
 
   private ignore(
     transactionID: string,

@@ -10,9 +10,6 @@ import {
 import { StringUtilService } from '../../common/utils/string-util/string-util.service';
 import { CategoriesService } from './categories.service';
 
-// Cây mẫu:  phong-khach ─┬─ sofa ── sofa-goc
-//                        └─ ban-tra
-//           phong-ngu (đang ẩn) ── giuong
 const cat = (id: string, slug: string, parentID: string | null = null) => ({
   id,
   name: slug,
@@ -26,7 +23,7 @@ const PK = cat('pk', 'phong-khach');
 const SOFA = cat('sofa', 'sofa', 'pk');
 const SOFA_GOC = cat('sofa-goc', 'sofa-goc', 'sofa');
 const BAN_TRA = cat('ban-tra', 'ban-tra', 'pk');
-const GIUONG = cat('giuong', 'giuong', 'pn'); // cha "pn" đang ẩn nên không có trong danh sách active
+const GIUONG = cat('giuong', 'giuong', 'pn');
 const ACTIVE = [PK, SOFA, SOFA_GOC, BAN_TRA, GIUONG];
 
 describe('CategoriesService', () => {
@@ -48,7 +45,7 @@ describe('CategoriesService', () => {
       expect(model.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { isActive: true } }),
       );
-      expect(tree.map((c) => c.slug)).toEqual(['phong-khach']); // "giuong" bị bỏ vì cha đang ẩn
+      expect(tree.map((c) => c.slug)).toEqual(['phong-khach']);
       expect(tree[0].children.map((c) => c.slug)).toEqual(['sofa', 'ban-tra']);
       expect(tree[0].children[0].children.map((c) => c.slug)).toEqual([
         'sofa-goc',
@@ -108,7 +105,7 @@ describe('CategoriesService', () => {
 
   describe('create', () => {
     it('tự sinh slug từ tên tiếng Việt', async () => {
-      model.findMany.mockResolvedValue([]); // chưa có slug nào trùng
+      model.findMany.mockResolvedValue([]);
       model.create.mockImplementation(({ data }) => data);
       const created = await service.create({ name: 'Bàn trà' });
       expect(created.slug).toBe('ban-tra');

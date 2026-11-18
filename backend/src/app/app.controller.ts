@@ -14,7 +14,6 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  /** GET /api/health: Render / Railway / Docker gọi định kỳ, nên public và không giới hạn tần suất. */
   @Public()
   @SkipThrottle()
   @Get('health')

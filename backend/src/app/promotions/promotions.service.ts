@@ -21,7 +21,6 @@ import {
 
 export interface ApplyContext {
   subtotal: number;
-  /** Số đơn chưa hủy của user đã dùng mã (chỉ gọi khi mã có perUserLimit). */
   countUserUsage: (promotionID: string) => Promise<number>;
 }
 
@@ -30,8 +29,6 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
   constructor(prismaService: PrismaService) {
     super(prismaService, 'promotion');
   }
-
-  // ───────────── admin ─────────────
 
   async findList({ q, isActive, ...pagination }: PromotionListQueryDto) {
     const where: Prisma.PromotionWhereInput = {
@@ -78,10 +75,6 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
     return this.extended.update({ where: { id }, data });
   }
 
-  /**
-   * Soft delete, đổi code thành "<code>--deleted-<id>" để dùng lại được mã.
-   * Đơn hàng cũ lưu sẵn promotionCode nên không bị ảnh hưởng.
-   */
   async remove(id: string) {
     const promotion = await this.findOne(id);
     await this.client.update({
@@ -91,9 +84,6 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
     return { id };
   }
 
-  // ───────────── dùng cho checkout / orders (nhận tx) ─────────────
-
-  /** Mã dùng được cho đơn này, ném 400 kèm lý do nếu không. */
   async findApplicable(
     code: string,
     { subtotal, countUserUsage }: ApplyContext,
@@ -111,7 +101,6 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
     return promotion;
   }
 
-  /** Tăng usedCount ATOMIC: chỉ tăng khi còn lượt (2 đơn cùng lúc không vượt usageLimit). */
   async consume(
     promotion: Pick<Promotion, 'id' | 'usageLimit'>,
     tx: Prisma.TransactionClient,
@@ -129,7 +118,6 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
       throw new ConflictException('Mã giảm giá vừa hết lượt sử dụng');
   }
 
-  /** Trả lại 1 lượt khi hủy đơn (không xuống dưới 0, kể cả mã đã bị xóa). */
   async release(promotionID: string, tx: Prisma.TransactionClient) {
     await tx.promotion.updateMany({
       where: { id: promotionID, usedCount: { gt: 0 } },
@@ -137,9 +125,6 @@ export class PromotionsService extends PrismaBaseService<'promotion'> {
     });
   }
 
-  // ───────────── helpers ─────────────
-
-  /** Dùng client gốc: index @unique của code tính cả mã đã xóa. */
   private async assertCodeAvailable(code: string) {
     const existed = await this.client.findUnique({
       where: { code },

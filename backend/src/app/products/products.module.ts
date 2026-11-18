@@ -16,14 +16,14 @@ import { ProductsService } from './products.service';
     CollectionsModule,
     StringUtilModule,
     ExcelUtilModule,
-    FileUtilModule, // multer lưu file Excel tạm ra đĩa để import
+    FileUtilModule,
   ],
   controllers: [
     ProductsController,
     AdminProductsController,
-    AdminCollectionProductsController, // gán / gỡ sản phẩm khỏi bộ sưu tập (ghi Product.collectionIDs)
+    AdminCollectionProductsController,
   ],
   providers: [ProductsService, ProductsExcelService],
-  exports: [ProductsService], // product-variants, product-images, wishlist, cart, checkout dùng
+  exports: [ProductsService],
 })
 export class ProductsModule {}

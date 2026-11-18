@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Workbook } from 'exceljs';
-import { startCase } from 'es-toolkit/compat'; // giống lodash.startCase, lodash không có trong package.json
+import { startCase } from 'es-toolkit/compat';
 import { File, GenerateExcelParams } from './dto/excel-util.interface';
 import { camelCase } from 'es-toolkit';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -44,7 +44,7 @@ export class ExcelUtilService {
       const worksheet = workbook.addWorksheet(sheetName);
 
       const fields: Record<string, any> =
-        data[0] ?? this.prismaService[camelCase(sheetName)]?.fields ?? {}; // sheet rỗng + tên không phải model → dùng fieldsExtend
+        data[0] ?? this.prismaService[camelCase(sheetName)]?.fields ?? {};
 
       const dataColumns = Object.keys(fields)
         .reduce<string[]>((acc, field) => {

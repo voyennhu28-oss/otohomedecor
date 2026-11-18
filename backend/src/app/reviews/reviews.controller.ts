@@ -25,7 +25,6 @@ import { ReviewsService } from './reviews.service';
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
-  /** Review đã duyệt của sản phẩm đang bán, phân trang, kèm thống kê số sao. */
   @Public()
   @Get('products/:productID/reviews')
   findByProduct(
@@ -35,7 +34,6 @@ export class ReviewsController {
     return this.reviewsService.findPublic(productID, query);
   }
 
-  /** Chỉ khi có đơn đã giao chứa sản phẩm này; mỗi đơn 1 review. */
   @Post('products/:productID/reviews')
   create(
     @User() user: UserInfo,
@@ -45,7 +43,6 @@ export class ReviewsController {
     return this.reviewsService.create(user, productID, dto);
   }
 
-  /** Chỉ chủ review. */
   @Patch('reviews/:id')
   update(
     @User() user: UserInfo,
@@ -55,7 +52,6 @@ export class ReviewsController {
     return this.reviewsService.updateMine(user.userID, id, dto);
   }
 
-  /** Chỉ chủ review. */
   @Delete('reviews/:id')
   remove(@User() user: UserInfo, @Param() { id }: IDDto) {
     return this.reviewsService.removeMine(user.userID, id);

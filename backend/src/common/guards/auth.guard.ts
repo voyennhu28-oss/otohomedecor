@@ -15,10 +15,6 @@ import {
 import { IS_PUBLIC } from '../decorators/public.decorator';
 import { UserInfo } from '../decorators/user.decorator';
 
-/**
- * Global guard: mọi route cần access token, trừ route gắn `@Public()`.
- * Token lấy từ header `Authorization: Bearer ...` hoặc cookie `accessToken`.
- */
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(

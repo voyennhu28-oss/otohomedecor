@@ -8,7 +8,6 @@ import {
   phoneSchema,
 } from './user-fields';
 
-/** POST /admin/users */
 export class CreateUserDto extends createZodDto(
   z
     .object({

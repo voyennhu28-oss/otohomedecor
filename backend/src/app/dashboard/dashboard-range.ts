@@ -7,10 +7,6 @@ const vnStartOfDay = (vnDate: string) =>
   new Date(`${vnDate}T00:00:00.000+07:00`);
 const vnEndOfDay = (vnDate: string) => new Date(`${vnDate}T23:59:59.999+07:00`);
 
-/**
- * Khoảng thời gian của dashboard. Thiếu `to` → hết hôm nay (giờ VN);
- * thiếu `from` → 30 ngày tính tới `to` (gồm cả ngày `to`).
- */
 export const resolveRange = (from?: Date, to?: Date, now = new Date()) => {
   const end = to ?? vnEndOfDay(toVnDate(now));
   const start =
@@ -21,7 +17,6 @@ export const resolveRange = (from?: Date, to?: Date, now = new Date()) => {
   return { from: start, to: end };
 };
 
-/** Mọi ngày (YYYY-MM-DD, giờ VN) trong khoảng: để biểu đồ có cả ngày không có đơn. */
 export const listVnDates = (from: Date, to: Date): string[] => {
   const dates: string[] = [];
   const last = toVnDate(to);
@@ -32,7 +27,6 @@ export const listVnDates = (from: Date, to: Date): string[] => {
   return dates;
 };
 
-/** Doanh thu theo ngày, điền 0 cho ngày không có đơn. */
 export const fillDaily = (
   dates: string[],
   daily: { date: string; revenue: number; orders: number }[],

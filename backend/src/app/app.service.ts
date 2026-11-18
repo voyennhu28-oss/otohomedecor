@@ -15,7 +15,6 @@ export class AppService {
     return 'Hello World!';
   }
 
-  /** Health check cho nền tảng deploy: app chạy + kết nối được MongoDB. Lỗi DB → 503. */
   async health() {
     try {
       await this.prismaService.$runCommandRaw({ ping: 1 });

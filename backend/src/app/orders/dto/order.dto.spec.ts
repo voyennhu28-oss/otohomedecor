@@ -43,7 +43,7 @@ describe('Order DTO', () => {
     expect(
       OrderNumberParamDto.schema.safeParse({ orderNumber: 'HD261113-ABC0EF' })
         .success,
-    ).toBe(false); // không có số 0
+    ).toBe(false);
   });
 });
 

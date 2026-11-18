@@ -11,16 +11,11 @@ import { CreateAddressDto, UpdateAddressDto } from './dto/address.dto';
 
 export const MAX_ADDRESSES_PER_USER = 20;
 
-/** Mặc định lên đầu, rồi mới tạo trước. */
 const ADDRESS_ORDER: Prisma.AddressOrderByWithRelationInput[] = [
   { isDefault: 'desc' },
   { createdAt: 'desc' },
 ];
 
-/**
- * Sổ địa chỉ của user đang đăng nhập. Mọi hàm đều lọc theo userID lấy từ token.
- * Quy tắc: còn địa chỉ thì luôn có đúng 1 địa chỉ mặc định.
- */
 @Injectable()
 export class AddressesService extends PrismaBaseService<'address'> {
   constructor(prismaService: PrismaService) {
@@ -56,7 +51,6 @@ export class AddressesService extends PrismaBaseService<'address'> {
     return this.extended.update({ where: { id }, data: dto });
   }
 
-  /** Đặt làm mặc định, bỏ mặc định ở các địa chỉ khác. */
   setDefault(userID: string, id: string) {
     return this.inTransaction(async (tx) => {
       await this.findOwnedOrThrow(userID, id, tx);
@@ -65,7 +59,6 @@ export class AddressesService extends PrismaBaseService<'address'> {
     });
   }
 
-  /** Xóa cứng (đơn hàng lưu snapshot địa chỉ). Xóa địa chỉ mặc định thì địa chỉ mới nhất còn lại thành mặc định. */
   remove(userID: string, id: string) {
     return this.inTransaction(async (tx) => {
       const address = await this.findOwnedOrThrow(userID, id, tx);
@@ -87,7 +80,6 @@ export class AddressesService extends PrismaBaseService<'address'> {
     });
   }
 
-  /** Địa chỉ thuộc user, hoặc null. Checkout dùng (truyền tx). */
   findOwned(
     userID: string,
     id: string,
@@ -95,8 +87,6 @@ export class AddressesService extends PrismaBaseService<'address'> {
   ) {
     return db.address.findFirst({ where: { id, userID } });
   }
-
-  // ───────────── helpers ─────────────
 
   private async findOwnedOrThrow(
     userID: string,
@@ -123,7 +113,6 @@ export class AddressesService extends PrismaBaseService<'address'> {
     });
   }
 
-  /** Đổi mặc định chạm nhiều document: chạy trong transaction, xung đột thì chạy lại. */
   private inTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
     return withRetry(() => this.prismaService.$transaction(fn));
   }

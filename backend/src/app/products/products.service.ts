@@ -22,10 +22,8 @@ import { buildPublicProductWhere, PRODUCT_ORDER_BY } from './product-filter';
 import { computeProductSummary } from './product-summary';
 import { assertSkusAvailable } from './variant-sku';
 
-/** Slug trùng đường dẫn tĩnh /products/featured, /products/filters → không được dùng. */
 const RESERVED_SLUGS = ['featured', 'filters'];
 
-/** Thông tin hiển thị trên thẻ sản phẩm ở trang danh sách. */
 const PRODUCT_CARD_SELECT = {
   id: true,
   name: true,
@@ -42,7 +40,6 @@ const PRODUCT_CARD_SELECT = {
   allowBackorder: true,
 } satisfies Prisma.ProductSelect;
 
-/** Variant khách được thấy ở trang chi tiết. */
 const PUBLIC_VARIANT_SELECT = {
   id: true,
   sku: true,
@@ -61,12 +58,10 @@ const CATEGORY_SELECT = { id: true, name: true, slug: true } as const;
 const emptyPage = () => ({ list: [], totalItems: 0, totalPages: 0 });
 
 export interface RecalculateOptions {
-  /** Client của transaction đang chạy (mặc định: client gốc). */
   tx?: Prisma.TransactionClient;
   ensureSelling?: boolean;
 }
 
-/** Sản phẩm "active" (hiện cho khách) phải có ít nhất 1 variant đang bán. */
 const assertCanBeActive = (
   status: ProductStatus | undefined,
   sellingVariants: number,
@@ -89,14 +84,11 @@ export class ProductsService extends PrismaBaseService<'product'> {
     super(prismaService, 'product');
   }
 
-  // ───────────── public ─────────────
-
-  /** GET /products: lọc + sắp xếp + phân trang (plan mục 8). */
   async findPublicList(query: ProductListQueryDto) {
     const { sort, page, itemPerPage, category, collection, ...filters } = query;
 
     const scope = await this.resolveScope(category, collection);
-    if (!scope) return emptyPage(); // danh mục / bộ sưu tập không tồn tại hoặc đang ẩn
+    if (!scope) return emptyPage();
 
     const where = buildPublicProductWhere(
       filters,
@@ -111,7 +103,7 @@ export class ProductsService extends PrismaBaseService<'product'> {
         skip: (page - 1) * itemPerPage,
         take: itemPerPage,
       }),
-      this.extended.count({ where }), // PHẢI dùng cùng where với findMany
+      this.extended.count({ where }),
     ]);
     return {
       list,
@@ -120,7 +112,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     };
   }
 
-  /** GET /products/featured */
   findFeatured(limit: number) {
     return this.extended.findMany({
       where: { status: ProductStatus.active, isFeatured: true },
@@ -130,10 +121,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
   }
 
-  /**
-   * GET /products/filters: các giá trị lọc đang có sản phẩm, để frontend dựng bộ lọc.
-   * Đọc field lọc của mọi sản phẩm đang bán rồi gộp lại (đủ nhanh với vài nghìn sản phẩm).
-   */
   async getFilterOptions(categorySlug?: string, collectionSlug?: string) {
     const scope = await this.resolveScope(categorySlug, collectionSlug);
 
@@ -166,7 +153,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     const usedMaterials = used((p) => p.materials);
 
     return {
-      // giữ thứ tự như trong hằng số
       rooms: ROOMS.filter((r) => usedRooms.has(r)),
       styles: STYLES.filter((s) => usedStyles.has(s)),
       materials: MATERIALS.filter((m) => usedMaterials.has(m)),
@@ -185,10 +171,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     };
   }
 
-  /**
-   * GET /products/:slug: chi tiết kèm danh mục, các bộ sưu tập đang hiển thị
-   * và các variant đang bán (giá tăng dần).
-   */
   async findPublicBySlug(slug: string) {
     const product = await this.extended.findFirst({
       where: { slug, status: ProductStatus.active },
@@ -210,7 +192,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     };
   }
 
-  /** GET /products/:slug/related: cùng danh mục HOẶC cùng phong cách, bán chạy trước. */
   async findRelated(slug: string, limit: number) {
     const product = await this.extended.findFirst({
       where: { slug, status: ProductStatus.active },
@@ -239,9 +220,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
   }
 
-  // ───────────── admin ─────────────
-
-  /** GET /admin/products: thấy cả draft / inactive, tìm theo tên hoặc SKU. */
   async findAdminList(query: AdminProductListQueryDto) {
     const {
       q,
@@ -285,10 +263,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     };
   }
 
-  /**
-   * GET /admin/products/:id: đầy đủ, gồm cả variant đang tắt.
-   * collectionIDs chỉ giữ bộ sưu tập chưa xóa, để form sửa gửi lại không bị 404.
-   */
   async findAdminByID(id: string) {
     const product = await this.extended.findUnique({
       where: { id },
@@ -308,10 +282,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     };
   }
 
-  /**
-   * POST /admin/products: tạo product và các variant trong 1 lần ghi
-   * (nested create, Prisma tự chạy trong transaction).
-   */
   async create(dto: CreateProductDto) {
     const { variants, ...productData } = dto;
 
@@ -336,14 +306,13 @@ export class ProductsService extends PrismaBaseService<'product'> {
         ...productData,
         collectionIDs: productData.collectionIDs ?? [],
         slug,
-        ...computeProductSummary(variants), // minPrice, maxPrice, colors
+        ...computeProductSummary(variants),
         variants: { create: variants },
       },
       include: { variants: true },
     });
   }
 
-  /** PATCH /admin/products/:id */
   async update(id: string, dto: UpdateProductDto) {
     const current = await this.extended.findUnique({
       where: { id },
@@ -368,14 +337,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     return this.extended.update({ where: { id }, data: dto });
   }
 
-  /**
-   * DELETE /admin/products/:id: soft delete product và mọi variant của nó.
-   * Đổi slug / SKU thành "...--deleted-<id>" để giải phóng (index @unique tính cả bản ghi đã xóa).
-   * Đơn hàng cũ không bị ảnh hưởng vì đơn lưu snapshot.
-   *
-   * CỐ Ý giữ ảnh trên Cloudinary: soft delete còn khôi phục được, và đơn hàng cũ (snapshot)
-   * vẫn trỏ tới imageUrl. Nếu sau này có xóa cứng thì phải xóa ảnh (images[].publicID) ở bước đó.
-   */
   async remove(id: string) {
     const product = await this.extended.findUnique({
       where: { id },
@@ -402,10 +363,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     return { id };
   }
 
-  /**
-   * POST /admin/collections/:collectionID/products: thêm sản phẩm vào bộ sưu tập.
-   * `push` có điều kiện "chưa có ID này" → atomic, gọi lại nhiều lần không bị trùng.
-   */
   async addToCollection(collectionID: string, productIDs: string[]) {
     await this.collectionsService.ensureAllExist([collectionID]);
     const found = await this.extended.count({
@@ -426,11 +383,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     return { added: count };
   }
 
-  /**
-   * DELETE /admin/collections/:collectionID/products/:productID: gỡ sản phẩm khỏi bộ sưu tập.
-   * Prisma không có `pull` cho mảng → đọc - sửa - ghi trong transaction (xung đột thì chạy lại).
-   * Không kiểm tra bộ sưu tập còn tồn tại để gỡ được cả ID của bộ sưu tập đã xóa.
-   */
   removeFromCollection(collectionID: string, productID: string) {
     return withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
@@ -456,9 +408,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     );
   }
 
-  // ───────────── dùng cho module khác (variants, images, wishlist) ─────────────
-
-  /** Product chưa xóa (mọi trạng thái), ném 404 nếu không có. */
   async findOneOrThrow(id: string) {
     const product = await this.extended.findUnique({
       where: { id },
@@ -468,7 +417,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     return product;
   }
 
-  /** Ném 404 nếu sản phẩm không tồn tại hoặc không đang bán. */
   async ensureActive(id: string) {
     const product = await this.extended.findFirst({
       where: { id, status: ProductStatus.active },
@@ -477,7 +425,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
   }
 
-  /** Thẻ sản phẩm đang bán theo danh sách ID (wishlist). */
   findCardsByIDs(ids: string[]) {
     return this.extended.findMany({
       where: { id: { in: ids }, status: ProductStatus.active },
@@ -485,16 +432,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
   }
 
-  /**
-   * Tính lại minPrice / maxPrice / colors từ variant hiện có.
-   * PHẢI gọi sau mỗi lần tạo / sửa / xóa variant, trong CÙNG transaction với lần ghi variant.
-   *
-   * Hàm luôn ghi vào document product, nên 2 transaction sửa variant của cùng product sẽ
-   * xung đột (P2034) và bị chạy lại tuần tự: summary luôn đúng, và kiểm tra `ensureSelling`
-   * không bị lọt khi 2 admin cùng tắt 2 variant cuối (write skew).
-   *
-   * @param ensureSelling ném 409 nếu product đang "active" mà không còn variant đang bán
-   */
   async recalculateSummary(
     productID: string,
     { tx = this.prismaService, ensureSelling = false }: RecalculateOptions = {},
@@ -522,10 +459,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
   }
 
-  /**
-   * Cộng (hoặc trừ khi quantity âm) lượt bán `soldCount` theo các dòng đơn hàng.
-   * Dùng client gốc trong tx: product đã xóa vẫn được cập nhật cho đúng thống kê.
-   */
   async addSoldCount(
     items: { productID: string; quantity: number }[],
     tx: Prisma.TransactionClient,
@@ -542,10 +475,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     }
   }
 
-  /**
-   * Lưu điểm đánh giá (lưu thừa để lọc / sắp xếp "rating" không phải join review).
-   * Reviews gọi trong transaction mỗi khi review thêm / sửa / xóa / đổi trạng thái.
-   */
   async setRating(
     productID: string,
     rating: { ratingAvg: number; ratingCount: number },
@@ -554,9 +483,7 @@ export class ProductsService extends PrismaBaseService<'product'> {
     await tx.product.updateMany({ where: { id: productID }, data: rating });
   }
 
-  /** Thêm ảnh vào cuối danh sách ảnh của product. Trả về danh sách ảnh mới. */
   appendImages(productID: string, images: { url: string; publicID: string }[]) {
-    // Transaction: 2 lần upload song song không bị trùng sortOrder (lần sau xung đột và chạy lại)
     return this.updateImages(productID, (current) => {
       const nextOrder = current.reduce(
         (max, img) => Math.max(max, img.sortOrder + 1),
@@ -573,9 +500,7 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
   }
 
-  /** Bỏ 1 ảnh khỏi product theo publicID (Cloudinary). Trả về danh sách ảnh còn lại. */
   removeImage(productID: string, publicID: string) {
-    // Transaction: ảnh vừa upload xong trong lúc đang xóa không bị `set` ghi đè mất
     return this.updateImages(productID, (current) => {
       const remaining = current.filter((img) => img.publicID !== publicID);
       if (remaining.length === current.length) {
@@ -585,12 +510,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     });
   }
 
-  // ───────────── helpers ─────────────
-
-  /**
-   * Đổi slug danh mục / bộ sưu tập trên query thành ID để lọc.
-   * null = có slug nhưng không tồn tại hoặc đang ẩn → kết quả rỗng.
-   */
   private async resolveScope(
     categorySlug?: string,
     collectionSlug?: string,
@@ -607,10 +526,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     return { categoryIDs, collectionID };
   }
 
-  /**
-   * Đọc - sửa - ghi lại cả mảng ảnh trong 1 transaction (Prisma không có `pull` cho composite list).
-   * Request khác ghi chen vào giữa → xung đột P2034 → withRetry chạy lại với dữ liệu mới.
-   */
   private updateImages(
     productID: string,
     change: (current: ImageItem[]) => ImageItem[],
@@ -633,7 +548,6 @@ export class ProductsService extends PrismaBaseService<'product'> {
     );
   }
 
-  /** Dùng client gốc vì index @unique của slug tính cả bản ghi đã xóa. */
   private async assertSlugAvailable(slug: string, exceptID?: string) {
     if (RESERVED_SLUGS.includes(slug)) {
       throw new BadRequestException(

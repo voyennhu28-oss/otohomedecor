@@ -46,7 +46,7 @@ describe('ShippingZonesService', () => {
         ...dto,
         provinces: ['Bình Dương'],
       }).success,
-    ).toBe(false); // đã sáp nhập
+    ).toBe(false);
   });
 
   it('create: tỉnh đã thuộc vùng khác đang hoạt động → 409 nêu rõ tỉnh và vùng', async () => {

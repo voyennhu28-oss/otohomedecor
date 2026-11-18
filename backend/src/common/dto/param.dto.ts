@@ -7,7 +7,6 @@ export class IDDto extends createZodDto(
   }),
 ) {}
 
-/** "ban-tra", "sofa-3-cho": chữ thường không dấu, số, gạch ngang giữa các từ. */
 export const slugSchema = z
   .string()
   .trim()

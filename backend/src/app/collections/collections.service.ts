@@ -25,7 +25,6 @@ const PUBLIC_SELECT = {
   endsAt: true,
 } satisfies Prisma.CollectionSelect;
 
-/** Thông tin gắn kèm sản phẩm (badge, link sang trang bộ sưu tập). */
 const SUMMARY_SELECT = {
   id: true,
   name: true,
@@ -50,9 +49,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     super(prismaService, 'collection');
   }
 
-  // ───────────── public ─────────────
-
-  /** GET /collections: bộ sưu tập đang hiển thị. */
   findPublicList(featured?: boolean) {
     return this.extended.findMany({
       where: {
@@ -66,7 +62,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     });
   }
 
-  /** GET /collections/:slug. 404 nếu đang tắt hoặc ngoài thời gian hiển thị. */
   async findPublicBySlug(slug: string) {
     const collection = await this.extended.findFirst({
       where: { AND: [{ slug }, visibleCollectionWhere(new Date())] },
@@ -76,9 +71,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     return collection;
   }
 
-  // ───────────── dùng cho products ─────────────
-
-  /** ID của bộ sưu tập đang hiển thị theo slug, null nếu không có. Products dùng để lọc. */
   async getVisibleIDBySlug(slug: string): Promise<string | null> {
     const collection = await this.extended.findFirst({
       where: { AND: [{ slug }, visibleCollectionWhere(new Date())] },
@@ -87,7 +79,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     return collection?.id ?? null;
   }
 
-  /** Bộ sưu tập đang hiển thị trong danh sách ID (trang chi tiết sản phẩm). */
   findVisibleByIDs(ids: string[]): Promise<CollectionSummary[]> {
     if (!ids.length) return Promise.resolve([]);
     return this.extended.findMany({
@@ -97,7 +88,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     });
   }
 
-  /** Bộ sưu tập chưa xóa (mọi trạng thái) trong danh sách ID (trang admin). */
   findByIDs(ids: string[]): Promise<CollectionSummary[]> {
     if (!ids.length) return Promise.resolve([]);
     return this.extended.findMany({
@@ -107,7 +97,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     });
   }
 
-  /** Ném 404 nếu có ID không tồn tại hoặc đã bị xóa. Products dùng khi gán collectionIDs. */
   async ensureAllExist(ids: string[]) {
     const unique = [...new Set(ids)];
     if (!unique.length) return;
@@ -124,9 +113,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     }
   }
 
-  // ───────────── admin ─────────────
-
-  /** GET /admin/collections: tất cả (cả đang tắt / hết hạn). Số sản phẩm lấy qua GET /admin/products?collectionID= */
   findAdminList() {
     return this.extended.findMany({ orderBy: ORDER_BY });
   }
@@ -158,11 +144,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     return this.extended.update({ where: { id }, data: dto });
   }
 
-  /**
-   * Soft delete + đổi slug để giải phóng (index @unique tính cả bản ghi đã xóa).
-   * Product.collectionIDs vẫn giữ ID này: mọi chỗ đọc đều chỉ lấy bộ sưu tập chưa xóa nên không ảnh hưởng.
-   * Giữ ảnh bìa trên Cloudinary vì soft delete còn khôi phục được.
-   */
   async remove(id: string) {
     const collection = await this.findOne(id);
     await this.extended.update({
@@ -175,10 +156,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     return { id };
   }
 
-  /**
-   * Thay (hoặc bỏ khi `image` = null) ảnh bìa. Trả về ảnh cũ để xóa trên Cloudinary sau khi DB đã ghi.
-   * Transaction: 2 lần upload chen nhau thì lần sau xung đột và chạy lại, không làm sót ảnh cũ.
-   */
   setImage(id: string, image: Pick<ImageItem, 'url' | 'publicID'> | null) {
     return withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
@@ -201,9 +178,6 @@ export class CollectionsService extends PrismaBaseService<'collection'> {
     );
   }
 
-  // ───────────── helpers ─────────────
-
-  /** Dùng client gốc vì index @unique của slug tính cả bản ghi đã xóa. */
   private async assertSlugAvailable(slug: string, exceptID?: string) {
     const existed = await this.client.findUnique({
       where: { slug },

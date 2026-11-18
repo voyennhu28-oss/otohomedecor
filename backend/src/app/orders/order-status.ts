@@ -1,11 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { OrderStatus, Prisma } from '@prisma/client';
 
-/**
- * Bước chuyển hợp lệ (plan mục 11):
- *   pending ──► confirmed ──► processing ──► shipping ──► delivered ──► returned
- *      └────────────┴──► cancelled
- */
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   pending: [OrderStatus.confirmed, OrderStatus.cancelled],
   confirmed: [OrderStatus.processing, OrderStatus.cancelled],
@@ -16,7 +11,6 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   returned: [],
 };
 
-/** Customer chỉ tự hủy được đơn chưa xác nhận. */
 export const CUSTOMER_CANCELLABLE: readonly OrderStatus[] = [
   OrderStatus.pending,
 ];
@@ -42,7 +36,6 @@ export const assertTransition = (from: OrderStatus, to: OrderStatus) => {
   }
 };
 
-/** Mốc thời gian set khi chuyển sang trạng thái tương ứng. */
 export const statusTimestamp = (
   status: OrderStatus,
   at: Date,

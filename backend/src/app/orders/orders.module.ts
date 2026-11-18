@@ -12,15 +12,14 @@ import { OrdersService } from './orders.service';
 
 @Module({
   imports: [
-    ProductVariantsModule, // hoàn kho khi hủy
-    ProductsModule, // cộng / trừ soldCount
-    PromotionsModule, // trả lượt mã khi hủy
+    ProductVariantsModule,
+    ProductsModule,
+    PromotionsModule,
     ExcelUtilModule,
-    MailUtilModule, // email đơn hàng (Brevo)
+    MailUtilModule,
   ],
   controllers: [OrdersController, AdminOrdersController],
   providers: [OrdersService, OrderNotificationService, OrdersCron],
-  // checkout tạo đơn + gửi email đặt hàng; payments đánh dấu đã trả tiền; users tính tổng chi tiêu
   exports: [OrdersService, OrderNotificationService],
 })
 export class OrdersModule {}

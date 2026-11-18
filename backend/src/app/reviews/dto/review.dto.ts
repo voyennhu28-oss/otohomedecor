@@ -19,20 +19,15 @@ export class ReviewImageParamDto extends createZodDto(
   z.object({ id: objectId, publicID: z.string().min(1).max(200) }),
 ) {}
 
-/** GET /products/:productID/reviews?rating=5&sort=newest&page=1 */
 export class ReviewListQueryDto extends createZodDto(
   z.object({
-    rating: ratingQuery.optional(), // chỉ xem review N sao
+    rating: ratingQuery.optional(),
     sort: z.enum(REVIEW_SORTS).default('newest'),
     page: pageQuery,
     itemPerPage: itemPerPageQuery(50, 10),
   }),
 ) {}
 
-/**
- * POST /products/:productID/reviews. Chỉ khi có đơn ĐÃ GIAO chứa sản phẩm; mỗi đơn 1 review.
- * Không gửi orderID thì tự chọn đơn đã giao gần nhất chưa đánh giá.
- */
 export class CreateReviewDto extends createZodDto(
   z
     .object({
@@ -43,7 +38,6 @@ export class CreateReviewDto extends createZodDto(
     .strict(),
 ) {}
 
-/** PATCH /reviews/:id (chủ review). comment = null để xóa nội dung. */
 export class UpdateReviewDto extends createZodDto(
   z
     .object({
@@ -57,7 +51,6 @@ export class UpdateReviewDto extends createZodDto(
     ),
 ) {}
 
-/** GET /admin/reviews */
 export class AdminReviewListQueryDto extends createZodDto(
   z.object({
     status: z.nativeEnum(ReviewStatus).optional(),
@@ -68,7 +61,6 @@ export class AdminReviewListQueryDto extends createZodDto(
   }),
 ) {}
 
-/** PATCH /admin/reviews/:id/status: ẩn (hidden), duyệt (approved) hoặc chờ duyệt (pending). */
 export class UpdateReviewStatusDto extends createZodDto(
   z.object({ status: z.nativeEnum(ReviewStatus) }).strict(),
 ) {}

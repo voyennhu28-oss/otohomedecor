@@ -39,7 +39,6 @@ export class AuthController {
     private readonly authService: AuthService,
     config: ConfigService,
   ) {
-    // Refresh token chỉ được gửi kèm request tới /api/auth/*
     this.refreshCookiePath = `${config.get<string>('APP_PREFIX') ?? '/api'}/auth`;
     this.sameSite =
       config.get<CookieSameSite>('COOKIE_SAME_SITE') ??
@@ -59,7 +58,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle(STRICT_THROTTLE) // chống dò mật khẩu
+  @Throttle(STRICT_THROTTLE)
   @HttpCode(200)
   @Post('sign-in')
   async signIn(
@@ -99,7 +98,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle(STRICT_THROTTLE) // chống spam email
+  @Throttle(STRICT_THROTTLE)
   @HttpCode(200)
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -107,15 +106,14 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle(STRICT_THROTTLE) // chống dò token
+  @Throttle(STRICT_THROTTLE)
   @HttpCode(200)
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
 
-  /** Token cũ ở mọi thiết bị mất hiệu lực; phiên hiện tại nhận cookie token mới. */
-  @Throttle(STRICT_THROTTLE) // chống dò mật khẩu cũ khi bị lộ token
+  @Throttle(STRICT_THROTTLE)
   @Patch('change-password')
   async changePassword(
     @User() user: UserInfo,

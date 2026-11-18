@@ -129,8 +129,8 @@ describe('AddressesService', () => {
 
     it('remove địa chỉ mặc định → địa chỉ mới nhất còn lại thành mặc định', async () => {
       address.findFirst
-        .mockResolvedValueOnce({ id: 'a1', isDefault: true }) // địa chỉ bị xóa
-        .mockResolvedValueOnce({ id: 'a2' }); // mới nhất còn lại
+        .mockResolvedValueOnce({ id: 'a1', isDefault: true })
+        .mockResolvedValueOnce({ id: 'a2' });
       await expect(service.remove('u1', 'a1')).resolves.toEqual({ id: 'a1' });
       expect(address.delete).toHaveBeenCalledWith({ where: { id: 'a1' } });
       expect(address.update).toHaveBeenCalledWith({

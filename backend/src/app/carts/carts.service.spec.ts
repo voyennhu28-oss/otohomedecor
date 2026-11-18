@@ -23,7 +23,6 @@ describe('CartsService', () => {
   let cart: PrismaModelMock & { upsert: jest.Mock };
   let transaction: jest.Mock;
   let variants: { findForSale: jest.Mock };
-  /** Giỏ "trong DB": upsert ghi vào đây, findUnique đọc ra. */
   let stored: { variantID: string; quantity: number; addedAt: Date }[];
 
   beforeEach(() => {

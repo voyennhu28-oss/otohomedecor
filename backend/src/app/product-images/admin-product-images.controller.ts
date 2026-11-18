@@ -33,7 +33,6 @@ class ProductImageParamDto extends createZodDto(
 export class AdminProductImagesController {
   constructor(private readonly imagesService: ProductImagesService) {}
 
-  /** multipart/form-data, field "files" (chọn được nhiều ảnh). */
   @Post()
   @ApiConsumes('multipart/form-data')
   @ApiBody({

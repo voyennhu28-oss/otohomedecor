@@ -5,6 +5,6 @@ import { PromotionsService } from './promotions.service';
 @Module({
   controllers: [AdminPromotionsController],
   providers: [PromotionsService],
-  exports: [PromotionsService], // checkout áp mã, orders trả lượt khi hủy
+  exports: [PromotionsService],
 })
 export class PromotionsModule {}

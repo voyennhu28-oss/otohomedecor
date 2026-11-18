@@ -8,6 +8,6 @@ import { CategoriesService } from './categories.service';
   imports: [StringUtilModule],
   controllers: [CategoriesController, AdminCategoriesController],
   providers: [CategoriesService],
-  exports: [CategoriesService], // products dùng để lọc theo danh mục (gồm con cháu)
+  exports: [CategoriesService],
 })
 export class CategoriesModule {}

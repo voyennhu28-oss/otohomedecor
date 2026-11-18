@@ -3,7 +3,6 @@ import type { SaleVariant } from '../../src/app/product-variants/product-variant
 
 type ProductOverrides = Partial<SaleVariant['product']>;
 
-/** Variant đang bán, đủ hàng. Ghi đè field cần thiết cho từng test. */
 export const makeSaleVariant = (
   overrides: Partial<Omit<SaleVariant, 'product'>> = {},
   product: ProductOverrides = {},

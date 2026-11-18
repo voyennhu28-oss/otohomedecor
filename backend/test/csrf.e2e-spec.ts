@@ -1,7 +1,3 @@
-/**
- * BUG-01: chống CSRF qua cookie. Dựng app giống main.ts (NEST_APP_OPTIONS + initApp) với
- * controller admin giả và AuthController thật (AuthService mock), không cần database.
- */
 import { Body, Controller, INestApplication, Post } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_PIPE } from '@nestjs/core';
@@ -30,7 +26,6 @@ describe('CSRF (e2e)', () => {
 
   beforeAll(async () => {
     Object.assign(process.env, { FE_URL: FE, APP_PREFIX: '/api' });
-    // Prisma Client tự nạp .env khi import: bỏ giá trị local để test đúng giá trị MẶC ĐỊNH
     delete process.env.COOKIE_SAME_SITE;
     const moduleRef = await Test.createTestingModule({
       imports: [ConfigModule.forRoot({ ignoreEnvFile: true })],

@@ -1,4 +1,3 @@
-/** Qua HTTP để chạy thật ZodValidationPipe (param) và multer (giới hạn số ảnh, loại file). */
 import { ExecutionContext, INestApplication } from '@nestjs/common';
 import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
@@ -25,7 +24,6 @@ describe('ReviewImagesController', () => {
       providers: [
         { provide: ReviewImagesService, useValue: service },
         { provide: APP_PIPE, useClass: ZodValidationPipe },
-        // giả lập AuthGuard: gắn user đang đăng nhập
         {
           provide: APP_GUARD,
           useValue: {

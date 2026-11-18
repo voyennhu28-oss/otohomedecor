@@ -14,7 +14,6 @@ async function bootstrap() {
       logger: LoggerModule.createLogger(),
     }),
   );
-  // Giá trị đã qua validate.env.ts (có sẵn mặc định), không khai báo lại mặc định ở đây
   const config = app.get(ConfigService);
   const port = config.getOrThrow<Env['PORT']>('PORT');
   const host = config.getOrThrow<Env['HOST']>('HOST');

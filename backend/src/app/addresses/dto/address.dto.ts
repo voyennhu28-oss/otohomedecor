@@ -6,15 +6,14 @@ import { fullNameSchema, phoneSchema } from '../../users/dto/user-fields';
 const text = (max: number) => z.string().trim().min(1).max(max);
 
 const fields = {
-  fullName: fullNameSchema, // tên người nhận
+  fullName: fullNameSchema,
   phone: phoneSchema,
-  province: z.enum(PROVINCES), // lấy từ GET /shipping-zones/provinces
-  district: text(100).nullable(), // không bắt buộc: từ 01/07/2025 không còn cấp huyện
-  ward: text(100), // phường / xã
-  street: text(200), // số nhà, tên đường
+  province: z.enum(PROVINCES),
+  district: text(100).nullable(),
+  ward: text(100),
+  street: text(200),
 };
 
-/** POST /me/addresses. Địa chỉ đầu tiên luôn là mặc định. */
 export class CreateAddressDto extends createZodDto(
   z
     .object({
@@ -25,7 +24,6 @@ export class CreateAddressDto extends createZodDto(
     .strict(),
 ) {}
 
-/** PATCH /me/addresses/:id. Đặt mặc định dùng PATCH /me/addresses/:id/default. */
 export class UpdateAddressDto extends createZodDto(
   z.object(fields).partial().strict(),
 ) {}

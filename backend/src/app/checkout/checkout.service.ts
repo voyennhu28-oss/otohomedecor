@@ -24,15 +24,10 @@ import { ShippingZonesService } from '../shipping-zones/shipping-zones.service';
 import { buildCheckoutLines, sumBy } from './checkout-lines';
 import { CheckoutDto, CheckoutPreviewDto } from './dto/checkout.dto';
 
-/**
- * Transaction checkout gồm khoảng 10 + số dòng truy vấn. Atlas ở xa có thể 100–200ms / truy vấn,
- * nên nới timeout mặc định (5s) của Prisma.
- */
 const CHECKOUT_TX_OPTIONS = { maxWait: 5_000, timeout: 20_000 };
 
 type Quote = Awaited<ReturnType<CheckoutService['quote']>>;
 
-/** Không trả nguyên document địa chỉ ra ngoài, chỉ các field giao hàng. */
 const toShippingAddress = ({
   fullName,
   phone,
@@ -63,7 +58,6 @@ export class CheckoutService {
     private readonly notifications: OrderNotificationService,
   ) {}
 
-  /** POST /checkout/preview: bảng tính tiền giống hệt lúc đặt, không ghi DB. */
   async preview(user: UserInfo, dto: CheckoutPreviewDto) {
     const quote = await this.quote(user.userID, dto, this.prismaService);
     return {
@@ -98,17 +92,8 @@ export class CheckoutService {
     };
   }
 
-  /**
-   * POST /checkout (plan mục 10). Toàn bộ chạy trong 1 transaction:
-   * đọc giỏ → đọc variant + product từ DB → địa chỉ của user → kiểm tra trạng thái / tồn kho →
-   * tính tiền → trừ kho (atomic) → tăng lượt dùng mã (atomic) → tạo đơn (snapshot) → xóa giỏ.
-   *
-   * Xóa giỏ ghi vào document cart, nên 2 lần bấm "Đặt hàng" cùng lúc sẽ xung đột: lần sau
-   * chạy lại, thấy giỏ trống và bị từ chối (không tạo 2 đơn, không vượt perUserLimit).
-   */
   async checkout(user: UserInfo, dto: CheckoutDto) {
     const isTransfer = dto.paymentMethod === PaymentMethod.bank_transfer;
-    // Kiểm tra trước khi tạo đơn: không để đơn chuyển khoản được tạo mà không có thông tin nhận tiền
     if (isTransfer) this.paymentsService.assertTransferAvailable();
 
     const order = await withRetry(() =>
@@ -165,7 +150,6 @@ export class CheckoutService {
       }, CHECKOUT_TX_OPTIONS),
     );
 
-    // Ngoài transaction (đơn đã commit): thông tin chuyển khoản + QR, email xác nhận chạy nền
     const payment = isTransfer
       ? this.paymentsService.transferInfo(order)
       : null;
@@ -173,11 +157,6 @@ export class CheckoutService {
     return { order, payment };
   }
 
-  /**
-   * Tính tiền ở server, từ dữ liệu trong DB (không tin giá từ client).
-   * total = subtotal + shippingFee + assemblyFee − discount
-   * (mã free_shipping: discount = shippingFee, nên đơn vẫn lưu phí ship thật để đối soát).
-   */
   private async quote(
     userID: string,
     dto: CheckoutPreviewDto,

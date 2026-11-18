@@ -34,14 +34,14 @@ describe('shipping.util', () => {
           weightKg: 10,
           dimensions: box(100, 50, 40),
         }),
-      ).toBe(40); // gối to, nhẹ
+      ).toBe(40);
       expect(
         chargeableKg({
           quantity: 1,
           weightKg: 25,
           dimensions: box(20, 20, 20),
         }),
-      ).toBe(25); // nhỏ, nặng
+      ).toBe(25);
     });
 
     it('cồng kềnh: từ 30kg (quy đổi) hoặc cạnh dài từ 150cm', () => {
@@ -64,7 +64,6 @@ describe('shipping.util', () => {
     });
 
     it('mỗi kg tiếp theo làm tròn lên', () => {
-      // 2 × 3.2kg = 6.4kg → vượt 1.4kg → tính 2kg
       expect(
         calculateShippingFee(zone, [{ quantity: 2, weightKg: 3.2 }], 1_000_000),
       ).toBe(40_000);
@@ -87,8 +86,7 @@ describe('shipping.util', () => {
     });
 
     it('có hàng cồng kềnh: không free ship dù đủ ngưỡng, cộng phụ phí', () => {
-      const sofa = { quantity: 1, weightKg: 45, dimensions: box(210, 90, 80) }; // quy đổi 302.4kg
-      // 302.4 - 5 = 297.4 → 298kg × 5.000 + 30.000 + 200.000
+      const sofa = { quantity: 1, weightKg: 45, dimensions: box(210, 90, 80) };
       expect(calculateShippingFee(zone, [sofa], 50_000_000)).toBe(
         30_000 + 298 * 5_000 + 200_000,
       );

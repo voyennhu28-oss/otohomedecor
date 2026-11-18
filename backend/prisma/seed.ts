@@ -1,13 +1,3 @@
-/**
- * Seed dữ liệu ban đầu: admin, customer mẫu (chỉ ngoài production), cây danh mục, bộ sưu tập, sản phẩm mẫu,
- * vùng giao hàng, mã giảm giá.
- * Chạy: npm run db:seed. Chạy lại nhiều lần vẫn an toàn (upsert theo email / slug,
- * không ghi đè mật khẩu của tài khoản đã có).
- *
- * Biến môi trường (tùy chọn):
- *   SEED_ADMIN_EMAIL     mặc định admin@homedecor.local
- *   SEED_ADMIN_PASSWORD  bỏ trống thì sinh ngẫu nhiên và in ra một lần
- */
 import { PrismaClient, ProductStatus, PromotionType, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'node:crypto';
@@ -19,14 +9,12 @@ import { SEED_PRODUCTS } from './seed-data/products';
 try {
   process.loadEnvFile('.env');
 } catch {
-  // không có .env thì dùng biến môi trường sẵn có
 }
 
 const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 const isProduction = process.env.NODE_ENV === 'production';
 
-/** Cửa hàng đèn trang trí làm từ vỏ sò / vỏ điệp / xà cừ. Slug cha và con không được trùng nhau. */
 const CATEGORY_TREE: Record<string, string[]> = {
   'Đèn trần': ['Đèn thả', 'Đèn chùm', 'Đèn ốp trần'],
   'Đèn tường': ['Đèn vách', 'Đèn soi gương'],
@@ -35,7 +23,6 @@ const CATEGORY_TREE: Record<string, string[]> = {
   'Phụ kiện đèn': ['Chụp đèn thay thế', 'Bóng đèn'],
 };
 
-/** "Bàn trà" -> "ban-tra" */
 const slugify = (text: string) =>
   text
     .normalize('NFD')
@@ -46,7 +33,6 @@ const slugify = (text: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-/** Tạo user nếu chưa có. Đã có thì chỉ bảo đảm role / status, KHÔNG đổi mật khẩu. */
 async function upsertUser(params: {
   email: string;
   password: string;
@@ -88,7 +74,7 @@ async function seedUsers() {
     console.log('  → Lưu lại mật khẩu này, nó chỉ hiện một lần. Nên đổi sau khi đăng nhập.');
   }
 
-  if (isProduction) return; // không tạo tài khoản mẫu trên production
+  if (isProduction) return;
 
   const customers = [
     { email: 'customer1@homedecor.local', fullName: 'Nguyễn Văn An' },
@@ -100,11 +86,6 @@ async function seedUsers() {
   }
 }
 
-/**
- * `--reset-catalog`: xóa cứng toàn bộ danh mục, bộ sưu tập, sản phẩm, variant và dữ liệu trỏ tới chúng
- * (review, item trong giỏ, wishlist) để seed lại catalog từ đầu. Đơn hàng giữ nguyên vì là snapshot.
- * Ảnh đã upload lên Cloudinary không bị xóa. Không chạy trên production.
- */
 async function resetCatalog() {
   if (isProduction) throw new Error('Không được reset catalog khi NODE_ENV=production');
 
@@ -133,7 +114,6 @@ async function seedCategories() {
       create: { name: parentName, slug: slugify(parentName), sortOrder: sortOrder++ },
       update: {},
     });
-    // Các danh mục con độc lập với nhau → upsert song song (slug khác nhau, không đụng index)
     await Promise.all(
       children.map((name, i) =>
         prisma.category.upsert({
@@ -148,10 +128,6 @@ async function seedCategories() {
   console.log(`• ${count} danh mục (${Object.keys(CATEGORY_TREE).length} danh mục cha)`);
 }
 
-/**
- * Bộ sưu tập chưa có (theo slug) thì tạo, đã có thì giữ nguyên (admin có thể đã sửa).
- * Trả về: tên sản phẩm → ID các bộ sưu tập chứa nó.
- */
 async function seedCollections() {
   const productNames = new Set(SEED_PRODUCTS.map((p) => p.name));
   const collectionIDsByProduct = new Map<string, string[]>();
@@ -191,11 +167,6 @@ async function seedCollections() {
   return collectionIDsByProduct;
 }
 
-/**
- * Sản phẩm mẫu. Bỏ qua sản phẩm đã có (theo slug) hoặc có SKU đã tồn tại,
- * nên chạy lại không bị trùng. minPrice / maxPrice / colors tính bằng đúng hàm của API.
- * Sản phẩm đã có vẫn được bổ sung bộ sưu tập còn thiếu (không gỡ bộ sưu tập admin đã gán thêm).
- */
 async function seedProducts(collectionIDsByProduct: Map<string, string[]>) {
   const categories = await prisma.category.findMany({ select: { id: true, slug: true } });
   const categoryIDBySlug = new Map(categories.map((c) => [c.slug, c.id]));
@@ -241,7 +212,7 @@ async function seedProducts(collectionIDsByProduct: Map<string, string[]>) {
             sortOrder: 0,
           },
         ],
-        soldCount: (index * 7) % 40, // để sắp xếp "bán chạy" có dữ liệu
+        soldCount: (index * 7) % 40,
         ...computeProductSummary(variants.map((v) => ({ ...v, isActive: true }))),
         variants: { create: variants },
       },
@@ -251,7 +222,6 @@ async function seedProducts(collectionIDsByProduct: Map<string, string[]>) {
   console.log(`• Sản phẩm: tạo mới ${created}, bỏ qua ${skipped} (đã có)`);
 }
 
-/** 5 vùng giao hàng (plan mục 13). Mỗi tỉnh thuộc đúng 1 vùng, kiểm tra trước khi ghi. */
 const SHIPPING_ZONES = [
   {
     name: 'Nội thành HCM',
@@ -280,7 +250,6 @@ const SHIPPING_ZONES = [
   },
 ];
 
-/** Vùng chưa có (theo tên) thì tạo, đã có thì giữ nguyên (admin có thể đã sửa phí). */
 async function seedShippingZones() {
   const all = SHIPPING_ZONES.flatMap((z) => z.provinces);
   const missing = PROVINCES.filter((p) => !all.includes(p));

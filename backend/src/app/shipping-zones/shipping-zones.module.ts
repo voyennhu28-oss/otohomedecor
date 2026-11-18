@@ -6,6 +6,6 @@ import { ShippingZonesService } from './shipping-zones.service';
 @Module({
   controllers: [ShippingZonesController, AdminShippingZonesController],
   providers: [ShippingZonesService],
-  exports: [ShippingZonesService], // checkout tìm vùng theo tỉnh
+  exports: [ShippingZonesService],
 })
 export class ShippingZonesModule {}

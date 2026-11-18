@@ -10,7 +10,6 @@ import { DashboardQueryDto } from './dto/dashboard.dto';
 export class AdminDashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
-  /** Doanh thu theo ngày, số đơn theo trạng thái, top sản phẩm, hàng sắp hết, việc cần xử lý. */
   @Get()
   getOverview(@Query() query: DashboardQueryDto) {
     return this.dashboardService.getOverview(query);

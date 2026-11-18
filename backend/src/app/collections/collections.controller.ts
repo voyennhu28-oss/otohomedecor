@@ -5,7 +5,6 @@ import { SlugDto } from '../../common/dto/param.dto';
 import { CollectionsService } from './collections.service';
 import { CollectionListQueryDto } from './dto/collection.dto';
 
-/** Sản phẩm của một bộ sưu tập: GET /products?collection=<slug> (dùng chung lọc / sắp xếp / phân trang). */
 @ApiTags('Collections')
 @Public()
 @Controller('collections')

@@ -6,12 +6,9 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
-  imports: [
-    ProductsModule, // wishlist đọc thông tin sản phẩm qua ProductsService
-    OrdersModule, // tổng chi tiêu của user (admin xem chi tiết user)
-  ],
+  imports: [ProductsModule, OrdersModule],
   controllers: [UsersController, AdminUsersController],
   providers: [UsersService],
-  exports: [UsersService], // auth dùng để tìm user khi đăng nhập
+  exports: [UsersService],
 })
 export class UsersModule {}

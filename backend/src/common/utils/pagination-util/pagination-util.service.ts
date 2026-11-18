@@ -27,7 +27,7 @@ export class PaginationUtilService extends Pagination {
   }) {
     this.itemPerPage = itemPerPage;
     this.totalItems = totalItems;
-    const skip = (page - 1) * itemPerPage; // vị trí bắt đầu lấy phần từ
+    const skip = (page - 1) * itemPerPage;
     this.skip = skip;
     const totalPages = Math.ceil(totalItems / itemPerPage);
     this.totalPages = totalPages;

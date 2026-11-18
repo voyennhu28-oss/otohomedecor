@@ -9,7 +9,6 @@ import {
 import { objectId, slugSchema } from '../../../common/dto/param.dto';
 import { variantInputSchema } from './variant-input.schema';
 
-/** Mảng không trùng phần tử (gửi ["oak","oak"] → lưu ["oak"]). */
 const uniqueArray = <T extends z.ZodTypeAny>(item: T, max: number) =>
   z
     .array(item)
@@ -18,12 +17,11 @@ const uniqueArray = <T extends z.ZodTypeAny>(item: T, max: number) =>
 
 const money = z.number().int().min(0);
 
-/** Các field của product mà admin được nhập (không gồm field tính tự động: minPrice, ratingAvg...). */
 const productFields = {
   name: z.string().trim().min(1).max(200),
   slug: slugSchema,
   shortDescription: z.string().trim().max(500),
-  description: z.string().max(20_000), // HTML / markdown
+  description: z.string().max(20_000),
   categoryID: objectId,
   collectionIDs: uniqueArray(objectId, 20),
   rooms: uniqueArray(z.enum(ROOMS), ROOMS.length),
@@ -31,18 +29,14 @@ const productFields = {
   materials: uniqueArray(z.enum(MATERIALS), MATERIALS.length),
   tags: uniqueArray(z.string().trim().min(1).max(30), 20),
   requiresAssembly: z.boolean(),
-  assemblyFee: money, // VND / sản phẩm
-  allowBackorder: z.boolean(), // hàng đặt làm: cho đặt khi hết kho
+  assemblyFee: money,
+  allowBackorder: z.boolean(),
   leadTimeDays: z.number().int().min(0).max(365),
   warrantyMonths: z.number().int().min(0).max(120),
   isFeatured: z.boolean(),
   status: z.nativeEnum(ProductStatus),
 };
 
-/**
- * POST /admin/products: tạo product kèm ÍT NHẤT 1 variant.
- * Không gửi slug thì tự sinh từ name.
- */
 export class CreateProductDto extends createZodDto(
   z
     .object({
@@ -62,7 +56,7 @@ export class CreateProductDto extends createZodDto(
       leadTimeDays: productFields.leadTimeDays.optional(),
       warrantyMonths: productFields.warrantyMonths.optional(),
       isFeatured: productFields.isFeatured.optional(),
-      status: productFields.status.optional(), // mặc định draft
+      status: productFields.status.optional(),
       variants: z
         .array(variantInputSchema)
         .min(1, 'Sản phẩm phải có ít nhất 1 variant')
@@ -70,7 +64,6 @@ export class CreateProductDto extends createZodDto(
     })
     .strict()
     .superRefine(({ variants }, ctx) => {
-      // SKU không được trùng nhau ngay trong cùng request
       const seen = new Set<string>();
       variants.forEach(({ sku }, index) => {
         if (seen.has(sku)) {
@@ -85,7 +78,6 @@ export class CreateProductDto extends createZodDto(
     }),
 ) {}
 
-/** POST /admin/collections/:collectionID/products */
 export class CollectionProductsDto extends createZodDto(
   z
     .object({
@@ -98,10 +90,6 @@ export class CollectionProductsDto extends createZodDto(
     .strict(),
 ) {}
 
-/**
- * PATCH /admin/products/:id: chỉ sửa thông tin product.
- * Variant sửa qua /admin/products/:id/variants. Đổi name KHÔNG tự đổi slug.
- */
 export class UpdateProductDto extends createZodDto(
   z
     .object({
@@ -110,7 +98,7 @@ export class UpdateProductDto extends createZodDto(
       shortDescription: productFields.shortDescription.nullable().optional(),
       description: productFields.description.nullable().optional(),
       categoryID: productFields.categoryID.optional(),
-      collectionIDs: productFields.collectionIDs.optional(), // gửi cả danh sách mới, [] = bỏ khỏi mọi bộ sưu tập
+      collectionIDs: productFields.collectionIDs.optional(),
       rooms: productFields.rooms.optional(),
       styles: productFields.styles.optional(),
       materials: productFields.materials.optional(),

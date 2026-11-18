@@ -12,7 +12,7 @@ jest.mock('node:fs/promises', () => ({
 const P = 'aaaaaaaaaaaaaaaaaaaaaaaa';
 const files = [
   { path: 'uploads/images/a.jpg', originalname: 'anh.jpg' },
-  { path: 'uploads/images/b.jpg', originalname: 'anh.jpg' }, // cùng tên gốc
+  { path: 'uploads/images/b.jpg', originalname: 'anh.jpg' },
 ];
 
 describe('ProductImagesService', () => {
@@ -40,7 +40,6 @@ describe('ProductImagesService', () => {
       appendImages: jest.fn((_id, images) => Promise.resolve(images)),
       removeImage: jest.fn().mockResolvedValue([]),
     };
-    // ImageUploadService thật (bọc FileStrategy giả): kiểm tra luôn phần dùng chung
     service = new ProductImagesService(
       products as unknown as ProductsService,
       new ImageUploadService(strategy as unknown as FileStrategy),

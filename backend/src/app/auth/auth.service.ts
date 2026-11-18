@@ -37,10 +37,6 @@ import { SignInDto, SignUpDto } from './dto/sign.dto';
 const hashToken = (token: string) =>
   createHash('sha256').update(token).digest('hex');
 
-/**
- * Hash giả (cùng cost với hash thật) để signIn luôn chạy bcrypt.compare kể cả khi email
- * không tồn tại → không dò được email đã đăng ký qua thời gian phản hồi.
- */
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
   randomBytes(16).toString('hex'),
   SALT_ROUNDS,
@@ -63,7 +59,6 @@ export class AuthService {
     config: ConfigService,
   ) {
     this.refreshSecret = config.getOrThrow<string>(JWTEnvs.JWT_REFRESH_SECRET);
-    // Link trong email trỏ về FE đầu tiên, chuẩn hóa giống CORS ("https://a.com/" → "https://a.com")
     this.feUrl =
       parseOrigins(config.get<string>('FE_URL'))[0] ?? 'http://localhost:3000';
   }
@@ -89,7 +84,6 @@ export class AuthService {
     if (user.status !== UserStatus.active) {
       throw new ForbiddenException('Tài khoản đã bị khóa');
     }
-    // Đã có đủ dữ liệu user: bỏ field nhạy cảm tại chỗ, không query lại DB
     return { user: omitSensitive(user), ...(await this.createTokens(user)) };
   }
 
@@ -115,7 +109,6 @@ export class AuthService {
     if (user.status !== UserStatus.active) {
       throw new ForbiddenException('Tài khoản đã bị khóa');
     }
-    // Đổi / reset mật khẩu hoặc bị khóa sẽ tăng tokenVersion → refresh token phát trước đó bị từ chối
     if ((payload.ver ?? 0) !== (user.tokenVersion ?? 0)) {
       throw new UnauthorizedException(
         'Phiên đăng nhập đã hết hiệu lực, vui lòng đăng nhập lại',
@@ -128,8 +121,6 @@ export class AuthService {
     const user = await this.usersService.findForAuth({ email });
 
     if (user?.status === UserStatus.active) {
-      // Không await: email có tồn tại hay không thì thời gian phản hồi như nhau,
-      // và gửi mail không chặn response. Lỗi được ghi log bên trong.
       void this.sendResetPasswordEmail(user);
     }
 
@@ -151,10 +142,6 @@ export class AuthService {
     return { message: 'Đặt lại mật khẩu thành công' };
   }
 
-  /**
-   * Đổi mật khẩu làm mọi refresh token cũ (mọi thiết bị) mất hiệu lực.
-   * Trả về cặp token mới để phiên hiện tại không bị đăng xuất.
-   */
   async changePassword(
     currentUser: UserInfo,
     { oldPassword, newPassword }: ChangePasswordDto,

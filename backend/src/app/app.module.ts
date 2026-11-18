@@ -34,7 +34,6 @@ import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
-    // nạp .env vào process.env; thiếu / sai biến bắt buộc thì dừng ngay lúc khởi động
     ConfigModule.forRoot({ isGlobal: true, validate }),
     RateLimitModule,
     ApiUtilModule,
@@ -46,30 +45,24 @@ import { UsersModule } from './users/users.module';
     ProductsModule,
     ProductVariantsModule,
     ProductImagesModule,
-    // Giai đoạn 3: mua hàng
     AddressesModule,
     CartsModule,
     ShippingZonesModule,
     PromotionsModule,
     OrdersModule,
     CheckoutModule,
-    // Giai đoạn 4: thanh toán (SePay) + cron
     ScheduleModule.forRoot(),
     PaymentsModule,
-    // Giai đoạn 5: review + dashboard
     ReviewsModule,
     DashboardModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    ZodExceptionFilter, // CatchEverythingFilter dùng để định dạng lỗi Zod
-    { provide: APP_FILTER, useClass: CatchEverythingFilter }, // định dạng mọi lỗi, map lỗi Prisma
-    { provide: APP_PIPE, useClass: ZodValidationPipe }, // validate mọi DTO tạo bằng createZodDto
-    // bọc response thành công thành { errors: null, data, message } (trừ file và @SkipFormatResponse)
+    ZodExceptionFilter,
+    { provide: APP_FILTER, useClass: CatchEverythingFilter },
+    { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_INTERCEPTOR, useClass: FormatResponseInterceptor },
-    // Global guard chạy theo thứ tự khai báo:
-    // ThrottlerGuard chặn spam trước → AuthGuard gắn req.user → AdminGuard đọc req.user
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: AdminGuard },

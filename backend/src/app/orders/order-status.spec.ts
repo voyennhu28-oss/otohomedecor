@@ -80,7 +80,6 @@ describe('order-status', () => {
 
 describe('generateOrderNumber', () => {
   it('HD + ngày theo giờ Việt Nam + 6 ký tự dễ đọc', () => {
-    // 2026-11-13 18:30 UTC = 2026-11-14 01:30 giờ VN
     const number = generateOrderNumber(new Date('2026-11-13T18:30:00Z'));
     expect(number).toMatch(/^HD261114-/);
     expect(number).toMatch(ORDER_NUMBER_REGEX);
@@ -104,7 +103,6 @@ describe('mã thanh toán SePay', () => {
 
   it('findOrderNumberInText: đọc lại mã đơn từ code / nội dung chuyển khoản', () => {
     expect(findOrderNumberInText('HD2611137K3M9Q')).toBe('HD261113-7K3M9Q');
-    // ngân hàng thêm tiền tố, khách gõ thường / có khoảng trắng / còn giữ dấu "-"
     expect(
       findOrderNumberInText('MBVCB.123456.hd2611137k3m9q thanh toan'),
     ).toBe('HD261113-7K3M9Q');
@@ -115,7 +113,7 @@ describe('mã thanh toán SePay', () => {
   it('findOrderNumberInText: không có mã hợp lệ → null', () => {
     expect(findOrderNumberInText(null)).toBeNull();
     expect(findOrderNumberInText('chuyen tien an trua')).toBeNull();
-    expect(findOrderNumberInText('HD2611137K3M90')).toBeNull(); // số 0 không có trong bảng ký tự
+    expect(findOrderNumberInText('HD2611137K3M90')).toBeNull();
   });
 
   it('khứ hồi: mọi mã đơn sinh ra đều đọc lại đúng từ mã thanh toán', () => {

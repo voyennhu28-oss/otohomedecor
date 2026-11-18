@@ -7,9 +7,8 @@ import { CreateUserDto } from './create-user.dto';
 import { UpdateMeDto } from './update-me.dto';
 import { passwordSchema } from './user-fields';
 
-/** 37 chữ "ê" = 37 ký tự nhưng 74 byte UTF-8. */
 const TOO_LONG_BYTES = 'ê'.repeat(37);
-const MAX_BYTES = 'ê'.repeat(36); // 72 byte
+const MAX_BYTES = 'ê'.repeat(36);
 
 describe('passwordSchema (BUG-05: bcrypt chỉ dùng 72 byte đầu)', () => {
   it('nhận mật khẩu đúng 72 byte, từ chối 73+ byte dù chưa tới 72 ký tự', () => {

@@ -1,7 +1,3 @@
-/**
- * Bộ sưu tập mẫu cho `npm run db:seed`. `products` là tên sản phẩm trong SEED_PRODUCTS
- * (sai tên thì seed báo lỗi). Một sản phẩm nằm được trong nhiều bộ sưu tập.
- */
 const DAY = 24 * 60 * 60 * 1000;
 
 export interface SeedCollection {
@@ -9,7 +5,6 @@ export interface SeedCollection {
   slug: string;
   description: string;
   isFeatured?: boolean;
-  /** Số ngày tính từ lúc seed; bỏ trống = không giới hạn */
   startsInDays?: number;
   endsInDays?: number;
   products: string[];

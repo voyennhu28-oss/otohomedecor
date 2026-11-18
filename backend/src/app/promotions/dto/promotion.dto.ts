@@ -9,7 +9,6 @@ import {
 } from '../../../common/dto/query.dto';
 import { getRuleViolation } from '../promotion.util';
 
-/** "welcome10" → "WELCOME10" */
 export const promotionCodeSchema = z
   .string()
   .trim()
@@ -21,17 +20,16 @@ const fields = {
   name: z.string().trim().min(1).max(100),
   description: z.string().trim().max(500).nullable(),
   type: z.nativeEnum(PromotionType),
-  value: z.number().int().min(0), // % (1–100) hoặc số tiền VND; free_shipping bỏ qua
-  maxDiscount: z.number().int().min(1).nullable(), // trần tiền giảm, chỉ cho loại %
+  value: z.number().int().min(0),
+  maxDiscount: z.number().int().min(1).nullable(),
   minOrderValue: z.number().int().min(0),
-  usageLimit: z.number().int().min(1).nullable(), // tổng lượt dùng, null = không giới hạn
+  usageLimit: z.number().int().min(1).nullable(),
   perUserLimit: z.number().int().min(1).nullable(),
   startsAt: z.coerce.date(),
   endsAt: z.coerce.date().nullable(),
   isActive: z.boolean(),
 };
 
-/** POST /admin/promotions */
 export class CreatePromotionDto extends createZodDto(
   z
     .object({
@@ -59,15 +57,13 @@ export class CreatePromotionDto extends createZodDto(
     }),
 ) {}
 
-/** PATCH /admin/promotions/:id. Rule giữa các field kiểm tra trong service (cần giá trị hiện tại). */
 export class UpdatePromotionDto extends createZodDto(
   z.object(fields).partial().strict(),
 ) {}
 
-/** GET /admin/promotions?q=&isActive=&page=&itemPerPage= */
 export class PromotionListQueryDto extends createZodDto(
   z.object({
-    q: searchQuery.optional(), // tìm theo mã hoặc tên
+    q: searchQuery.optional(),
     isActive: booleanQuery.optional(),
     page: pageQuery,
     itemPerPage: itemPerPageQuery(100, 20),

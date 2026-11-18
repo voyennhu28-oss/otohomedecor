@@ -19,7 +19,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 export const SALT_ROUNDS = 10;
 
-/** Không bao giờ trả các field này ra response. */
 const SENSITIVE_FIELDS = {
   password: true,
   resetPasswordToken: true,
@@ -27,7 +26,6 @@ const SENSITIVE_FIELDS = {
   tokenVersion: true,
 } satisfies Prisma.UserOmit;
 
-/** Bỏ các field nhạy cảm khỏi user đã đọc kèm password (vd từ `findForAuth`), không cần query lại. */
 export const omitSensitive = <
   T extends Record<keyof typeof SENSITIVE_FIELDS, unknown>,
 >({
@@ -38,12 +36,10 @@ export const omitSensitive = <
   ...rest
 }: T): Omit<T, keyof typeof SENSITIVE_FIELDS> => rest;
 
-/** Tăng tokenVersion → mọi refresh token đã phát mất hiệu lực (field thiếu = 0). */
 const nextTokenVersion = (current?: number | null) => (current ?? 0) + 1;
 
 const userNotFound = () => new NotFoundException('Không tìm thấy tài khoản');
 
-/** `update` không khớp bản ghi nào (không tồn tại / đã soft delete) → 404 với câu thông báo riêng. */
 const rethrowNotFound = (error: unknown): never => {
   if (
     error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -64,8 +60,6 @@ export class UsersService extends PrismaBaseService<'user'> {
     super(prismaService, 'user');
   }
 
-  // ───────────── /me ─────────────
-
   async getMe(userID: string) {
     const user = await this.extended.findUnique({
       where: { id: userID },
@@ -75,7 +69,6 @@ export class UsersService extends PrismaBaseService<'user'> {
     return user;
   }
 
-  /** 1 lệnh: `where` kèm NOT_DELETED nên tài khoản đã xóa không khớp → P2025 → 404. */
   updateMe(userID: string, dto: UpdateMeDto) {
     return this.extended
       .update({
@@ -86,15 +79,12 @@ export class UsersService extends PrismaBaseService<'user'> {
       .catch(rethrowNotFound);
   }
 
-  // ───────────── /me/wishlist ─────────────
-
   async getWishlist(userID: string) {
     const ids = await this.getWishlistIDs(userID);
     if (!ids.length) return [];
 
     const products = await this.productsService.findCardsByIDs(ids);
 
-    // Sản phẩm thêm sau hiện trước. Sản phẩm đã ẩn / xóa thì không hiện (vẫn giữ ID trong mảng)
     const byID = new Map(products.map((p) => [p.id, p]));
     return [...ids]
       .reverse()
@@ -105,9 +95,6 @@ export class UsersService extends PrismaBaseService<'user'> {
   async addToWishlist(userID: string, productID: string) {
     await this.productsService.ensureActive(productID);
 
-    // Atomic: chỉ push khi chưa có, nên gọi 2 lần cũng không bị trùng.
-    // Không cần kiểm tra user trước: user đã xóa không khớp NOT_DELETED (không ghi gì),
-    // và getWishlistIDs ngay sau đó ném 404.
     await this.extended.updateMany({
       where: {
         id: userID,
@@ -120,9 +107,6 @@ export class UsersService extends PrismaBaseService<'user'> {
   }
 
   async removeFromWishlist(userID: string, productID: string) {
-    // Prisma + MongoDB không có `pull` cho mảng scalar, nên phải đọc rồi ghi lại cả mảng.
-    // Chạy trong transaction: nếu request khác (vd thêm sản phẩm) ghi chen vào giữa thì
-    // transaction bị xung đột (P2034) và chạy lại với dữ liệu mới, không ghi đè mất.
     const wishlistProductIDs = await withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
         const user = await tx.user.findFirst({
@@ -165,7 +149,7 @@ export class UsersService extends PrismaBaseService<'user'> {
         skip: (page - 1) * itemPerPage,
         take: itemPerPage,
       }),
-      this.extended.count({ where }), // cùng where với findMany
+      this.extended.count({ where }),
     ]);
 
     return {
@@ -176,7 +160,6 @@ export class UsersService extends PrismaBaseService<'user'> {
   }
 
   async findOne(id: string) {
-    // Chạy song song: tổng chi tiêu không phụ thuộc kết quả đọc user (user không có thì bỏ đi)
     const [user, totalSpent] = await Promise.all([
       this.extended.findUnique({
         where: { id },
@@ -194,7 +177,6 @@ export class UsersService extends PrismaBaseService<'user'> {
   }
 
   async create(dto: CreateUserDto) {
-    // Dùng client gốc để thấy cả tài khoản đã soft delete (email vẫn bị giữ bởi @unique)
     const existing = await this.client.findUnique({
       where: { email: dto.email },
       select: { deletedAt: true },
@@ -229,7 +211,6 @@ export class UsersService extends PrismaBaseService<'user'> {
     }
 
     const current = await this.ensureExists(id);
-    // Khóa tài khoản: thu hồi luôn refresh token, để mở khóa sau này token cũ không dùng lại được
     const isLocking =
       dto.status === UserStatus.inactive &&
       current.status !== UserStatus.inactive;
@@ -248,15 +229,11 @@ export class UsersService extends PrismaBaseService<'user'> {
         'Không thể tự xóa tài khoản của chính mình',
       );
     }
-    // 1 lệnh, atomic: chỉ xóa khi chưa bị xóa; không khớp bản ghi nào → 404
     const { count } = await this.extended.softDelete({ id, ...NOT_DELETED });
     if (!count) throw userNotFound();
     return { id };
   }
 
-  // ───────────── dùng cho auth ─────────────
-
-  /** User KÈM password để auth so sánh. Không bao giờ trả kết quả này ra response. */
   findForAuth(where: { id: string } | { email: string }) {
     return this.extended.findUnique({ where });
   }
@@ -268,7 +245,6 @@ export class UsersService extends PrismaBaseService<'user'> {
     });
   }
 
-  /** Tìm user có token reset còn hạn (token đã được hash). */
   findByResetPasswordToken(tokenHash: string) {
     return this.extended.findFirst({
       where: {
@@ -280,10 +256,6 @@ export class UsersService extends PrismaBaseService<'user'> {
     });
   }
 
-  /**
-   * Hash mật khẩu mới, vô hiệu hóa token reset (nếu có) và mọi refresh token đã phát.
-   * Trả về tokenVersion mới để auth cấp token mới cho phiên hiện tại.
-   */
   async updatePassword(
     user: { id: string; tokenVersion?: number | null },
     plainPassword: string,
@@ -301,9 +273,6 @@ export class UsersService extends PrismaBaseService<'user'> {
     return tokenVersion;
   }
 
-  // ───────────── helpers ─────────────
-
-  /** Ném 404 nếu user không tồn tại hoặc đã bị soft delete. */
   private async ensureExists(id: string) {
     const user = await this.extended.findUnique({
       where: { id },

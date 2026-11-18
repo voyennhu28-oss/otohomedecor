@@ -9,14 +9,9 @@ export interface CheckoutLine {
   unitPrice: number;
   lineTotal: number;
   assemblyFee: number;
-  /** true: có sẵn hàng → trừ kho. false: hàng đặt làm không đủ kho → không trừ, cộng leadTimeDays. */
   reserveStock: boolean;
 }
 
-/**
- * Dựng các dòng của đơn từ giỏ hàng + dữ liệu variant ĐỌC TỪ DB (giá luôn lấy từ DB).
- * Có dòng không mua được thì báo lỗi cho cả đơn để khách sửa giỏ trước.
- */
 export const buildCheckoutLines = (
   items: CartItem[],
   variants: SaleVariant[],

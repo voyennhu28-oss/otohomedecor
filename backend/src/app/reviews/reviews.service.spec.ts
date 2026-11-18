@@ -22,7 +22,7 @@ const user: UserInfo = {
   role: Role.customer,
 };
 const P = 'aaaaaaaaaaaaaaaaaaaaaaaa';
-const O1 = 'bbbbbbbbbbbbbbbbbbbbbbbb'; // đơn giao gần nhất
+const O1 = 'bbbbbbbbbbbbbbbbbbbbbbbb';
 const O2 = 'cccccccccccccccccccccccc';
 
 describe('review-rating', () => {
@@ -92,7 +92,6 @@ describe('ReviewsService', () => {
     );
   });
 
-  /** ratingAvg / ratingCount được tính lại trong cùng transaction, chỉ từ review đã duyệt. */
   const expectRatingRecalculated = () => {
     expect(review.aggregate).toHaveBeenCalledWith({
       where: { productID: P, status: ReviewStatus.approved },
@@ -137,7 +136,7 @@ describe('ReviewsService', () => {
         list: [{ id: 'r1' }],
         totalItems: 11,
         totalPages: 2,
-        stats: { average: 3.9, count: 11, distribution: { 5: 8, 1: 3 } }, // (8×5 + 3×1) / 11 = 3.909
+        stats: { average: 3.9, count: 11, distribution: { 5: 8, 1: 3 } },
       });
     });
 
@@ -171,7 +170,7 @@ describe('ReviewsService', () => {
 
   describe('create', () => {
     it('tự chọn đơn đã giao gần nhất chưa đánh giá; tính lại điểm trong cùng transaction', async () => {
-      review.findMany.mockResolvedValue([{ orderID: O1 }]); // đơn O1 đã đánh giá
+      review.findMany.mockResolvedValue([{ orderID: O1 }]);
 
       await service.create(user, P, { rating: 5, comment: 'Đẹp' });
 

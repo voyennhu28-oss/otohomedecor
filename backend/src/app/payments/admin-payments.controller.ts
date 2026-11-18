@@ -10,10 +10,6 @@ import { PaymentsService } from './payments.service';
 export class AdminPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  /**
-   * Giao dịch SePay đã nhận. `?status=failed`: tiền đã vào nhưng không tự áp được vào đơn
-   * (sai số tiền, đơn đã hủy / đã trả) → đối soát, hoàn tiền hoặc POST /admin/orders/:id/mark-paid.
-   */
   @Get()
   findList(@Query() query: PaymentListQueryDto) {
     return this.paymentsService.findList(query);

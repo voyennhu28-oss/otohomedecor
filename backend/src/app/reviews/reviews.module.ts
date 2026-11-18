@@ -9,11 +9,7 @@ import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 
 @Module({
-  imports: [
-    ProductsModule, // kiểm tra sản phẩm, lưu ratingAvg / ratingCount
-    OrdersModule, // đơn đã giao chứa sản phẩm (điều kiện viết review)
-    FileUtilModule, // multer lưu file tạm + upload Cloudinary (ảnh review)
-  ],
+  imports: [ProductsModule, OrdersModule, FileUtilModule],
   controllers: [
     ReviewsController,
     ReviewImagesController,

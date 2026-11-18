@@ -12,7 +12,6 @@ export class ProductImagesService {
     private readonly imageUpload: ImageUploadService,
   ) {}
 
-  /** Upload lên Cloudinary rồi thêm vào cuối danh sách ảnh của product (tất cả hoặc không). */
   upload(productID: string, files: UploadedImage[]) {
     return this.imageUpload.upload(files, {
       publicIDPrefix: `hd-product-${productID}`,
@@ -21,7 +20,6 @@ export class ProductImagesService {
     });
   }
 
-  /** Bỏ ảnh khỏi product, rồi xóa trên Cloudinary (lỗi Cloudinary chỉ ghi log, không chặn). */
   async remove(productID: string, publicID: string) {
     const images = await this.productsService.removeImage(productID, publicID);
     this.imageUpload.destroyQuietly([publicID]);

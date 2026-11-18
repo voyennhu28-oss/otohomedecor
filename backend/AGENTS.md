@@ -66,6 +66,10 @@ src/
 
 ### Quy tắc bắt buộc
 
+**Comment**
+- Không viết comment giải thích trong code (`src/`, `test/`, `prisma/`, kể cả `schema.prisma`). Ghi chú / lý do thiết kế đặt trong [`docs/code-notes/`](docs/code-notes/README.md), mỗi module một file. Chỉ giữ directive có tác dụng (`eslint-disable...`, `@ts-...`).
+- Đọc ghi chú của module trong `docs/code-notes/` trước khi sửa module đó.
+
 **Dữ liệu và schema**
 - Khóa ngoại đặt tên theo kiểu `xxxID` (`userID`, `productID`, `variantID`...). `removeFieldsAndRelations` trong `init.ts` có hard-code `userID`.
 - Tiền luôn là `Int` (VND). Prisma + MongoDB không có `Decimal`.

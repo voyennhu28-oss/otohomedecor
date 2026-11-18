@@ -35,7 +35,6 @@ describe('ProductVariantsService', () => {
     recalculateSummary: jest.Mock;
   };
 
-  /** recalculateSummary được gọi trong transaction (tx = mock prisma), với ensureSelling tương ứng. */
   const expectRecalculated = (ensureSelling: boolean) =>
     expect(products.recalculateSummary).toHaveBeenCalledWith(P, {
       tx: prisma,
@@ -72,7 +71,7 @@ describe('ProductVariantsService', () => {
     };
 
     it('tạo variant rồi tính lại giá / màu của product trong cùng transaction', async () => {
-      variant.findMany.mockResolvedValue([]); // SKU chưa có
+      variant.findMany.mockResolvedValue([]);
       variant.create.mockResolvedValue({ id: 'new' });
 
       await expect(service.create(P, dto)).resolves.toEqual({ id: 'new' });
@@ -169,8 +168,8 @@ describe('ProductVariantsService', () => {
         { code: 'P2034', clientVersion: 't' },
       );
       products.recalculateSummary
-        .mockRejectedValueOnce(conflict) // lần 1: document product đã bị transaction kia ghi
-        .mockRejectedValueOnce(new ConflictException()); // lần 2: đọc lại thấy không còn variant đang bán
+        .mockRejectedValueOnce(conflict)
+        .mockRejectedValueOnce(new ConflictException());
 
       await expect(
         service.update(P, V, { isActive: false }),

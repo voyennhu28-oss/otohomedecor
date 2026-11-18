@@ -31,7 +31,6 @@ const ORDER_BY: Prisma.CategoryOrderByWithRelationInput[] = [
   { name: 'asc' },
 ];
 
-/** Chỉ đếm sản phẩm / danh mục con chưa bị xóa. */
 const COUNT_NOT_DELETED = {
   _count: {
     select: {
@@ -50,14 +49,10 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     super(prismaService, 'category');
   }
 
-  // ───────────── public ─────────────
-
-  /** Cây danh mục đang hiển thị. Danh mục con của danh mục đang ẩn cũng bị ẩn. */
   async getPublicTree() {
     return buildTree(await this.findActive());
   }
 
-  /** Chi tiết + breadcrumb + danh mục con. 404 nếu nó hoặc một tổ tiên đang ẩn. */
   async getPublicBySlug(slug: string) {
     const active = await this.findActive();
     const byID = new Map(active.map((c) => [c.id, c]));
@@ -78,10 +73,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     };
   }
 
-  /**
-   * ID của danh mục (theo slug) và mọi danh mục con cháu đang hiển thị.
-   * Products dùng để lọc "sản phẩm thuộc danh mục, gồm cả danh mục con" (plan mục 8).
-   */
   async getActiveIDsWithDescendants(slug: string): Promise<string[]> {
     const active = await this.findActive();
     const byID = new Map(active.map((c) => [c.id, c]));
@@ -90,9 +81,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     return getDescendantIDs(root.id, active);
   }
 
-  // ───────────── admin ─────────────
-
-  /** Cây đầy đủ (cả danh mục đang ẩn), kèm số sản phẩm. */
   async getAdminTree() {
     const all = await this.extended.findMany({
       orderBy: ORDER_BY,
@@ -162,8 +150,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
       );
     }
 
-    // Soft delete, đồng thời đổi slug để giải phóng slug cũ (slug là @unique,
-    // index vẫn tính cả bản ghi đã xóa) → tạo lại danh mục cùng tên vẫn được.
     await this.extended.update({
       where: { id },
       data: {
@@ -174,7 +160,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     return { id };
   }
 
-  /** slug → id của các danh mục chưa xóa (mọi trạng thái). Dùng cho import Excel sản phẩm. */
   async findIDsBySlugs(slugs: string[]): Promise<Map<string, string>> {
     const categories = await this.extended.findMany({
       where: { slug: { in: slugs } },
@@ -183,7 +168,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     return new Map(categories.map((c) => [c.slug, c.id]));
   }
 
-  /** Ném 404 nếu danh mục không tồn tại hoặc đã bị xóa. Products dùng khi gán categoryID. */
   async ensureExists(id: string) {
     const category = await this.extended.findUnique({
       where: { id },
@@ -191,8 +175,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     });
     if (!category) throw new NotFoundException('Không tìm thấy danh mục');
   }
-
-  // ───────────── helpers ─────────────
 
   private findActive() {
     return this.extended.findMany({
@@ -202,10 +184,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     });
   }
 
-  /**
-   * Cha phải tồn tại, không phải chính nó, không phải con cháu của nó (tránh vòng lặp).
-   * `id` = null khi tạo mới.
-   */
   private async assertValidParent(id: string | null, parentID: string) {
     if (id === parentID) {
       throw new BadRequestException(
@@ -225,7 +203,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     }
   }
 
-  /** Dùng client gốc vì index @unique của slug tính cả bản ghi đã xóa. */
   private async assertSlugAvailable(slug: string, exceptID?: string) {
     const existed = await this.client.findUnique({
       where: { slug },
@@ -237,7 +214,6 @@ export class CategoriesService extends PrismaBaseService<'category'> {
     return slug;
   }
 
-  /** "Bàn trà" → "ban-tra"; đã có thì "ban-tra-2", "ban-tra-3"... */
   private async generateUniqueSlug(name: string) {
     const base = this.stringUtilService.toSlug(name) || 'danh-muc';
     const existing = await this.client.findMany({

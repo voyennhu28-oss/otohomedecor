@@ -80,7 +80,7 @@ describe('ReviewImagesService', () => {
         where: { id: R },
         data: { images: { set: images } },
       });
-      expect(fs.unlink).toHaveBeenCalledTimes(2); // luôn xóa file tạm
+      expect(fs.unlink).toHaveBeenCalledTimes(2);
     });
 
     it(`vượt ${MAX_IMAGES_PER_REVIEW} ảnh / review → 400 TRƯỚC khi upload (không tốn Cloudinary)`, async () => {
@@ -114,10 +114,10 @@ describe('ReviewImagesService', () => {
     it('2 lần upload song song: lúc lưu (trong transaction) đã đủ ảnh → 400 và xóa ảnh vừa upload', async () => {
       const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
       review.findFirst
-        .mockResolvedValueOnce({ images: [image('a')] }) // kiểm tra trước: còn chỗ
+        .mockResolvedValueOnce({ images: [image('a')] })
         .mockResolvedValueOnce({
           images: [image('a'), image('b'), image('c'), image('d')],
-        }); // lúc lưu: request kia đã thêm
+        });
 
       await expect(service.upload('u1', R, files(2))).rejects.toBeInstanceOf(
         BadRequestException,

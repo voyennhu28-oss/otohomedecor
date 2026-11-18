@@ -1,7 +1,3 @@
-/**
- * Webhook SePay qua HTTP thật: guard xác thực (HMAC-SHA256 hoặc API key) chạy TRƯỚC validate body,
- * response đúng `{"success":true}` (SePay coi body khác là thất bại), lỗi hệ thống → 5xx để SePay gửi lại.
- */
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_PIPE } from '@nestjs/core';
@@ -25,9 +21,8 @@ const body = {
   content: 'HD2611137K3M9Q',
   transferType: 'in',
   transferAmount: 100_000,
-  newFieldFromSepay: 'x', // field mới SePay thêm sau này không làm webhook lỗi
+  newFieldFromSepay: 'x',
 };
-// Body gốc có dấu tiếng Việt + khoảng trắng "lạ": parse rồi stringify lại sẽ ra chuỗi khác → chữ ký sai
 const RAW_BODY =
   '{"id": 2,  "content":"Thanh toán đơn HD2611137K3M9Q", "transferType":"in", "transferAmount":100000}';
 
@@ -51,7 +46,6 @@ describe('SepayWebhookController', () => {
         SepayWebhookGuard,
       ],
     }).compile();
-    // rawBody giống main.ts (NEST_APP_OPTIONS), parser JSON mặc định cũng giữ body gốc
     const app = moduleRef.createNestApplication({
       rawBody: NEST_APP_OPTIONS.rawBody,
     });
@@ -145,7 +139,7 @@ describe('SepayWebhookController', () => {
         'X-SePay-Signature': sign(RAW_BODY, ts),
       });
       expect(res.status).toBe(401);
-      expect(res.body.message).toMatch(/hết hạn/); // app test không có CatchEverythingFilter → format mặc định
+      expect(res.body.message).toMatch(/hết hạn/);
     });
 
     it('chữ ký đúng nhưng body sai schema → 400', async () => {

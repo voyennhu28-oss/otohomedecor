@@ -13,7 +13,6 @@ import {
   pageQuery as page,
 } from '../../../common/dto/query.dto';
 
-/** "oak,rattan" → ["oak", "rattan"], mỗi giá trị phải nằm trong `values`. */
 const commaList = <T extends readonly [string, ...string[]]>(values: T) =>
   z
     .string()
@@ -36,24 +35,19 @@ export const PRODUCT_SORTS = [
 ] as const;
 export type ProductSort = (typeof PRODUCT_SORTS)[number];
 
-/**
- * GET /products (plan mục 8). Ví dụ:
- * ?category=sofa&room=living-room&style=japandi&material=oak,rattan&color=Xám
- * &minPrice=1000000&maxPrice=20000000&inStock=true&q=sofa&sort=price_asc&page=1&itemPerPage=20
- */
 export class ProductListQueryDto extends createZodDto(
   z
     .object({
-      category: slugSchema.optional(), // gồm cả danh mục con
-      collection: slugSchema.optional(), // slug bộ sưu tập đang hiển thị
+      category: slugSchema.optional(),
+      collection: slugSchema.optional(),
       room: z.enum(ROOMS).optional(),
       style: z.enum(STYLES).optional(),
-      material: commaList(MATERIALS).optional(), // có ít nhất 1 chất liệu trong danh sách
-      color: z.string().trim().min(1).max(50).optional(), // lấy từ GET /products/filters
+      material: commaList(MATERIALS).optional(),
+      color: z.string().trim().min(1).max(50).optional(),
       minPrice: price.optional(),
       maxPrice: price.optional(),
       inStock: booleanQuery.optional(),
-      q: z.string().trim().min(1).max(100).optional(), // tìm theo tên
+      q: z.string().trim().min(1).max(100).optional(),
       sort: z.enum(PRODUCT_SORTS).default('newest'),
       page,
       itemPerPage: itemPerPage(60, 20),
@@ -70,12 +64,10 @@ export class ProductListQueryDto extends createZodDto(
     ),
 ) {}
 
-/** GET /products/featured?limit=8 và GET /products/:slug/related?limit=8 */
 export class ProductLimitQueryDto extends createZodDto(
   z.object({ limit: z.coerce.number().int().min(1).max(24).default(8) }),
 ) {}
 
-/** GET /products/filters?category=den-tha&collection=ha-long */
 export class ProductFiltersQueryDto extends createZodDto(
   z.object({
     category: slugSchema.optional(),
@@ -83,7 +75,6 @@ export class ProductFiltersQueryDto extends createZodDto(
   }),
 ) {}
 
-/** GET /admin/products: thấy cả sản phẩm draft / inactive. q tìm theo tên hoặc SKU. */
 export class AdminProductListQueryDto extends createZodDto(
   z.object({
     q: z.string().trim().min(1).max(100).optional(),

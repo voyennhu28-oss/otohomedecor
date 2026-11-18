@@ -5,12 +5,6 @@ const vnd = (amount: number) =>
 
 export type DiscountRule = Pick<Promotion, 'type' | 'value' | 'maxDiscount'>;
 
-/**
- * Số tiền giảm (VND, plan mục 10):
- *  - percentage: subtotal × value%, làm tròn xuống, tối đa maxDiscount
- *  - fixed_amount: value, không vượt quá subtotal
- *  - free_shipping: bằng phí ship
- */
 export const computeDiscount = (
   promo: DiscountRule,
   subtotal: number,
@@ -40,10 +34,6 @@ export type UsageRule = Pick<
   | 'perUserLimit'
 >;
 
-/**
- * Lý do mã KHÔNG dùng được cho đơn này, hoặc null nếu dùng được.
- * @param usedByUser số đơn chưa hủy của user đã dùng mã này
- */
 export const getUnusableReason = (
   promo: UsageRule,
   {
@@ -78,7 +68,6 @@ export type PromotionRules = Pick<
   | 'usedCount'
 >;
 
-/** Lỗi cấu hình mã (admin nhập), hoặc null nếu hợp lệ. Dùng cho cả tạo mới và sửa. */
 export const getRuleViolation = (promo: PromotionRules): string | null => {
   if (
     promo.type === PromotionType.percentage &&
@@ -97,10 +86,6 @@ export const getRuleViolation = (promo: PromotionRules): string | null => {
   return null;
 };
 
-/**
- * Chuẩn hóa field không áp dụng cho loại mã: free_shipping không có value,
- * chỉ loại percentage mới có maxDiscount.
- */
 export const normalizeRules = <
   T extends Partial<Pick<Promotion, 'type' | 'value' | 'maxDiscount'>>,
 >(

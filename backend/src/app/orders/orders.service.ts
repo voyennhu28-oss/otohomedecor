@@ -39,10 +39,8 @@ import {
 } from './order-status';
 
 export const MAX_EXPORT_ORDERS = 5000;
-/** Số đơn quá hạn xử lý mỗi lần cron chạy (còn lại để lần sau). */
 const EXPIRE_BATCH_SIZE = 100;
 
-/** Field của đơn cần để đối chiếu 1 giao dịch chuyển khoản. */
 const PAYMENT_ORDER_SELECT = {
   id: true,
   orderNumber: true,
@@ -62,11 +60,9 @@ interface TransitionOptions {
   note?: string;
 
   allowedFrom?: readonly OrderStatus[];
-  /** Chỉ chuyển khi đơn CHƯA trả tiền (cron hủy đơn quá hạn: tránh hủy đơn vừa nhận tiền). */
   requireUnpaid?: boolean;
 }
 
-/** Thông tin hiển thị ở danh sách "Đơn của tôi". */
 const MY_ORDER_LIST_SELECT = {
   id: true,
   orderNumber: true,
@@ -88,7 +84,6 @@ export type NewOrder = Omit<
   'orderNumber' | 'statusHistory' | 'status' | 'paymentStatus'
 >;
 
-/** Bộ lọc admin → where của Prisma. Lọc theo email qua quan hệ user. */
 export const buildAdminOrderWhere = (
   f: AdminOrderFilter,
 ): Prisma.OrderWhereInput => ({
@@ -126,8 +121,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     );
   }
 
-  // ───────────── đơn của tôi ─────────────
-
   async findMine(
     userID: string,
     { status, ...pagination }: MyOrderListQueryDto,
@@ -145,7 +138,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return toPage(list, totalItems, pagination.itemPerPage);
   }
 
-  /** Chi tiết + lịch sử trạng thái. Đơn của người khác cũng trả 404 (không lộ mã đơn tồn tại). */
   async findMineByNumber(userID: string, orderNumber: string) {
     const order = await this.extended.findFirst({
       where: { orderNumber, userID },
@@ -154,7 +146,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return order;
   }
 
-  /** Customer tự hủy: chỉ khi đơn còn "Chờ xác nhận". */
   async cancelMine(user: UserInfo, orderNumber: string, reason?: string) {
     const { id } = await this.findMineByNumber(user.userID, orderNumber);
     return this.transition(id, OrderStatus.cancelled, {
@@ -163,8 +154,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
       allowedFrom: CUSTOMER_CANCELLABLE,
     });
   }
-
-  // ───────────── admin ─────────────
 
   async findAdminList({
     page,
@@ -204,10 +193,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return this.transition(id, status, { changedBy: admin.userEmail, note });
   }
 
-  /**
-   * Admin xác nhận đã nhận tiền thủ công: khách chuyển sai nội dung nên SePay không khớp được,
-   * hoặc chuyển thành nhiều lần. Đơn chờ xác nhận thì chuyển luôn sang "Đã xác nhận".
-   */
   async markPaidManually(admin: UserInfo, id: string, note?: string) {
     const { order, confirmed } = await withRetry(() =>
       this.prismaService.$transaction(async (tx) => {
@@ -254,15 +239,12 @@ export class OrdersService extends PrismaBaseService<'order'> {
         {
           sheetName: 'Orders',
           data: toOrderExcelRows(orders),
-          fieldsExtend: [...ORDER_EXCEL_COLUMNS], // không có đơn vẫn có header
+          fieldsExtend: [...ORDER_EXCEL_COLUMNS],
         },
       ],
     });
   }
 
-  // ───────────── dùng cho checkout / users (nhận tx) ─────────────
-
-  /** Tạo đơn trong transaction của checkout: sinh mã đơn và dòng đầu tiên của lịch sử. */
   createInTx(tx: Prisma.TransactionClient, data: NewOrder, changedBy: string) {
     return tx.order.create({
       data: {
@@ -277,7 +259,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     });
   }
 
-  /** Số đơn chưa hủy của user đã dùng mã giảm giá (kiểm tra perUserLimit). */
   countPromotionUsage(
     userID: string,
     promotionID: string,
@@ -288,7 +269,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     });
   }
 
-  /** Đơn để đối chiếu giao dịch chuyển khoản (payments dùng, trong transaction của webhook). */
   findForPayment(
     orderNumber: string,
     db: Prisma.TransactionClient = this.prismaService,
@@ -299,11 +279,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     });
   }
 
-  /**
-   * Đánh dấu đã trả tiền TRONG transaction của bên gọi (webhook SePay / admin xác nhận tay).
-   * Đơn đang chờ xác nhận thì chuyển luôn sang "Đã xác nhận" và ghi lịch sử.
-   * Ghi vào document đơn → 2 lần xử lý đồng thời sẽ xung đột và được chạy lại tuần tự.
-   */
   async markPaid(
     order: Pick<Order, 'id' | 'status'>,
     tx: Prisma.TransactionClient,
@@ -327,11 +302,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return { order: updated, confirmed };
   }
 
-  /**
-   * Cron: hủy đơn chuyển khoản chưa nhận tiền quá ORDER_UNPAID_TIMEOUT_MINUTES (hoàn kho, trả lượt mã).
-   * Mỗi đơn 1 transaction riêng; đơn vừa được thanh toán / đổi trạng thái giữa chừng thì bỏ qua.
-   * @returns số đơn đã hủy
-   */
   async cancelExpiredUnpaid(now = new Date()) {
     const deadline = new Date(
       now.getTime() - this.unpaidTimeoutMinutes * 60_000,
@@ -359,7 +329,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
         });
         cancelled++;
       } catch (error) {
-        // HttpException: đơn vừa được thanh toán / đổi trạng thái → bỏ qua là đúng
         if (!(error instanceof HttpException)) {
           this.logger.error(
             `Hủy đơn quá hạn ${orderNumber} thất bại`,
@@ -371,9 +340,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return cancelled;
   }
 
-  // ───────────── dùng cho reviews / dashboard ─────────────
-
-  /** ID các đơn ĐÃ GIAO của user có chứa sản phẩm (mới nhất trước): điều kiện để viết review. */
   async findReviewableOrderIDs(
     userID: string,
     productID: string,
@@ -391,13 +357,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return orders.map((o) => o.id);
   }
 
-  /**
-   * Báo cáo bán hàng trong khoảng [from, to] (dashboard, plan mục 15):
-   *  - daily: doanh thu + số đơn theo NGÀY GIỜ VIỆT NAM (aggregateRaw, Prisma groupBy không nhóm theo ngày được)
-   *  - topProducts: sản phẩm bán nhiều nhất (theo số lượng, lấy từ snapshot trong đơn)
-   *  - byStatus: số đơn theo trạng thái
-   * Doanh thu = tổng `total` của đơn tạo trong khoảng, KHÔNG tính đơn đã hủy / trả hàng.
-   */
   async salesReport({ from, to }: { from: Date; to: Date }, topLimit: number) {
     const match = {
       createdAt: { $gte: rawDate(from), $lte: rawDate(to) },
@@ -469,12 +428,10 @@ export class OrdersService extends PrismaBaseService<'order'> {
     };
   }
 
-  /** Dashboard: đơn đang chờ xác nhận (cần xử lý ngay, không phụ thuộc khoảng ngày). */
   countPending() {
     return this.extended.count({ where: { status: OrderStatus.pending } });
   }
 
-  /** Tổng chi tiêu: chỉ tính đơn đã giao (tiền đã thực sự trả). */
   async totalSpent(userID: string) {
     const result = await this.extended.aggregate({
       where: { userID, status: OrderStatus.delivered },
@@ -483,19 +440,6 @@ export class OrdersService extends PrismaBaseService<'order'> {
     return result._sum.total ?? 0;
   }
 
-  // ───────────── chuyển trạng thái ─────────────
-
-  /**
-   * Chuyển trạng thái + tác dụng phụ trong CÙNG 1 transaction (plan mục 11):
-   *  - cancelled: hoàn kho các dòng đã trừ kho, trả lại 1 lượt mã giảm giá, đã trả tiền → refunded
-   *  - delivered: cộng soldCount; COD thì coi như đã thu tiền (paid)
-   *  - returned: trừ lại soldCount; đã trả tiền → refunded. KHÔNG tự cộng kho
-   *    (hàng trả về cần kiểm tra, admin nhập kho bằng PATCH /admin/variants/:id/stock)
-   *
-   * Đọc và ghi cùng document đơn trong transaction: 2 request đổi trạng thái cùng lúc thì
-   * request sau xung đột, chạy lại, đọc trạng thái mới và bị từ chối (không hoàn kho 2 lần).
-   * Commit xong thì gửi email cho khách (chạy nền).
-   */
   private async transition(
     id: string,
     to: OrderStatus,

@@ -1,7 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Role, User as UserModel } from '@prisma/client';
 
-/** Payload của access token, được AuthGuard gắn vào `req.user`. */
 export interface UserInfo {
   userID: UserModel['id'];
   userEmail: UserModel['email'];

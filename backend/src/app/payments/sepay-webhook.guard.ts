@@ -9,13 +9,6 @@ import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import { safeEqual, verifySepaySignature } from './sepay.util';
 
-/**
- * Xác thực webhook SePay (developer.sepay.vn/vi/sepay-webhooks/xac-thuc), chọn theo env:
- *  - SEPAY_WEBHOOK_SECRET  → HMAC-SHA256 (SePay khuyến nghị): header X-SePay-Signature + X-SePay-Timestamp
- *  - SEPAY_WEBHOOK_API_KEY → API Key: header `Authorization: Apikey <key>`
- * Đặt cả hai thì dùng HMAC. Guard chạy trước validate body: request không hợp lệ bị chặn sớm.
- * HMAC cần body gốc: app phải tạo với `rawBody: true` (NEST_APP_OPTIONS).
- */
 @Injectable()
 export class SepayWebhookGuard implements CanActivate {
   private readonly secret?: string;
@@ -32,7 +25,6 @@ export class SepayWebhookGuard implements CanActivate {
       .getRequest<Request & { rawBody?: Buffer }>();
     if (this.secret) return this.checkSignature(req, this.secret);
     if (this.apiKey) return this.checkApiKey(req, this.apiKey);
-    // Chưa cấu hình: 503 để SePay gửi lại sau khi cấu hình xong, không âm thầm nhận mọi request
     throw new ServiceUnavailableException(
       'Chưa cấu hình SEPAY_WEBHOOK_SECRET hoặc SEPAY_WEBHOOK_API_KEY',
     );

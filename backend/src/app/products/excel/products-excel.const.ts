@@ -4,7 +4,6 @@ import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/m
 export const XLSX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-/** Chỉ nhận file .xlsx, tối đa 5MB. */
 export const EXCEL_UPLOAD_OPTIONS: MulterOptions = {
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, callback) => {

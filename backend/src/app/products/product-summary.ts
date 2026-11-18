@@ -14,20 +14,12 @@ export interface ProductSummary {
   colors: string[];
 }
 
-/** "Màu sắc" → "mau-sac", để so với COLOR_OPTION_NAMES. */
 const normalize = (text: string) =>
   kebabCase(text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd'));
 
 const isColorOption = (optionName: string) =>
   COLOR_OPTION_NAMES.includes(normalize(optionName));
 
-/**
- * Các field lưu thừa trên Product để lọc / sắp xếp mà không phải join variant:
- *  - minPrice / maxPrice: giá thấp nhất / cao nhất của variant đang bán (0 nếu không có)
- *  - colors: các giá trị option "Màu" của variant đang bán, không trùng (không phân biệt hoa thường)
- *
- * Phải gọi lại mỗi khi tạo / sửa / xóa variant.
- */
 export const computeProductSummary = (
   variants: VariantForSummary[],
 ): ProductSummary => {

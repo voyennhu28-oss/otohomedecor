@@ -26,8 +26,6 @@ export class MailUtilService implements OnModuleDestroy {
     if (host) {
       const port = Number(config.get<string>('MAIL_PORT') ?? 587);
       this.transporter = createTransport({
-        // Giữ kết nối SMTP để dùng lại: không phải bắt tay TLS + đăng nhập lại cho từng email
-        // (đặt đơn, đổi trạng thái... gửi liên tục). Kết nối rảnh tự đóng, cần thì mở lại.
         pool: true,
         maxConnections: 3,
         host,
@@ -44,8 +42,6 @@ export class MailUtilService implements OnModuleDestroy {
 
   async send({ to, subject, html, text }: SendMailParams) {
     if (!this.transporter) {
-      // Dev: in nội dung ra log để test (vd lấy link reset password).
-      // Production: không in nội dung vì có thể chứa token.
       this.logger.warn(
         this.isProduction
           ? `Bỏ qua email "${subject}" tới ${to}: chưa cấu hình MAIL_HOST`

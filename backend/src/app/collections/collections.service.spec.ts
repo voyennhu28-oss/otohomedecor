@@ -25,7 +25,6 @@ describe('CollectionsService', () => {
   beforeEach(() => {
     ({ prismaService, modelMock: model } =
       createPrismaServiceMock('collection'));
-    // $transaction(fn) gọi fn với tx = chính mock này
     Object.assign(prismaService, {
       $transaction: jest.fn((fn: (tx: unknown) => unknown) =>
         fn(prismaService),

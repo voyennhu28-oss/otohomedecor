@@ -33,7 +33,6 @@ const dateFormat = new Intl.DateTimeFormat('vi-VN', {
 export const formatAddress = (a: ShippingAddress) =>
   [a.street, a.ward, a.district, a.province].filter(Boolean).join(', ');
 
-/** Mỗi đơn 1 dòng; các sản phẩm gộp thành "SKU x số lượng; ...". */
 export const toOrderExcelRows = (orders: ExportOrder[]) =>
   orders.map((o) => ({
     orderNumber: o.orderNumber,

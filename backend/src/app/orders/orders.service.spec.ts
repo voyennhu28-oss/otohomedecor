@@ -50,7 +50,7 @@ const items = [
     quantity: 1,
     stockReserved: false,
     sku: 'B',
-  }, // hàng đặt làm
+  },
 ];
 
 const storedOrder = (overrides: Record<string, unknown> = {}) => ({
@@ -77,7 +77,7 @@ describe('OrdersService', () => {
   };
 
   beforeEach(() => {
-    jest.resetAllMocks(); // xóa cả implementation / hàng đợi "Once" của test trước
+    jest.resetAllMocks();
     excel.generateExcel.mockReturnValue('workbook');
     order = Object.assign(createPrismaModelMock(), { aggregate: jest.fn() });
     order.update.mockImplementation(({ data }) => Promise.resolve(data));
@@ -95,7 +95,6 @@ describe('OrdersService', () => {
     );
   });
 
-  /** data của lần tx.order.update cuối cùng */
   const updated = () => order.update.mock.calls.at(-1)![0].data;
 
   describe('admin đổi trạng thái', () => {
@@ -168,7 +167,7 @@ describe('OrdersService', () => {
         cancelReason: 'Khách đổi ý',
         cancelledAt: expect.any(Date),
       });
-      expect(updated().paymentStatus).toBeUndefined(); // chưa trả tiền
+      expect(updated().paymentStatus).toBeUndefined();
     });
 
     it('hủy đơn đã trả tiền → paymentStatus refunded; đơn không có mã thì không trả lượt', async () => {
@@ -253,7 +252,6 @@ describe('OrdersService', () => {
         service.updateStatus(admin, 'o1', { status: OrderStatus.cancelled }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(transaction).toHaveBeenCalledTimes(2);
-      // lần 1 bị rollback cùng transaction; lần 2 không chạy tới bước hoàn kho
       expect(variants.restoreStock).toHaveBeenCalledTimes(1);
     });
   });
@@ -412,13 +410,13 @@ describe('OrdersService', () => {
         { id: 'o2', orderNumber: 'B' },
       ]);
       order.findUnique
-        .mockResolvedValueOnce(storedOrder()) // o1: vẫn chờ tiền
+        .mockResolvedValueOnce(storedOrder())
         .mockResolvedValueOnce(
           storedOrder({
             status: OrderStatus.confirmed,
             paymentStatus: PaymentStatus.paid,
           }),
-        ); // o2: tiền vừa về
+        );
 
       await expect(service.cancelExpiredUnpaid(now)).resolves.toBe(1);
 

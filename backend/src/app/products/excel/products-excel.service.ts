@@ -42,7 +42,6 @@ export class ProductsExcelService {
     private readonly categoriesService: CategoriesService,
   ) {}
 
-  /** Xuất sản phẩm (theo ids, hoặc tất cả) ra Excel, mỗi variant 1 dòng. */
   async export(ids?: string[]) {
     const products = await this.prismaService.extended.product.findMany({
       where: ids?.length ? { id: { in: ids } } : {},
@@ -58,17 +57,12 @@ export class ProductsExcelService {
         {
           sheetName: SHEET_NAME,
           data: toExcelRows(products),
-          fieldsExtend: [...PRODUCT_EXCEL_COLUMNS], // không có dữ liệu vẫn có header (làm file mẫu)
+          fieldsExtend: [...PRODUCT_EXCEL_COLUMNS],
         },
       ],
     });
   }
 
-  /**
-   * Nhập sản phẩm MỚI từ Excel. Mỗi sản phẩm được validate và tạo giống hệt
-   * POST /admin/products (qua ProductsService.create). Sản phẩm lỗi được bỏ qua
-   * và báo lại số dòng, các sản phẩm khác vẫn được tạo.
-   */
   async import(file: { path: string } | undefined) {
     if (!file) throw new BadRequestException('Chưa chọn file Excel');
     try {
@@ -108,7 +102,6 @@ export class ProductsExcelService {
       ...new Set(categorySlugs),
     ]);
 
-    // Tạo lần lượt từng sản phẩm (không song song) để slug tự sinh không đụng nhau
     for (const group of groups) {
       const productName = cellText(group.rows[0].name);
       const categorySlug = cellText(group.rows[0].categorySlug);

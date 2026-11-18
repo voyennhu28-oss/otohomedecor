@@ -60,7 +60,6 @@ export class AdminProductsController {
     return this.productsService.remove(id);
   }
 
-  /** Tải file Excel. Body { ids } để chỉ xuất một số sản phẩm; bỏ trống = xuất tất cả. */
   @Post('export')
   @HttpCode(200)
   async exportExcel(@Body() { ids }: ExportProductsDto) {
@@ -73,7 +72,6 @@ export class AdminProductsController {
     });
   }
 
-  /** multipart/form-data, field "file" (.xlsx). Cùng định dạng với file export. */
   @Post('import')
   @HttpCode(200)
   @ApiConsumes('multipart/form-data')

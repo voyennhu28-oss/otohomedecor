@@ -4,20 +4,17 @@ import { User, type UserInfo } from '../../common/decorators/user.decorator';
 import { CheckoutService } from './checkout.service';
 import { CheckoutDto, CheckoutPreviewDto } from './dto/checkout.dto';
 
-/** Đặt hàng từ giỏ hàng của người đang đăng nhập. */
 @ApiTags('Checkout')
 @Controller('checkout')
 export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
 
-  /** Bảng tính tiền (tạm tính, phí ship, lắp đặt, giảm giá, tổng), không ghi DB. */
   @Post('preview')
   @HttpCode(200)
   preview(@User() user: UserInfo, @Body() dto: CheckoutPreviewDto) {
     return this.checkoutService.preview(user, dto);
   }
 
-  /** Tạo đơn. Chuyển khoản (bank_transfer) trả kèm `payment`: thông tin chuyển khoản + QR; COD thì null. */
   @Post()
   checkout(@User() user: UserInfo, @Body() dto: CheckoutDto) {
     return this.checkoutService.checkout(user, dto);

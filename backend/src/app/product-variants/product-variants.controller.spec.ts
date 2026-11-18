@@ -54,7 +54,7 @@ describe('DTO variant', () => {
 
   it('UpdateVariantDto: field không gửi KHÔNG bị gán giá trị mặc định (không ghi đè dữ liệu cũ)', () => {
     const result = UpdateVariantDto.schema.parse({ price: 1_000_000 });
-    expect(result).toEqual({ price: 1_000_000 }); // không có isActive: true, options: [], weightKg: 0
+    expect(result).toEqual({ price: 1_000_000 });
   });
 
   it('UpdateVariantDto: không sửa tồn kho ở đây', () => {

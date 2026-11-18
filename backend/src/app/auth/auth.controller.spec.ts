@@ -43,7 +43,6 @@ describe('AuthController', () => {
     authService = module.get(AuthService);
   });
 
-  /** Cả 2 cookie phải httpOnly + Secure + SameSite=Lax (chống CSRF); refresh chỉ gửi tới /api/auth. */
   const expectTokenCookies = (res: ReturnType<typeof createResponse>) => {
     expect(res.cookie).toHaveBeenCalledTimes(2);
     expect(res.cookie).toHaveBeenCalledWith(

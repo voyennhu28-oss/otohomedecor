@@ -8,7 +8,6 @@ import { ShippingZonesService } from './shipping-zones.service';
 export class ShippingZonesController {
   constructor(private readonly shippingZonesService: ShippingZonesService) {}
 
-  /** Danh sách tỉnh cho form địa chỉ, kèm cờ `supported` (đang giao được). */
   @Public()
   @Get('provinces')
   listProvinces() {
