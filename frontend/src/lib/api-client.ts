@@ -106,6 +106,13 @@ async function request<T>(
         : [{ message: 'Có lỗi xảy ra, vui lòng thử lại' }],
     );
   }
+  // Backend bọc mọi response thành công (FormatResponseInterceptor). Thiếu `data` nghĩa là
+  // backend chạy bản cũ / sai địa chỉ: báo lỗi thay vì trả `undefined` (React Query không nhận).
+  if (!('data' in payload) || payload.data === undefined) {
+    throw new ApiError(res.status, [
+      { message: 'Phản hồi từ máy chủ không đúng định dạng' },
+    ]);
+  }
   return payload.data as T;
 }
 

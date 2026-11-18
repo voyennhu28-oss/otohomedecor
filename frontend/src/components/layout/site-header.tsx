@@ -1,27 +1,22 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 import { BrandLogo } from '@/components/brand-logo';
 
-import { HeaderAccount } from './header-account';
+import { HeaderUserMenu } from './header-user-menu';
 import { MobileNav } from './mobile-nav';
-import { SHOP_NAV } from './nav-items';
+import { ShopNavLinks, ShopNavList } from './shop-nav-links';
 
-// TODO: nút giỏ hàng (CartSheet)
+const NAV_CLASS = 'hidden gap-8 text-[15px] md:flex';
+
+// TODO: nút giỏ hàng (CartSheet) đặt cạnh HeaderUserMenu khi có API giỏ hàng
 export function SiteHeader() {
   return (
     <header className='sticky top-0 z-40 border-b bg-background/95 backdrop-blur'>
       <div className='container mx-auto grid h-16 grid-cols-[1fr_auto] items-center gap-6 px-6 md:h-20 md:grid-cols-3'>
-        <nav className='hidden gap-8 text-[15px] md:flex'>
-          {SHOP_NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className='underline-offset-4 outline-none hover:underline focus-visible:underline'
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <Suspense fallback={<ShopNavList className={NAV_CLASS} />}>
+          <ShopNavLinks className={NAV_CLASS} />
+        </Suspense>
         <Link
           href='/'
           className='order-first outline-none focus-visible:ring-2 focus-visible:ring-ring md:order-0 md:justify-self-center'
@@ -32,7 +27,9 @@ export function SiteHeader() {
             className='h-11 md:h-16'
           />
         </Link>
-        <HeaderAccount className='hidden gap-8 justify-self-end text-[15px] md:flex' />
+        <div className='hidden items-center justify-self-end md:flex'>
+          <HeaderUserMenu />
+        </div>
         <MobileNav className='justify-self-end md:hidden' />
       </div>
     </header>

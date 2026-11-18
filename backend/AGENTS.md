@@ -124,7 +124,7 @@ src/
 - **Chỉ webhook `POST /payments/sepay/webhook` được đánh dấu đơn đã trả tiền.** Không tin client báo "đã chuyển khoản".
 - Xác thực webhook (`SepayWebhookGuard`): `SEPAY_WEBHOOK_SECRET` → HMAC-SHA256, header `X-SePay-Signature: sha256=<hex>` = HMAC(secret, `<X-SePay-Timestamp>.<raw body>`), timestamp lệch > 5 phút bị từ chối; hoặc `SEPAY_WEBHOOK_API_KEY` → header `Authorization: Apikey <key>`. Có cả hai thì dùng HMAC. HMAC ký trên **body gốc** (`req.rawBody`, nhờ `rawBody: true` trong `NEST_APP_OPTIONS`): không bỏ option này, không ký lại từ JSON đã parse.
 - Xử lý webhook: chỉ `transferType === 'in'` → **idempotent theo `id` của SePay** (lưu vào `Payment.transactionID`) → đơn `pending` và số tiền **khớp đúng** `order.total` thì mới `paid` + `confirmed`. Sai tiền / đơn đã hủy / đã trả rồi: lưu `Payment` + log để admin xử lý, không tự đổi đơn.
-- Response webhook: HTTP 200 + đúng body `{ "success": true }`, kể cả khi bỏ qua giao dịch (để SePay không gửi lại). Không bọc qua format response chung.
+- Response webhook: HTTP 200 + đúng body `{ "success": true }`, kể cả khi bỏ qua giao dịch (để SePay không gửi lại). Không bọc qua format response chung: route gắn `@SkipFormatResponse()` (`FormatResponseInterceptor` global bọc mọi route khác, trừ `StreamableFile`).
 
 **Review** (module `reviews`)
 - Chỉ viết review khi có đơn `delivered` chứa sản phẩm, mỗi đơn 1 review (unique `userID + productID + orderID`). Chỉ review `approved` được hiển thị và tính điểm.

@@ -9,7 +9,6 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,17 +24,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { UserAvatar } from '@/features/auth/components/user-avatar';
 import { useLogout } from '@/features/auth/hooks/use-logout';
 import { useMe } from '@/features/auth/hooks/use-me';
-
-/** "Nguyễn Văn An" → "NA" */
-function initials(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return '?';
-  const first = words[0][0];
-  const last = words.length > 1 ? words[words.length - 1][0] : '';
-  return (first + last).toUpperCase();
-}
 
 /** Tài khoản admin ở chân sidebar: tên, email, đăng xuất. */
 export function AdminUserMenu() {
@@ -46,20 +37,7 @@ export function AdminUserMenu() {
   // Layout admin nằm trong AuthGuard nên lúc này user luôn có
   if (!user) return null;
 
-  const avatar = (
-    <Avatar className='size-8 rounded-sm after:rounded-sm'>
-      {user.avatarUrl && (
-        <AvatarImage
-          src={user.avatarUrl}
-          alt={user.fullName}
-          className='rounded-sm'
-        />
-      )}
-      <AvatarFallback className='rounded-sm bg-secondary text-xs font-medium text-secondary-foreground'>
-        {initials(user.fullName)}
-      </AvatarFallback>
-    </Avatar>
-  );
+  const avatar = <UserAvatar user={user} shape='square' />;
 
   return (
     <SidebarMenu>

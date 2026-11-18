@@ -2,6 +2,7 @@ import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
+import { SkipFormatResponse } from '../../common/decorators/skip-format-response.decorator';
 import { SepayWebhookDto } from './dto/payment.dto';
 import { PaymentsService } from './payments.service';
 import { SepayWebhookGuard } from './sepay-webhook.guard';
@@ -20,9 +21,11 @@ export class SepayWebhookController {
   /**
    * SePay chỉ coi là thành công khi HTTP 200 + đúng body `{ "success": true }`.
    * Giao dịch bỏ qua / trùng vẫn trả thành công; lỗi hệ thống → 5xx để SePay gửi lại.
+   * Vì vậy không bọc qua format response chung.
    */
   @Post('webhook')
   @HttpCode(200)
+  @SkipFormatResponse()
   @UseGuards(SepayWebhookGuard)
   async webhook(@Body() payload: SepayWebhookDto) {
     await this.paymentsService.handleSepayWebhook(payload);

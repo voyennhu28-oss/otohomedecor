@@ -18,17 +18,17 @@ export type AdminNavItem = {
 };
 
 export type AdminNavGroup = {
-  label: string;
+  /** Bỏ trống: nhóm không có tiêu đề (mục đứng đầu như "Bảng điều khiển"). */
+  label?: string;
   items: AdminNavItem[];
 };
 
 /**
- * Menu trang quản trị, nhóm theo module backend (docs/api-docs).
- * Breadcrumb trên topbar cũng đọc tên trang từ đây.
+ * Menu trang quản trị. Mỗi nhóm nên có từ 2 mục trở lên, tránh nhóm 1 mục làm menu vụn.
+ * Breadcrumb trên topbar cũng đọc tên nhóm / trang từ đây.
  */
 export const ADMIN_NAV: AdminNavGroup[] = [
   {
-    label: 'Tổng quan',
     items: [
       { href: '/admin', label: 'Bảng điều khiển', icon: DashboardSquare01Icon },
     ],
@@ -54,12 +54,9 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
-    label: 'Khách hàng',
-    items: [{ href: '/admin/users', label: 'Tài khoản', icon: UserGroupIcon }],
-  },
-  {
-    label: 'Cấu hình',
+    label: 'Hệ thống',
     items: [
+      { href: '/admin/users', label: 'Tài khoản', icon: UserGroupIcon },
       {
         href: '/admin/shipping-zones',
         label: 'Vùng giao hàng',
@@ -69,17 +66,19 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   },
 ];
 
-const ADMIN_NAV_ITEMS = ADMIN_NAV.flatMap((group) => group.items);
-
 /** `/admin` chỉ active khi đúng trang đó; mục khác active cả ở trang con (`/admin/orders/123`). */
 export function isAdminNavActive(href: string, pathname: string) {
   if (href === '/admin') return pathname === '/admin';
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Mục menu ứng với đường dẫn hiện tại (dài nhất khớp trước). */
-export function findAdminNavItem(pathname: string) {
-  return [...ADMIN_NAV_ITEMS]
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((item) => isAdminNavActive(item.href, pathname));
+const ADMIN_NAV_ENTRIES = ADMIN_NAV.flatMap((group) =>
+  group.items.map((item) => ({ item, group })),
+).sort((a, b) => b.item.href.length - a.item.href.length);
+
+/** Mục menu (kèm nhóm) ứng với đường dẫn hiện tại, đường dẫn dài nhất khớp trước. */
+export function findAdminNavEntry(pathname: string) {
+  return ADMIN_NAV_ENTRIES.find(({ item }) =>
+    isAdminNavActive(item.href, pathname),
+  );
 }

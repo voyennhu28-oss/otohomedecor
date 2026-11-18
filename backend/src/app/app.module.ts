@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { CatchEverythingFilter } from '../catch-everything/catch-everything.filter';
@@ -9,6 +9,7 @@ import { ZodExceptionFilter } from '../catch-everything/zod-exception/zod-except
 import { validate } from '../common/envs/validate.env';
 import { AdminGuard } from '../common/guards/admin.guard';
 import { AuthGuard } from '../common/guards/auth.guard';
+import { FormatResponseInterceptor } from '../common/interceptors/format-response/format-response.interceptor';
 import { PrismaModule } from '../common/prisma/prisma.module';
 import { RateLimitModule } from '../common/security/rate-limit/rate-limit.module';
 import { ApiUtilModule } from '../common/utils/api-util/api-util.module';
@@ -63,6 +64,8 @@ import { UsersModule } from './users/users.module';
     ZodExceptionFilter, // CatchEverythingFilter dùng để định dạng lỗi Zod
     { provide: APP_FILTER, useClass: CatchEverythingFilter }, // định dạng mọi lỗi, map lỗi Prisma
     { provide: APP_PIPE, useClass: ZodValidationPipe }, // validate mọi DTO tạo bằng createZodDto
+    // bọc response thành công thành { errors: null, data, message } (trừ file và @SkipFormatResponse)
+    { provide: APP_INTERCEPTOR, useClass: FormatResponseInterceptor },
     // Global guard chạy theo thứ tự khai báo:
     // ThrottlerGuard chặn spam trước → AuthGuard gắn req.user → AdminGuard đọc req.user
     { provide: APP_GUARD, useClass: ThrottlerGuard },

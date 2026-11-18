@@ -32,7 +32,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <AdminSidebar />
         <SidebarInset className='min-w-0'>
           <AdminTopbar />
-          <div className='flex-1 px-4 py-6 md:px-6 lg:px-8'>{children}</div>
+          {/* Cùng px với topbar để mép trái tiêu đề thẳng breadcrumb; giới hạn bề ngang trên màn rộng */}
+          <div className='w-full max-w-screen-2xl flex-1 px-4 py-8 md:px-6'>
+            {children}
+          </div>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

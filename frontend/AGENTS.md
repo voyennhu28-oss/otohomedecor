@@ -96,6 +96,7 @@ src/
 
 - FE **không** đọc, không lưu token (không localStorage, không state). Mọi request gửi `credentials: 'include'`.
 - Gặp 401: gọi `POST /auth/refresh-token` **một lần** rồi gửi lại request. Nhiều request cùng 401 thì dùng chung một promise refresh. Refresh thất bại: xóa user khỏi state (cache `['me']` của React Query); nếu đang ở `/account` hoặc `/admin` thì chuyển về `/sign-in?next=...`. Trang công khai không chuyển hướng.
+- **Mỗi `page.tsx`** nằm dưới layout bọc `AuthGuard` (`admin/`, `(shop)/account/`) phải có `export const instant = false`. AuthGuard chờ `/me` ở trình duyệt mới render trang con nên trang không prerender được; Next coi mọi page không khai báo là `instant = true` và báo lỗi "dropped segment". Đặt ở layout **không** áp xuống page.
 - Biết ai đang đăng nhập bằng `GET /me`. Chặn trang admin (`app/admin/layout.tsx`) theo `role === 'admin'` từ `/me`. Bảo vệ thật nằm ở backend (`@AdminOnly`). Không dựa vào `proxy.ts` để check đăng nhập, vì ở production cookie thuộc domain API nên FE có thể không đọc được.
 
 **Chống CSRF và loại body** (backend chặn):

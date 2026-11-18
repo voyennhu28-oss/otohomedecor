@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 
+// Trang nằm sau AuthGuard (chờ GET /me ở trình duyệt) nên không prerender được: tắt kiểm tra instant navigation.
+export const instant = false;
+
 export const metadata: Metadata = { title: 'Chi tiết đơn hàng' };
 
 export default function OrderDetailPage() {

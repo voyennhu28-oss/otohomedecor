@@ -18,7 +18,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar';
 
@@ -36,18 +35,18 @@ export function AdminSidebar() {
 
   return (
     <Sidebar collapsible='icon'>
-      <SidebarHeader className='h-16 justify-center border-b border-sidebar-border px-3 group-data-[collapsible=icon]:px-2'>
+      <SidebarHeader className='h-16 justify-center border-b border-sidebar-border px-4 group-data-[collapsible=icon]:px-2'>
         <Link
           href='/admin'
           onClick={closeOnMobile}
-          className='flex items-center gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring'
+          className='flex items-center gap-2.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring'
         >
           <BrandLogo
             eager
-            sizes='92px'
-            className='h-9 group-data-[collapsible=icon]:hidden'
+            sizes='112px'
+            className='h-11 group-data-[collapsible=icon]:hidden'
           />
-          <span className='border-l border-sidebar-border pl-3 label-caps text-[0.625rem] text-muted-foreground group-data-[collapsible=icon]:hidden'>
+          <span className='rounded-sm bg-sidebar-accent px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground group-data-[collapsible=icon]:hidden'>
             Quản trị
           </span>
           {/* Thu gọn: không đủ chỗ cho logo, chỉ hiện icon */}
@@ -58,14 +57,20 @@ export function AdminSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className='py-2'>
-        {ADMIN_NAV.map((group) => (
-          <SidebarGroup key={group.label} className='py-1'>
-            <SidebarGroupLabel className='h-7 label-caps text-[0.625rem] text-muted-foreground'>
-              {group.label}
-            </SidebarGroupLabel>
+      <SidebarContent className='gap-0 py-3'>
+        {ADMIN_NAV.map((group, index) => (
+          <SidebarGroup
+            key={group.label ?? index}
+            // Thu gọn: cột 48px, chừa px-2 để nút icon 32px nằm giữa
+            className='px-3 py-0 not-first:mt-5 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:not-first:mt-2'
+          >
+            {group.label && (
+              <SidebarGroupLabel className='mb-1 h-6 px-2.5 text-[11px] font-medium tracking-[0.08em] text-muted-foreground/80 uppercase'>
+                {group.label}
+              </SidebarGroupLabel>
+            )}
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className='gap-0.5'>
                 {group.items.map((item) => {
                   const active = isAdminNavActive(item.href, pathname);
                   return (
@@ -80,7 +85,8 @@ export function AdminSidebar() {
                             aria-current={active ? 'page' : undefined}
                           />
                         }
-                        className='relative text-muted-foreground hover:text-sidebar-accent-foreground data-active:text-sidebar-accent-foreground data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-sidebar-primary group-data-[collapsible=icon]:data-active:before:hidden'
+                        // Chữ đậm màu chính, icon xám; mục đang mở: nền cát + icon đậm
+                        className='h-8 gap-2.5 rounded-sm px-2.5 text-sidebar-foreground/85 hover:text-sidebar-foreground data-active:text-sidebar-foreground [&_svg]:text-muted-foreground data-active:[&_svg]:text-sidebar-foreground'
                       >
                         <HugeiconsIcon icon={item.icon} strokeWidth={1.75} />
                         <span>{item.label}</span>
@@ -94,8 +100,7 @@ export function AdminSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarSeparator className='mx-0' />
-      <SidebarFooter>
+      <SidebarFooter className='border-t border-sidebar-border p-3 group-data-[collapsible=icon]:p-2'>
         <AdminUserMenu />
       </SidebarFooter>
       <SidebarRail />

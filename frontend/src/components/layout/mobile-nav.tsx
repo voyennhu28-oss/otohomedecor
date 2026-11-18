@@ -13,7 +13,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 
-import { HeaderAccount } from './header-account';
+import { MobileAccount } from './mobile-account';
 import { SHOP_NAV } from './nav-items';
 
 /** Menu cho màn hình nhỏ: panel trượt từ phải, chữ lớn như trang mục lục. */
@@ -49,10 +49,9 @@ export function MobileNav({ className }: { className?: string }) {
             </Link>
           ))}
         </nav>
-        <HeaderAccount
-          onNavigate={close}
-          className='mt-10 flex flex-col items-start gap-4 text-base'
-        />
+        <div className='mt-auto pt-10'>
+          <MobileAccount onNavigate={close} />
+        </div>
       </SheetContent>
     </Sheet>
   );
