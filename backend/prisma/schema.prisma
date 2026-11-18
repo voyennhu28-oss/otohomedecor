@@ -198,6 +198,26 @@ model Category {
   @@index([parentID])
 }
 
+/// Bộ sưu tập (theo chủ đề / mùa / chiến dịch). Một sản phẩm thuộc được nhiều bộ sưu tập:
+/// quan hệ lưu ở Product.collectionIDs (mảng ID, không khai báo relation của Prisma).
+model Collection {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String     @unique
+  description String?
+  image       ImageItem? // ảnh bìa
+  isActive    Boolean    @default(true)
+  isFeatured  Boolean    @default(false)
+  sortOrder   Int        @default(0)
+  startsAt    DateTime? // bỏ trống = hiển thị ngay
+  endsAt      DateTime? // bỏ trống = không hết hạn
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  @@index([isActive, sortOrder])
+}
+
 model Product {
   id               String      @id @default(auto()) @map("_id") @db.ObjectId
   name             String
@@ -205,6 +225,7 @@ model Product {
   shortDescription String?
   description      String? // HTML / markdown
   categoryID       String      @db.ObjectId
+  collectionIDs    String[]    @db.ObjectId // nhiều bộ sưu tập, có thể còn ID của bộ sưu tập đã xóa
   images           ImageItem[]
 
   // Các field để lọc. Giá trị lấy từ hằng số (mục 3.2)
@@ -239,6 +260,7 @@ model Product {
   reviews  Review[]
 
   @@index([categoryID])
+  @@index([collectionIDs])
   @@index([status, isFeatured])
 }
 

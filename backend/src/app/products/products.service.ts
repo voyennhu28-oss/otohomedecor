@@ -12,6 +12,7 @@ import { PrismaBaseService } from '../../common/services/prisma-base.service';
 import { pickAvailableSlug } from '../../common/utils/string-util/slug.util';
 import { StringUtilService } from '../../common/utils/string-util/string-util.service';
 import { CategoriesService } from '../categories/categories.service';
+import { CollectionsService } from '../collections/collections.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import {
   AdminProductListQueryDto,
@@ -83,6 +84,7 @@ export class ProductsService extends PrismaBaseService<'product'> {
     prismaService: PrismaService,
     private readonly categoriesService: CategoriesService,
     private readonly stringUtilService: StringUtilService,
+    private readonly collectionsService: CollectionsService,
   ) {
     super(prismaService, 'product');
   }
@@ -91,16 +93,16 @@ export class ProductsService extends PrismaBaseService<'product'> {
 
   /** GET /products: lọc + sắp xếp + phân trang (plan mục 8). */
   async findPublicList(query: ProductListQueryDto) {
-    const { sort, page, itemPerPage, category, ...filters } = query;
+    const { sort, page, itemPerPage, category, collection, ...filters } = query;
 
-    let categoryIDs: string[] | undefined;
-    if (category) {
-      categoryIDs =
-        await this.categoriesService.getActiveIDsWithDescendants(category);
-      if (!categoryIDs.length) return emptyPage(); // danh mục không tồn tại / đang ẩn
-    }
+    const scope = await this.resolveScope(category, collection);
+    if (!scope) return emptyPage(); // danh mục / bộ sưu tập không tồn tại hoặc đang ẩn
 
-    const where = buildPublicProductWhere(filters, categoryIDs);
+    const where = buildPublicProductWhere(
+      filters,
+      scope.categoryIDs,
+      scope.collectionID,
+    );
     const [list, totalItems] = await Promise.all([
       this.extended.findMany({
         where,
@@ -132,27 +134,30 @@ export class ProductsService extends PrismaBaseService<'product'> {
    * GET /products/filters: các giá trị lọc đang có sản phẩm, để frontend dựng bộ lọc.
    * Đọc field lọc của mọi sản phẩm đang bán rồi gộp lại (đủ nhanh với vài nghìn sản phẩm).
    */
-  async getFilterOptions(categorySlug?: string) {
-    let categoryIDs: string[] | undefined;
-    if (categorySlug) {
-      categoryIDs =
-        await this.categoriesService.getActiveIDsWithDescendants(categorySlug);
-    }
+  async getFilterOptions(categorySlug?: string, collectionSlug?: string) {
+    const scope = await this.resolveScope(categorySlug, collectionSlug);
 
-    const products = await this.extended.findMany({
-      where: {
-        status: ProductStatus.active,
-        ...(categoryIDs && { categoryID: { in: categoryIDs } }),
-      },
-      select: {
-        rooms: true,
-        styles: true,
-        materials: true,
-        colors: true,
-        minPrice: true,
-        maxPrice: true,
-      },
-    });
+    const products = scope
+      ? await this.extended.findMany({
+          where: {
+            status: ProductStatus.active,
+            ...(scope.categoryIDs && {
+              categoryID: { in: scope.categoryIDs },
+            }),
+            ...(scope.collectionID && {
+              collectionIDs: { has: scope.collectionID },
+            }),
+          },
+          select: {
+            rooms: true,
+            styles: true,
+            materials: true,
+            colors: true,
+            minPrice: true,
+            maxPrice: true,
+          },
+        })
+      : [];
 
     const used = (pick: (p: (typeof products)[number]) => string[]) =>
       new Set(products.flatMap(pick));
@@ -180,7 +185,10 @@ export class ProductsService extends PrismaBaseService<'product'> {
     };
   }
 
-  /** GET /products/:slug: chi tiết kèm danh mục và các variant đang bán (giá tăng dần). */
+  /**
+   * GET /products/:slug: chi tiết kèm danh mục, các bộ sưu tập đang hiển thị
+   * và các variant đang bán (giá tăng dần).
+   */
   async findPublicBySlug(slug: string) {
     const product = await this.extended.findFirst({
       where: { slug, status: ProductStatus.active },
@@ -194,7 +202,12 @@ export class ProductsService extends PrismaBaseService<'product'> {
       },
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-    return product;
+    const { collectionIDs, ...rest } = product;
+    return {
+      ...rest,
+      collections:
+        await this.collectionsService.findVisibleByIDs(collectionIDs),
+    };
   }
 
   /** GET /products/:slug/related: cùng danh mục HOẶC cùng phong cách, bán chạy trước. */
@@ -230,10 +243,19 @@ export class ProductsService extends PrismaBaseService<'product'> {
 
   /** GET /admin/products: thấy cả draft / inactive, tìm theo tên hoặc SKU. */
   async findAdminList(query: AdminProductListQueryDto) {
-    const { q, status, categoryID, isFeatured, page, itemPerPage } = query;
+    const {
+      q,
+      status,
+      categoryID,
+      collectionID,
+      isFeatured,
+      page,
+      itemPerPage,
+    } = query;
     const where: Prisma.ProductWhereInput = {
       ...(status && { status }),
       ...(categoryID && { categoryID }),
+      ...(collectionID && { collectionIDs: { has: collectionID } }),
       ...(isFeatured !== undefined && { isFeatured }),
       ...(q && {
         OR: [
@@ -263,7 +285,10 @@ export class ProductsService extends PrismaBaseService<'product'> {
     };
   }
 
-  /** GET /admin/products/:id: đầy đủ, gồm cả variant đang tắt. */
+  /**
+   * GET /admin/products/:id: đầy đủ, gồm cả variant đang tắt.
+   * collectionIDs chỉ giữ bộ sưu tập chưa xóa, để form sửa gửi lại không bị 404.
+   */
   async findAdminByID(id: string) {
     const product = await this.extended.findUnique({
       where: { id },
@@ -273,7 +298,14 @@ export class ProductsService extends PrismaBaseService<'product'> {
       },
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-    return product;
+    const collections = await this.collectionsService.findByIDs(
+      product.collectionIDs,
+    );
+    return {
+      ...product,
+      collectionIDs: collections.map((c) => c.id),
+      collections,
+    };
   }
 
   /**
@@ -288,6 +320,9 @@ export class ProductsService extends PrismaBaseService<'product'> {
       variants.filter((v) => v.isActive).length,
     );
     await this.categoriesService.ensureExists(productData.categoryID);
+    await this.collectionsService.ensureAllExist(
+      productData.collectionIDs ?? [],
+    );
     await assertSkusAvailable(
       this.prismaService,
       variants.map((v) => v.sku),
@@ -299,6 +334,7 @@ export class ProductsService extends PrismaBaseService<'product'> {
     return this.extended.create({
       data: {
         ...productData,
+        collectionIDs: productData.collectionIDs ?? [],
         slug,
         ...computeProductSummary(variants), // minPrice, maxPrice, colors
         variants: { create: variants },
@@ -323,6 +359,8 @@ export class ProductsService extends PrismaBaseService<'product'> {
     assertCanBeActive(dto.status, current._count.variants);
     if (dto.categoryID)
       await this.categoriesService.ensureExists(dto.categoryID);
+    if (dto.collectionIDs)
+      await this.collectionsService.ensureAllExist(dto.collectionIDs);
     if (dto.slug && dto.slug !== current.slug) {
       await this.assertSlugAvailable(dto.slug, id);
     }
@@ -362,6 +400,60 @@ export class ProductsService extends PrismaBaseService<'product'> {
       ),
     ]);
     return { id };
+  }
+
+  /**
+   * POST /admin/collections/:collectionID/products: thêm sản phẩm vào bộ sưu tập.
+   * `push` có điều kiện "chưa có ID này" → atomic, gọi lại nhiều lần không bị trùng.
+   */
+  async addToCollection(collectionID: string, productIDs: string[]) {
+    await this.collectionsService.ensureAllExist([collectionID]);
+    const found = await this.extended.count({
+      where: { id: { in: productIDs } },
+    });
+    if (found !== productIDs.length) {
+      throw new NotFoundException('Có sản phẩm không tồn tại hoặc đã bị xóa');
+    }
+
+    const { count } = await this.prismaService.product.updateMany({
+      where: {
+        id: { in: productIDs },
+        NOT: { collectionIDs: { has: collectionID } },
+        ...NOT_DELETED,
+      },
+      data: { collectionIDs: { push: collectionID } },
+    });
+    return { added: count };
+  }
+
+  /**
+   * DELETE /admin/collections/:collectionID/products/:productID: gỡ sản phẩm khỏi bộ sưu tập.
+   * Prisma không có `pull` cho mảng → đọc - sửa - ghi trong transaction (xung đột thì chạy lại).
+   * Không kiểm tra bộ sưu tập còn tồn tại để gỡ được cả ID của bộ sưu tập đã xóa.
+   */
+  removeFromCollection(collectionID: string, productID: string) {
+    return withRetry(() =>
+      this.prismaService.$transaction(async (tx) => {
+        const product = await tx.product.findFirst({
+          where: { id: productID, ...NOT_DELETED },
+          select: { collectionIDs: true },
+        });
+        if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
+        if (!product.collectionIDs.includes(collectionID)) {
+          throw new NotFoundException('Sản phẩm không thuộc bộ sưu tập này');
+        }
+
+        await tx.product.update({
+          where: { id: productID },
+          data: {
+            collectionIDs: {
+              set: product.collectionIDs.filter((id) => id !== collectionID),
+            },
+          },
+        });
+        return { id: productID };
+      }),
+    );
   }
 
   // ───────────── dùng cho module khác (variants, images, wishlist) ─────────────
@@ -494,6 +586,26 @@ export class ProductsService extends PrismaBaseService<'product'> {
   }
 
   // ───────────── helpers ─────────────
+
+  /**
+   * Đổi slug danh mục / bộ sưu tập trên query thành ID để lọc.
+   * null = có slug nhưng không tồn tại hoặc đang ẩn → kết quả rỗng.
+   */
+  private async resolveScope(
+    categorySlug?: string,
+    collectionSlug?: string,
+  ): Promise<{ categoryIDs?: string[]; collectionID?: string } | null> {
+    const [categoryIDs, collectionID] = await Promise.all([
+      categorySlug
+        ? this.categoriesService.getActiveIDsWithDescendants(categorySlug)
+        : undefined,
+      collectionSlug
+        ? this.collectionsService.getVisibleIDBySlug(collectionSlug)
+        : undefined,
+    ]);
+    if (categoryIDs?.length === 0 || collectionID === null) return null;
+    return { categoryIDs, collectionID };
+  }
 
   /**
    * Đọc - sửa - ghi lại cả mảng ảnh trong 1 transaction (Prisma không có `pull` cho composite list).

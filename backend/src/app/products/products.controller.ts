@@ -30,8 +30,8 @@ export class ProductsController {
   }
 
   @Get('filters')
-  getFilterOptions(@Query() { category }: ProductFiltersQueryDto) {
-    return this.productsService.getFilterOptions(category);
+  getFilterOptions(@Query() { category, collection }: ProductFiltersQueryDto) {
+    return this.productsService.getFilterOptions(category, collection);
   }
 
   @Get(':slug')

@@ -3,6 +3,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 export const SOFT_DELETE_MODELS: string[] = [
   'User',
   'Category',
+  'Collection',
   'Product',
   'ProductVariant',
   'Promotion',

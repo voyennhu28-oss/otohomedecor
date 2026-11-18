@@ -23,6 +23,7 @@ export const STYLES = [
   'vintage',
   'modern',
   'boho',
+  'coastal',
 ] as const;
 
 export const MATERIALS = [
@@ -38,6 +39,13 @@ export const MATERIALS = [
   'leather',
   'marble',
   'linen',
+  'capiz',
+  'seashell',
+  'mother-of-pearl',
+  'conch',
+  'coconut-shell',
+  'driftwood',
+  'jute',
 ] as const;
 
 /**

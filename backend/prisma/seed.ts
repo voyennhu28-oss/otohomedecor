@@ -1,5 +1,5 @@
 /**
- * Seed dữ liệu ban đầu: admin, customer mẫu (chỉ ngoài production), cây danh mục, sản phẩm mẫu,
+ * Seed dữ liệu ban đầu: admin, customer mẫu (chỉ ngoài production), cây danh mục, bộ sưu tập, sản phẩm mẫu,
  * vùng giao hàng, mã giảm giá.
  * Chạy: npm run db:seed. Chạy lại nhiều lần vẫn an toàn (upsert theo email / slug,
  * không ghi đè mật khẩu của tài khoản đã có).
@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'node:crypto';
 import { computeProductSummary } from '../src/app/products/product-summary';
 import { PROVINCES } from '../src/common/constants/catalog.const';
+import { SEED_COLLECTIONS, seedCollectionSchedule } from './seed-data/collections';
 import { SEED_PRODUCTS } from './seed-data/products';
 
 try {
@@ -25,12 +26,13 @@ const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 const isProduction = process.env.NODE_ENV === 'production';
 
+/** Cửa hàng đèn trang trí làm từ vỏ sò / vỏ điệp / xà cừ. Slug cha và con không được trùng nhau. */
 const CATEGORY_TREE: Record<string, string[]> = {
-  'Phòng khách': ['Sofa', 'Bàn trà', 'Kệ TV', 'Ghế thư giãn'],
-  'Phòng ngủ': ['Giường', 'Tủ đầu giường', 'Bàn trang điểm'],
-  'Phòng ăn': ['Bàn ăn', 'Ghế ăn', 'Tủ bếp'],
-  'Trang trí': ['Đèn', 'Tranh', 'Gương', 'Thảm', 'Bình hoa', 'Nến thơm', 'Cây giả'],
-  'Lưu trữ': ['Kệ sách', 'Tủ quần áo', 'Giỏ mây'],
+  'Đèn trần': ['Đèn thả', 'Đèn chùm', 'Đèn ốp trần'],
+  'Đèn tường': ['Đèn vách', 'Đèn soi gương'],
+  'Đèn bàn & đèn cây': ['Đèn bàn', 'Đèn ngủ', 'Đèn cây đứng'],
+  'Đèn trang trí': ['Đèn lồng', 'Đèn dây', 'Đèn ngoài trời'],
+  'Phụ kiện đèn': ['Chụp đèn thay thế', 'Bóng đèn'],
 };
 
 /** "Bàn trà" -> "ban-tra" */
@@ -98,6 +100,30 @@ async function seedUsers() {
   }
 }
 
+/**
+ * `--reset-catalog`: xóa cứng toàn bộ danh mục, bộ sưu tập, sản phẩm, variant và dữ liệu trỏ tới chúng
+ * (review, item trong giỏ, wishlist) để seed lại catalog từ đầu. Đơn hàng giữ nguyên vì là snapshot.
+ * Ảnh đã upload lên Cloudinary không bị xóa. Không chạy trên production.
+ */
+async function resetCatalog() {
+  if (isProduction) throw new Error('Không được reset catalog khi NODE_ENV=production');
+
+  const [reviews, variants, products, childCategories, rootCategories, collections] = await prisma.$transaction([
+    prisma.review.deleteMany({}),
+    prisma.productVariant.deleteMany({}),
+    prisma.product.deleteMany({}),
+    prisma.category.deleteMany({ where: { parentID: { not: null } } }),
+    prisma.category.deleteMany({}),
+    prisma.collection.deleteMany({}),
+    prisma.cart.updateMany({ data: { items: [] } }),
+    prisma.user.updateMany({ data: { wishlistProductIDs: { set: [] } } }),
+  ]);
+  console.log(
+    `• Đã xóa catalog cũ: ${childCategories.count + rootCategories.count} danh mục, ${collections.count} bộ sưu tập, ` +
+      `${products.count} sản phẩm, ${variants.count} variant, ${reviews.count} review (giỏ hàng và wishlist đã làm trống)`,
+  );
+}
+
 async function seedCategories() {
   let sortOrder = 0;
   let count = 0;
@@ -123,10 +149,54 @@ async function seedCategories() {
 }
 
 /**
+ * Bộ sưu tập chưa có (theo slug) thì tạo, đã có thì giữ nguyên (admin có thể đã sửa).
+ * Trả về: tên sản phẩm → ID các bộ sưu tập chứa nó.
+ */
+async function seedCollections() {
+  const productNames = new Set(SEED_PRODUCTS.map((p) => p.name));
+  const collectionIDsByProduct = new Map<string, string[]>();
+  let created = 0;
+
+  for (const [sortOrder, seed] of SEED_COLLECTIONS.entries()) {
+    const unknown = seed.products.filter((name) => !productNames.has(name));
+    if (unknown.length) {
+      throw new Error(`Seed bộ sưu tập "${seed.name}": không có sản phẩm [${unknown.join(', ')}]`);
+    }
+
+    let collection = await prisma.collection.findUnique({ where: { slug: seed.slug }, select: { id: true } });
+    if (!collection) {
+      collection = await prisma.collection.create({
+        data: {
+          name: seed.name,
+          slug: seed.slug,
+          description: seed.description,
+          isFeatured: seed.isFeatured ?? false,
+          sortOrder,
+          ...seedCollectionSchedule(seed),
+          image: {
+            url: `https://placehold.co/1600x600/F4EFE6/5B4A3A?text=${encodeURIComponent(seed.name)}`,
+            alt: seed.name,
+            sortOrder: 0,
+          },
+        },
+        select: { id: true },
+      });
+      created++;
+    }
+    for (const name of seed.products) {
+      collectionIDsByProduct.set(name, [...(collectionIDsByProduct.get(name) ?? []), collection.id]);
+    }
+  }
+  console.log(`• Bộ sưu tập: tạo mới ${created}/${SEED_COLLECTIONS.length}`);
+  return collectionIDsByProduct;
+}
+
+/**
  * Sản phẩm mẫu. Bỏ qua sản phẩm đã có (theo slug) hoặc có SKU đã tồn tại,
  * nên chạy lại không bị trùng. minPrice / maxPrice / colors tính bằng đúng hàm của API.
+ * Sản phẩm đã có vẫn được bổ sung bộ sưu tập còn thiếu (không gỡ bộ sưu tập admin đã gán thêm).
  */
-async function seedProducts() {
+async function seedProducts(collectionIDsByProduct: Map<string, string[]>) {
   const categories = await prisma.category.findMany({ select: { id: true, slug: true } });
   const categoryIDBySlug = new Map(categories.map((c) => [c.slug, c.id]));
   let created = 0;
@@ -136,15 +206,23 @@ async function seedProducts() {
     const slug = slugify(product.name);
     const categoryID = categoryIDBySlug.get(category);
     if (!categoryID) throw new Error(`Seed: chưa có danh mục "${category}"`);
+    const collectionIDs = collectionIDsByProduct.get(product.name) ?? [];
 
     const [existedProduct, existedSku] = await Promise.all([
-      prisma.product.findUnique({ where: { slug }, select: { id: true } }),
+      prisma.product.findUnique({ where: { slug }, select: { id: true, collectionIDs: true } }),
       prisma.productVariant.findFirst({
         where: { sku: { in: variants.map((v) => v.sku) } },
         select: { id: true },
       }),
     ]);
     if (existedProduct || existedSku) {
+      const missing = collectionIDs.filter((id) => !existedProduct?.collectionIDs.includes(id));
+      if (existedProduct && missing.length) {
+        await prisma.product.update({
+          where: { id: existedProduct.id },
+          data: { collectionIDs: { push: missing } },
+        });
+      }
       skipped++;
       continue;
     }
@@ -154,6 +232,7 @@ async function seedProducts() {
         ...product,
         slug,
         categoryID,
+        collectionIDs,
         status: ProductStatus.active,
         images: [
           {
@@ -239,8 +318,9 @@ async function seedPromotions() {
 async function main() {
   console.log('Seeding...');
   await seedUsers();
+  if (process.argv.includes('--reset-catalog')) await resetCatalog();
   await seedCategories();
-  await seedProducts();
+  await seedProducts(await seedCollections());
   await seedShippingZones();
   await seedPromotions();
   console.log('Xong.');

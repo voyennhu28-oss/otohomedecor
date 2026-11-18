@@ -53,7 +53,7 @@ src/
     dto/param.dto.ts     objectId, IDDto
   generated/zod/         sinh tự động, không sửa tay
   app/                   mỗi collection một module (giống project cũ)
-    auth, users, addresses, categories, products, product-variants,
+    auth, users, addresses, categories, collections, products, product-variants,
     product-images, carts, shipping-zones, promotions, checkout,
     orders, payments, reviews, dashboard
 ```
@@ -74,11 +74,11 @@ src/
 - Chỉ đặt `@unique` trên field **bắt buộc có giá trị**. Field optional dùng `@@index` (MongoDB coi `null` là giá trị nên sẽ trùng).
 - `minPrice`, `maxPrice`, `colors` trên Product được lưu thừa: **tính lại sau mỗi lần tạo/sửa/xóa variant**.
 - Giá trị `rooms` / `styles` / `materials` lấy từ `catalog.const.ts` và validate bằng `z.enum`.
-- Không tạo quan hệ nhiều-nhiều. Room/style là mảng string trên Product.
+- Không tạo quan hệ nhiều-nhiều. Room/style là mảng string trên Product. **Ngoại lệ duy nhất:** bộ sưu tập (`Collection`), lưu bằng mảng `Product.collectionIDs` (không khai báo relation của Prisma). Mảng này có thể còn ID của bộ sưu tập đã xóa, nên mọi chỗ đọc phải đi qua `CollectionsService` (chỉ trả bộ sưu tập chưa xóa / đang hiển thị). Gán / gỡ sản phẩm nằm ở module `products` (`/admin/collections/:collectionID/products`) vì ghi vào Product; sản phẩm của bộ sưu tập lấy qua `GET /products?collection=<slug>`.
 
 **Prisma**
-- Service truy vấn qua `this.prisma.extended.<model>`, hoặc `this.extended` nếu kế thừa `PrismaBaseService` (client đã extend, tự lọc soft delete). `client` / `this.prisma.<model>` là client gốc, chỉ dùng khi cần đọc cả bản ghi đã xóa. Model soft delete: `User`, `Category`, `Product`, `ProductVariant`, `Promotion`. Xóa bằng `softDelete()`, không xóa cứng các model này.
-- Soft delete bản ghi có field `@unique` do người dùng đặt (slug, sku, code): đổi luôn giá trị đó thành `<giá trị>--deleted-<id>` để giải phóng, vì index unique vẫn tính bản ghi đã xóa. Xem `CategoriesService.remove`. Riêng email của User thì giữ nguyên (chưa chốt).
+- Service truy vấn qua `this.prisma.extended.<model>`, hoặc `this.extended` nếu kế thừa `PrismaBaseService` (client đã extend, tự lọc soft delete). `client` / `this.prisma.<model>` là client gốc, chỉ dùng khi cần đọc cả bản ghi đã xóa. Model soft delete: `User`, `Category`, `Collection`, `Product`, `ProductVariant`, `Promotion`. Xóa bằng `softDelete()`, không xóa cứng các model này.
+- Soft delete bản ghi có field `@unique` do người dùng đặt (slug, sku, code): đổi luôn giá trị đó thành `<giá trị>--deleted-<id>` để giải phóng, vì index unique vẫn tính bản ghi đã xóa. Xem `CategoriesService.remove`, `CollectionsService.remove`. Riêng email của User thì giữ nguyên (chưa chốt).
 - Lọc "chưa xóa" phải dùng `NOT_DELETED` (`deletedAt` null **hoặc** chưa tồn tại), không viết `deletedAt: null`.
 - Bên trong `$transaction(async (tx) => ...)`, `tx` là client gốc, **không** có filter soft delete. Phải tự thêm `...NOT_DELETED` vào `where`.
 - Giữ transaction ngắn: **không** gọi cổng thanh toán, Cloudinary hay gửi mail bên trong transaction. Bọc transaction có ghi tồn kho bằng `withRetry` (retry khi gặp lỗi `P2034`).

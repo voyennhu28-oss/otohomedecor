@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { ExcelUtilService } from '../../../common/utils/excel-util/excel-util.service';
 import { CategoriesService } from '../../categories/categories.service';
+import { CollectionsService } from '../../collections/collections.service';
 import { ProductsService } from '../products.service';
 import { PRODUCT_EXCEL_COLUMNS } from './product-excel.mapper';
 import { ProductsExcelService } from './products-excel.service';
@@ -120,6 +121,7 @@ describe('ProductsExcelService', () => {
         {
           toSlug: (s: string) => s.toLowerCase().replace(/\s+/g, '-'),
         } as never,
+        { ensureAllExist: jest.fn() } as unknown as CollectionsService,
       );
       const importService = new ProductsExcelService(
         prisma,

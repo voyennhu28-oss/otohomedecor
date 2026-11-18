@@ -11,6 +11,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { StringUtilService } from '../../common/utils/string-util/string-util.service';
 import { CategoriesService } from '../categories/categories.service';
+import { CollectionsService } from '../collections/collections.service';
 import { CreateProductDto } from './dto/product.dto';
 import { ProductListQueryDto } from './dto/product-query.dto';
 import { ProductsService } from './products.service';
@@ -67,6 +68,12 @@ describe('ProductsService', () => {
     getActiveIDsWithDescendants: jest.Mock;
     ensureExists: jest.Mock;
   };
+  let collections: {
+    getVisibleIDBySlug: jest.Mock;
+    findVisibleByIDs: jest.Mock;
+    findByIDs: jest.Mock;
+    ensureAllExist: jest.Mock;
+  };
 
   beforeEach(() => {
     product = createPrismaModelMock();
@@ -88,10 +95,18 @@ describe('ProductsService', () => {
       ensureExists: jest.fn(),
     };
 
+    collections = {
+      getVisibleIDBySlug: jest.fn(),
+      findVisibleByIDs: jest.fn().mockResolvedValue([]),
+      findByIDs: jest.fn().mockResolvedValue([]),
+      ensureAllExist: jest.fn(),
+    };
+
     service = new ProductsService(
       prisma,
       categories as unknown as CategoriesService,
       new StringUtilService(),
+      collections as unknown as CollectionsService,
     );
   });
 
@@ -142,6 +157,126 @@ describe('ProductsService', () => {
       );
       expect(result).toEqual({ list: [], totalItems: 0, totalPages: 0 });
       expect(product.findMany).not.toHaveBeenCalled();
+    });
+
+    it('lọc theo bộ sưu tập: collectionIDs chứa ID của bộ sưu tập', async () => {
+      collections.getVisibleIDBySlug.mockResolvedValue('col1');
+      product.findMany.mockResolvedValue([]);
+      product.count.mockResolvedValue(0);
+
+      await service.findPublicList(listQuery({ collection: 'ha-long' }));
+
+      expect(collections.getVisibleIDBySlug).toHaveBeenCalledWith('ha-long');
+      const where = product.findMany.mock.calls[0][0].where;
+      expect(where.AND).toContainEqual({ collectionIDs: { has: 'col1' } });
+      expect(product.count).toHaveBeenCalledWith({ where });
+    });
+
+    it('bộ sưu tập không tồn tại / đang ẩn: trả trang rỗng', async () => {
+      collections.getVisibleIDBySlug.mockResolvedValue(null);
+      const result = await service.findPublicList(
+        listQuery({ collection: 'khong-co' }),
+      );
+      expect(result).toEqual({ list: [], totalItems: 0, totalPages: 0 });
+      expect(product.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bộ sưu tập', () => {
+    const COL = 'cccccccccccccccccccccccc';
+
+    it('create: kiểm tra collectionIDs tồn tại, không gửi thì lưu []', async () => {
+      product.findUnique.mockResolvedValue(null);
+      product.findMany.mockResolvedValue([]);
+      variant.findMany.mockResolvedValue([]);
+      product.create.mockImplementation(({ data }) => Promise.resolve(data));
+
+      await service.create(createDto({ collectionIDs: [COL] }));
+      expect(collections.ensureAllExist).toHaveBeenCalledWith([COL]);
+
+      const data = await service.create(createDto());
+      expect(data).toMatchObject({ collectionIDs: [] });
+    });
+
+    it('create: bộ sưu tập không tồn tại → không tạo sản phẩm', async () => {
+      collections.ensureAllExist.mockRejectedValue(new NotFoundException());
+      await expect(
+        service.create(createDto({ collectionIDs: [COL] })),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(product.create).not.toHaveBeenCalled();
+    });
+
+    it('chi tiết public: thay collectionIDs bằng các bộ sưu tập đang hiển thị', async () => {
+      product.findFirst.mockResolvedValue({ id: 'p1', collectionIDs: [COL] });
+      collections.findVisibleByIDs.mockResolvedValue([
+        { id: COL, name: 'Hạ Long', slug: 'ha-long' },
+      ]);
+
+      const result = await service.findPublicBySlug('den-tha');
+
+      expect(collections.findVisibleByIDs).toHaveBeenCalledWith([COL]);
+      expect(result).not.toHaveProperty('collectionIDs');
+      expect(result.collections).toEqual([
+        { id: COL, name: 'Hạ Long', slug: 'ha-long' },
+      ]);
+    });
+
+    it('chi tiết admin: bỏ ID của bộ sưu tập đã xóa khỏi collectionIDs', async () => {
+      product.findUnique.mockResolvedValue({
+        id: 'p1',
+        collectionIDs: [COL, 'deleted-collection'],
+      });
+      collections.findByIDs.mockResolvedValue([
+        { id: COL, name: 'Hạ Long', slug: 'ha-long' },
+      ]);
+
+      const result = await service.findAdminByID('p1');
+      expect(result.collectionIDs).toEqual([COL]);
+    });
+
+    it('addToCollection: push có điều kiện chưa có ID, bỏ qua sản phẩm đã xóa', async () => {
+      product.count.mockResolvedValue(2);
+      product.updateMany.mockResolvedValue({ count: 1 });
+
+      await expect(service.addToCollection(COL, ['p1', 'p2'])).resolves.toEqual(
+        { added: 1 },
+      );
+      expect(collections.ensureAllExist).toHaveBeenCalledWith([COL]);
+      expect(product.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          id: { in: ['p1', 'p2'] },
+          NOT: { collectionIDs: { has: COL } },
+          OR: expect.any(Array), // NOT_DELETED
+        }),
+        data: { collectionIDs: { push: COL } },
+      });
+    });
+
+    it('addToCollection: có sản phẩm không tồn tại → 404, không ghi', async () => {
+      product.count.mockResolvedValue(1);
+      await expect(
+        service.addToCollection(COL, ['p1', 'p2']),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(product.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('removeFromCollection: ghi lại mảng không còn ID đó', async () => {
+      product.findFirst.mockResolvedValue({ collectionIDs: ['x', COL] });
+
+      await service.removeFromCollection(COL, 'p1');
+
+      expect(product.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: { collectionIDs: { set: ['x'] } },
+      });
+    });
+
+    it('removeFromCollection: sản phẩm không thuộc bộ sưu tập → 404', async () => {
+      product.findFirst.mockResolvedValue({ collectionIDs: ['x'] });
+      await expect(
+        service.removeFromCollection(COL, 'p1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(product.update).not.toHaveBeenCalled();
     });
   });
 
@@ -421,9 +556,13 @@ describe('ProductsService', () => {
 
     it('findAdminByID: trả chi tiết; không có → 404', async () => {
       product.findUnique
-        .mockResolvedValueOnce({ id: 'p1' })
+        .mockResolvedValueOnce({ id: 'p1', collectionIDs: [] })
         .mockResolvedValueOnce(null);
-      await expect(service.findAdminByID('p1')).resolves.toEqual({ id: 'p1' });
+      await expect(service.findAdminByID('p1')).resolves.toEqual({
+        id: 'p1',
+        collectionIDs: [],
+        collections: [],
+      });
       await expect(service.findAdminByID('x')).rejects.toBeInstanceOf(
         NotFoundException,
       );
@@ -451,10 +590,15 @@ describe('ProductsService', () => {
     });
 
     it('findPublicBySlug: có sản phẩm thì trả kèm variant đang bán', async () => {
-      product.findFirst.mockResolvedValue({ id: 'p1', variants: [] });
+      product.findFirst.mockResolvedValue({
+        id: 'p1',
+        variants: [],
+        collectionIDs: [],
+      });
       await expect(service.findPublicBySlug('sofa')).resolves.toEqual({
         id: 'p1',
         variants: [],
+        collections: [],
       });
     });
 

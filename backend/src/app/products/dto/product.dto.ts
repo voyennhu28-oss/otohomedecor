@@ -25,6 +25,7 @@ const productFields = {
   shortDescription: z.string().trim().max(500),
   description: z.string().max(20_000), // HTML / markdown
   categoryID: objectId,
+  collectionIDs: uniqueArray(objectId, 20),
   rooms: uniqueArray(z.enum(ROOMS), ROOMS.length),
   styles: uniqueArray(z.enum(STYLES), STYLES.length),
   materials: uniqueArray(z.enum(MATERIALS), MATERIALS.length),
@@ -50,6 +51,7 @@ export class CreateProductDto extends createZodDto(
       shortDescription: productFields.shortDescription.optional(),
       description: productFields.description.optional(),
       categoryID: productFields.categoryID,
+      collectionIDs: productFields.collectionIDs.optional(),
       rooms: productFields.rooms.default([]),
       styles: productFields.styles.default([]),
       materials: productFields.materials.default([]),
@@ -83,6 +85,19 @@ export class CreateProductDto extends createZodDto(
     }),
 ) {}
 
+/** POST /admin/collections/:collectionID/products */
+export class CollectionProductsDto extends createZodDto(
+  z
+    .object({
+      productIDs: z
+        .array(objectId)
+        .min(1)
+        .max(200)
+        .transform((ids) => [...new Set(ids)]),
+    })
+    .strict(),
+) {}
+
 /**
  * PATCH /admin/products/:id: chỉ sửa thông tin product.
  * Variant sửa qua /admin/products/:id/variants. Đổi name KHÔNG tự đổi slug.
@@ -95,6 +110,7 @@ export class UpdateProductDto extends createZodDto(
       shortDescription: productFields.shortDescription.nullable().optional(),
       description: productFields.description.nullable().optional(),
       categoryID: productFields.categoryID.optional(),
+      collectionIDs: productFields.collectionIDs.optional(), // gửi cả danh sách mới, [] = bỏ khỏi mọi bộ sưu tập
       rooms: productFields.rooms.optional(),
       styles: productFields.styles.optional(),
       materials: productFields.materials.optional(),

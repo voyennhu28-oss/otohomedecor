@@ -18,6 +18,7 @@ export const STYLES = {
   vintage: 'Vintage',
   modern: 'Hiện đại',
   boho: 'Boho',
+  coastal: 'Biển (Coastal)',
 } as const;
 
 export const MATERIALS = {
@@ -33,6 +34,13 @@ export const MATERIALS = {
   leather: 'Da',
   marble: 'Đá cẩm thạch',
   linen: 'Vải lanh',
+  capiz: 'Vỏ điệp (Capiz)',
+  seashell: 'Vỏ sò',
+  'mother-of-pearl': 'Xà cừ',
+  conch: 'Vỏ ốc',
+  'coconut-shell': 'Gáo dừa',
+  driftwood: 'Gỗ lũa',
+  jute: 'Dây đay',
 } as const;
 
 export type Room = keyof typeof ROOMS;

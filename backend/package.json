@@ -22,6 +22,7 @@
     "db:push": "prisma db push",
     "db:reset": "prisma db push --force-reset",
     "db:seed": "ts-node prisma/seed.ts",
+    "db:seed:reset-catalog": "ts-node prisma/seed.ts --reset-catalog",
     "db:studio": "prisma studio"
   },
   "dependencies": {

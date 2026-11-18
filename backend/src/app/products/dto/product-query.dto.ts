@@ -45,6 +45,7 @@ export class ProductListQueryDto extends createZodDto(
   z
     .object({
       category: slugSchema.optional(), // gồm cả danh mục con
+      collection: slugSchema.optional(), // slug bộ sưu tập đang hiển thị
       room: z.enum(ROOMS).optional(),
       style: z.enum(STYLES).optional(),
       material: commaList(MATERIALS).optional(), // có ít nhất 1 chất liệu trong danh sách
@@ -74,9 +75,12 @@ export class ProductLimitQueryDto extends createZodDto(
   z.object({ limit: z.coerce.number().int().min(1).max(24).default(8) }),
 ) {}
 
-/** GET /products/filters?category=sofa */
+/** GET /products/filters?category=den-tha&collection=ha-long */
 export class ProductFiltersQueryDto extends createZodDto(
-  z.object({ category: slugSchema.optional() }),
+  z.object({
+    category: slugSchema.optional(),
+    collection: slugSchema.optional(),
+  }),
 ) {}
 
 /** GET /admin/products: thấy cả sản phẩm draft / inactive. q tìm theo tên hoặc SKU. */
@@ -85,6 +89,7 @@ export class AdminProductListQueryDto extends createZodDto(
     q: z.string().trim().min(1).max(100).optional(),
     status: z.nativeEnum(ProductStatus).optional(),
     categoryID: objectId.optional(),
+    collectionID: objectId.optional(),
     isFeatured: booleanQuery.optional(),
     page,
     itemPerPage: itemPerPage(100, 20),

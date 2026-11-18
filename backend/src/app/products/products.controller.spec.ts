@@ -48,7 +48,10 @@ describe('ProductsController (public)', () => {
     expect(service.findFeatured).toHaveBeenCalledWith(8);
 
     await controller.getFilterOptions({ category: 'sofa' });
-    expect(service.getFilterOptions).toHaveBeenCalledWith('sofa');
+    expect(service.getFilterOptions).toHaveBeenCalledWith('sofa', undefined);
+
+    await controller.getFilterOptions({ collection: 'ha-long' });
+    expect(service.getFilterOptions).toHaveBeenCalledWith(undefined, 'ha-long');
 
     await controller.findBySlug({ slug: 'sofa-bang' });
     expect(service.findPublicBySlug).toHaveBeenCalledWith('sofa-bang');

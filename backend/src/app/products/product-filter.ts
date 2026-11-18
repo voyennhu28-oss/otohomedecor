@@ -7,10 +7,15 @@ import type { ProductListQueryDto, ProductSort } from './dto/product-query.dto';
  * Mỗi bộ lọc là một điều kiện trong AND, nên đọc từ trên xuống là thấy đủ.
  *
  * @param categoryIDs ID danh mục + con cháu (undefined = không lọc theo danh mục)
+ * @param collectionID ID bộ sưu tập (undefined = không lọc theo bộ sưu tập)
  */
 export const buildPublicProductWhere = (
-  query: Omit<ProductListQueryDto, 'sort' | 'page' | 'itemPerPage'>,
+  query: Omit<
+    ProductListQueryDto,
+    'sort' | 'page' | 'itemPerPage' | 'category' | 'collection'
+  >,
   categoryIDs?: string[],
+  collectionID?: string,
 ): Prisma.ProductWhereInput => {
   const { room, style, material, color, minPrice, maxPrice, inStock, q } =
     query;
@@ -19,6 +24,7 @@ export const buildPublicProductWhere = (
   ];
 
   if (categoryIDs) conditions.push({ categoryID: { in: categoryIDs } });
+  if (collectionID) conditions.push({ collectionIDs: { has: collectionID } });
   if (room) conditions.push({ rooms: { has: room } });
   if (style) conditions.push({ styles: { has: style } });
   if (material?.length) conditions.push({ materials: { hasSome: material } });
