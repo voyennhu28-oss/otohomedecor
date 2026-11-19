@@ -13,16 +13,8 @@ import type {
   VariantInput,
 } from '@/features/products/types';
 import { api } from '@/lib/api-client';
+import { toQueryString } from '@/lib/query-string';
 import type { Page } from '@/types/api';
-
-function toQueryString(query: AdminProductQuery) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== '') params.set(key, String(value));
-  }
-  const text = params.toString();
-  return text ? `?${text}` : '';
-}
 
 export const productService = {
   adminList: (query: AdminProductQuery) =>

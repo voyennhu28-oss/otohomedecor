@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
-import { AdminPageHeader } from '@/components/layout/admin-page-header';
-
-import { ComingSoon } from '@/app/admin/_components/coming-soon';
+import { DataTableSkeleton } from '@/components/admin/data-table-state';
+import { PaymentsManager } from '@/features/admin-payments/components/payments-manager';
 
 export const instant = false;
 
@@ -10,12 +10,8 @@ export const metadata: Metadata = { title: 'Thanh toán' };
 
 export default function AdminPaymentsPage() {
   return (
-    <>
-      <AdminPageHeader
-        title='Thanh toán'
-        description='Giao dịch chuyển khoản SePay, đối soát giao dịch chưa khớp đơn.'
-      />
-      <ComingSoon phase='Giai đoạn 2' endpoints={['GET /admin/payments']} />
-    </>
+    <Suspense fallback={<DataTableSkeleton label='Đang tải giao dịch' />}>
+      <PaymentsManager />
+    </Suspense>
   );
 }

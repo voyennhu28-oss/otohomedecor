@@ -58,3 +58,19 @@
 - Sản phẩm của bộ sưu tập: dialog 2 tab. "Đang có" = `GET /admin/products?collectionID=` (gỡ từng sản phẩm). "Thêm sản phẩm" = tìm trong toàn bộ sản phẩm, chọn nhiều (giữ qua các trang, tối đa 200 mỗi lần), sản phẩm đã có (theo `collectionIDs`) bị khóa.
 - Xóa bộ sưu tập là xóa mềm; `collectionIDs` của sản phẩm vẫn giữ ID cũ nhưng backend chỉ trả bộ sưu tập chưa xóa.
 - Kiểm tra file ảnh (loại, dung lượng) dùng chung `lib/image-files.ts` với ảnh sản phẩm.
+
+## Đơn hàng (`features/admin-orders`)
+
+- **Danh sách** (`/admin/orders`): tab theo trạng thái, tìm theo mã đơn **hoặc** email (chọn ở ô "tìm theo"; API nhận `orderNumber` / `email` riêng), lọc phương thức / trạng thái thanh toán, khoảng ngày đặt (`from` / `to` dạng `YYYY-MM-DD`, backend hiểu theo giờ VN, gồm cả ngày `to`). Phân trang ở server. Ngày "đến" trước ngày "từ" thì bỏ ngày "đến".
+- Xuất Excel gửi đúng bộ lọc đang chọn (không phân trang); backend giới hạn 5000 đơn mỗi lần, quá thì báo lỗi (lọc hẹp khoảng ngày).
+- **Chi tiết** (`/admin/orders/[id]`): sản phẩm là snapshot trong đơn (không gọi lại API sản phẩm), dòng hàng đặt làm (`stockReserved = false`) có nhãn "Đặt làm".
+- Nút thao tác lấy từ `ORDER_TRANSITIONS` (`constants/orders.ts`, giống `backend/src/app/orders/order-status.ts`): nút chính là bước tiếp theo, "Hủy đơn" riêng. Trước khi chuyển, dialog liệt kê tác dụng phụ (`transitionEffects`: hoàn kho phần đã trừ, trả lượt mã, nhắc hoàn tiền khi đơn đã trả, COD giao xong thì tính đã trả, trả hàng không tự cộng kho). Hủy đơn bắt buộc nhập lý do ở FE (backend không bắt buộc) vì lý do gửi kèm email cho khách.
+- "Xác nhận đã nhận tiền" (`mark-paid`) chỉ hiện với đơn chuyển khoản chưa trả, chưa hủy / trả hàng. Backend cho cả COD nhưng COD tự tính đã trả khi giao xong nên FE ẩn.
+- `statusHistory[].changedBy`: email admin, `system` (cron tự hủy đơn quá hạn), `sepay` (webhook nhận tiền).
+- Đổi trạng thái / xác nhận tiền xong thì làm mới cả đơn, giao dịch và sản phẩm (kho, số đã bán đổi).
+
+## Thanh toán (`features/admin-payments`)
+
+- `/admin/payments`: giao dịch SePay, tab "Cần đối soát" (`status=failed`) / "Đã khớp đơn" (`paid`), tìm theo mã đơn.
+- Backend không lưu lý do không khớp, FE đoán từ dữ liệu hiện tại (`mismatchReason`): số tiền khác tổng đơn → "Sai số tiền"; đơn đã hủy / trả hàng → "Tiền về khi đơn đã hủy"; còn lại → "Chuyển trùng". Kèm việc nên làm (`suggestedAction`). Xử lý (xác nhận nhận tiền / hoàn tiền) làm ở trang chi tiết đơn.
+- Dialog chi tiết hiện các field chính của payload SePay và JSON gốc.
