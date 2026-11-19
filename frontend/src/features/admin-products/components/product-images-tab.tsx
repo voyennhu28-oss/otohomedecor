@@ -17,26 +17,10 @@ import {
   useUploadImages,
 } from '@/features/admin-products/hooks/use-admin-products';
 import type { AdminProductDetail, ImageItem } from '@/features/products/types';
+import { ACCEPTED_IMAGE_TYPES, validateImageFiles } from '@/lib/image-files';
 import { cn } from '@/lib/utils';
 
-const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_SIZE = 5 * 1024 * 1024;
 const MAX_FILES = 10;
-
-function validateFiles(files: File[]) {
-  if (files.length > MAX_FILES) {
-    return `Tối đa ${MAX_FILES} ảnh mỗi lần tải lên`;
-  }
-  for (const file of files) {
-    if (!ACCEPTED.includes(file.type)) {
-      return `"${file.name}" không phải ảnh jpg / png / webp`;
-    }
-    if (file.size > MAX_SIZE) {
-      return `"${file.name}" lớn hơn 5MB`;
-    }
-  }
-  return null;
-}
 
 export function ProductImagesTab({ product }: { product: AdminProductDetail }) {
   const inputID = useId();
@@ -52,7 +36,7 @@ export function ProductImagesTab({ product }: { product: AdminProductDetail }) {
     const files = Array.from(list ?? []);
     if (inputRef.current) inputRef.current.value = '';
     if (files.length === 0) return;
-    const message = validateFiles(files);
+    const message = validateImageFiles(files, MAX_FILES);
     setError(message);
     if (message) return;
     upload.mutate(files, {
@@ -105,7 +89,7 @@ export function ProductImagesTab({ product }: { product: AdminProductDetail }) {
           id={inputID}
           type='file'
           multiple
-          accept={ACCEPTED.join(',')}
+          accept={ACCEPTED_IMAGE_TYPES.join(',')}
           className='sr-only'
           disabled={upload.isPending}
           onChange={(event) => handleFiles(event.target.files)}

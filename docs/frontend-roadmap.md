@@ -8,7 +8,7 @@ Thứ tự admin theo phụ thuộc dữ liệu: có danh mục → có sản ph
 | GĐ | Nội dung | Endpoint | Trạng thái |
 |---|---|---|---|
 | 0 | Nền tảng | | Format response + layout xong, còn lại chưa |
-| 1 | Danh mục, sản phẩm, variant, ảnh | 19 | |
+| 1 | Danh mục, sản phẩm, variant, ảnh, bộ sưu tập | 19 + 9 | Xong |
 | 2 | Đơn hàng, thanh toán | 6 | |
 | 3 | Dashboard | 1 | |
 | 4 | Khuyến mãi, vùng giao hàng | 10 | |
@@ -21,8 +21,8 @@ Thứ tự admin theo phụ thuộc dữ liệu: có danh mục → có sản ph
 
 - [x] Format response: backend đăng ký `FormatResponseInterceptor` global, mọi response thành công bọc `{ errors, data, message }` khớp `api-client.ts`. File Excel và webhook SePay không bọc.
 - [x] Layout admin: sidebar thu gọn được (Ctrl+B, nhớ trạng thái bằng cookie), topbar có breadcrumb, menu tài khoản, `AdminPageHeader`.
-- [ ] `types/api.ts`: `Page<T> = { list, totalItems, totalPages }`; enum dùng chung (`OrderStatus`, `PaymentStatus`, `PaymentMethod`, `ProductStatus`, `ReviewStatus`...) theo `models.md`.
-- [ ] `api-client`: thêm hàm tải file (blob + tên file từ `Content-Disposition`) cho các route export Excel.
+- [x] `types/api.ts`: `Page<T> = { list, totalItems, totalPages }`; enum dùng chung (`OrderStatus`, `PaymentStatus`, `PaymentMethod`, `ProductStatus`, `ReviewStatus`...) theo `models.md`.
+- [x] `api-client`: thêm hàm tải file (blob + tên file từ `Content-Disposition`) cho các route export Excel.
 - [x] Bộ component bảng dùng chung: `useUrlFilters`, `SearchInput`, `DataTablePagination`, `DataTableState` / `DataTableSkeleton` (lọc lưu trên URL để F5 / chia sẻ link giữ nguyên).
 - [ ] `StatusBadge` (nhãn tiếng Việt cho trạng thái đơn, thanh toán, sản phẩm...), dialog xác nhận xóa, trạng thái rỗng / lỗi / đang tải.
 - [ ] shadcn cần thêm: `table`, `select`, `tabs`, `textarea`, `switch`, `checkbox`, `alert-dialog`, `popover`, `calendar` (chọn khoảng ngày), `pagination`.
@@ -36,6 +36,7 @@ Tài liệu: 05, 06, 07, 08.
 - [x] **Variant**: thêm / sửa / nhân bản / ngừng bán / xóa trong tab Biến thể; điều chỉnh tồn kho `PATCH /admin/variants/:id/stock` (nhập-xuất hoặc kiểm kê).
 - [x] **Ảnh**: upload multipart field `files` (jpg / png / webp, ≤ 5MB, kéo thả), xóa theo `publicID`.
 - [x] **Excel**: xuất (tất cả hoặc các dòng đã chọn), nhập (`file` .xlsx) rồi hiện kết quả `created` / `errors` theo số dòng.
+- [x] **Bộ sưu tập** (`/admin/collections`, thêm sau khi backend có module collections): CRUD trong dialog, ảnh bìa, thời gian hiển thị, bật / tắt, nổi bật; dialog gán / gỡ sản phẩm; form sản phẩm chọn bộ sưu tập; lọc sản phẩm theo bộ sưu tập.
 
 ## GĐ 2: Đơn hàng & thanh toán
 

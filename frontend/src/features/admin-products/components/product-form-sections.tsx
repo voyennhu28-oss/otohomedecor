@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo } from 'react';
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 
@@ -29,6 +30,11 @@ import {
 } from '@/constants/catalog';
 import { useAdminCategories } from '@/features/admin-categories/hooks/use-admin-categories';
 import { flattenTree } from '@/features/admin-categories/tree';
+import {
+  COLLECTION_STATES,
+  getCollectionState,
+} from '@/features/admin-collections/filters';
+import { useAdminCollections } from '@/features/admin-collections/hooks/use-admin-collections';
 import type { ProductFormValues } from '@/features/admin-products/schemas';
 import { formatVND } from '@/lib/format';
 
@@ -193,6 +199,23 @@ export function ProductClassificationSection() {
   } = useFormContext<ProductFormValues>();
   const { data: tree, isPending } = useAdminCategories();
   const categoryOptions = useMemo(() => flattenTree(tree ?? []), [tree]);
+  const { data: collections, isPending: collectionsPending } =
+    useAdminCollections();
+  const collectionOptions = useMemo(
+    () =>
+      Object.fromEntries(
+        (collections ?? []).map((collection) => {
+          const state = getCollectionState(collection);
+          return [
+            collection.id,
+            state === 'live'
+              ? collection.name
+              : `${collection.name} (${COLLECTION_STATES[state].toLowerCase()})`,
+          ];
+        }),
+      ) as Record<string, string>,
+    [collections],
+  );
 
   return (
     <FormSection title='Phân loại' description='Dùng cho bộ lọc ở cửa hàng.'>
@@ -216,6 +239,38 @@ export function ProductClassificationSection() {
         </NativeSelect>
         <FieldError errors={[errors.categoryID]} />
       </Field>
+
+      <Controller
+        control={control}
+        name='collectionIDs'
+        render={({ field, fieldState }) => (
+          <Field data-invalid={!!fieldState.error}>
+            <FieldLabel htmlFor='product-collections'>Bộ sưu tập</FieldLabel>
+            {collectionsPending ? (
+              <FieldDescription>Đang tải bộ sưu tập…</FieldDescription>
+            ) : Object.keys(collectionOptions).length === 0 ? (
+              <FieldDescription>
+                Chưa có bộ sưu tập.{' '}
+                <Link
+                  href='/admin/collections'
+                  className='underline underline-offset-4 hover:text-foreground'
+                >
+                  Tạo bộ sưu tập
+                </Link>
+              </FieldDescription>
+            ) : (
+              <ToggleChips
+                id='product-collections'
+                label='Bộ sưu tập'
+                options={collectionOptions}
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+            <FieldError errors={[fieldState.error]} />
+          </Field>
+        )}
+      />
 
       <Controller
         control={control}

@@ -31,6 +31,7 @@ import {
 import { PRODUCT_STATUSES, type ProductStatus } from '@/constants/catalog';
 import { useAdminCategories } from '@/features/admin-categories/hooks/use-admin-categories';
 import { flattenTree } from '@/features/admin-categories/tree';
+import { useAdminCollections } from '@/features/admin-collections/hooks/use-admin-collections';
 import {
   hasProductFilters,
   PRODUCT_FILTER_DEFAULTS,
@@ -77,6 +78,7 @@ export function ProductsManager() {
   } = useAdminProducts(query);
   const { data: tree } = useAdminCategories();
   const categoryOptions = useMemo(() => flattenTree(tree ?? []), [tree]);
+  const { data: collections } = useAdminCollections();
 
   const update = useUpdateProduct();
   const remove = useDeleteProduct();
@@ -201,6 +203,24 @@ export function ProductsManager() {
               </NativeSelectOption>
             ))}
           </NativeSelect>
+          {(collections?.length ?? 0) > 0 && (
+            <NativeSelect
+              size='sm'
+              value={query.collectionID ?? ''}
+              onChange={(event) =>
+                setValues({ collection: event.target.value })
+              }
+              aria-label='Lọc theo bộ sưu tập'
+              className={selectClass(!!query.collectionID)}
+            >
+              <NativeSelectOption value=''>Mọi bộ sưu tập</NativeSelectOption>
+              {collections?.map((collection) => (
+                <NativeSelectOption key={collection.id} value={collection.id}>
+                  {collection.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          )}
           <NativeSelect
             size='sm'
             value={values.featured}

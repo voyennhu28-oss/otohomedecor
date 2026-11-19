@@ -1,4 +1,5 @@
 import {
+  Album02Icon,
   CreditCardIcon,
   DashboardSquare01Icon,
   DeliveryTruck01Icon,
@@ -45,6 +46,11 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { href: '/admin/products', label: 'Sản phẩm', icon: PackageIcon },
       { href: '/admin/categories', label: 'Danh mục', icon: Layers01Icon },
+      {
+        href: '/admin/collections',
+        label: 'Bộ sưu tập',
+        icon: Album02Icon,
+      },
       { href: '/admin/reviews', label: 'Đánh giá', icon: StarIcon },
     ],
   },

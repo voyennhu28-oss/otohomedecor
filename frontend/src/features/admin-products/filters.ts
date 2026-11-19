@@ -6,6 +6,7 @@ export const PRODUCT_FILTER_DEFAULTS = {
   q: '',
   status: '',
   category: '',
+  collection: '',
   featured: '',
   page: '1',
   size: '20',
@@ -15,6 +16,8 @@ export type ProductFilterValues = typeof PRODUCT_FILTER_DEFAULTS;
 
 const STATUS_KEYS = Object.keys(PRODUCT_STATUSES) as ProductStatus[];
 const OBJECT_ID = /^[a-f\d]{24}$/i;
+
+export const isObjectID = (value: string) => OBJECT_ID.test(value);
 
 export function toProductQuery(raw: ProductFilterValues): AdminProductQuery {
   const q = raw.q.trim().slice(0, 100);
@@ -27,7 +30,8 @@ export function toProductQuery(raw: ProductFilterValues): AdminProductQuery {
   return {
     q: q || undefined,
     status: status || undefined,
-    categoryID: OBJECT_ID.test(raw.category) ? raw.category : undefined,
+    categoryID: isObjectID(raw.category) ? raw.category : undefined,
+    collectionID: isObjectID(raw.collection) ? raw.collection : undefined,
     isFeatured: featured === '' ? undefined : featured === 'true',
     page: parsePositiveInt(raw.page, 1),
     itemPerPage: Math.min(parsePositiveInt(raw.size, 20), 100),
@@ -39,6 +43,7 @@ export function hasProductFilters(query: AdminProductQuery) {
     query.q !== undefined ||
     query.status !== undefined ||
     query.categoryID !== undefined ||
+    query.collectionID !== undefined ||
     query.isFeatured !== undefined
   );
 }

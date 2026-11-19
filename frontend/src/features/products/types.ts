@@ -14,6 +14,7 @@ export type Product = {
   shortDescription: string | null;
   description: string | null;
   categoryID: string;
+  collectionIDs: string[];
   images: ImageItem[];
   rooms: Room[];
   styles: Style[];
@@ -72,6 +73,7 @@ export type AdminProductListItem = Product & {
 
 export type AdminProductDetail = Product & {
   category: CategoryRef;
+  collections: CategoryRef[];
   variants: ProductVariant[];
 };
 
@@ -79,6 +81,7 @@ export type AdminProductQuery = {
   q?: string;
   status?: ProductStatus;
   categoryID?: string;
+  collectionID?: string;
   isFeatured?: boolean;
   page?: number;
   itemPerPage?: number;
@@ -106,6 +109,7 @@ export type ProductFieldsInput = {
   shortDescription?: string | null;
   description?: string | null;
   categoryID: string;
+  collectionIDs?: string[];
   rooms?: Room[];
   styles?: Style[];
   materials?: Material[];

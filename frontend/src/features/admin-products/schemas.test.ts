@@ -34,6 +34,7 @@ const product: AdminProductDetail = {
   shortDescription: null,
   description: null,
   categoryID: 'c1',
+  collectionIDs: ['6738d0a0c2b4e9a1d0f00999'],
   images: [],
   rooms: ['bedroom'],
   styles: [],
@@ -56,6 +57,9 @@ const product: AdminProductDetail = {
   updatedAt: '2026-11-01T00:00:00.000Z',
   deletedAt: null,
   category: { id: 'c1', name: 'Đèn', slug: 'den' },
+  collections: [
+    { id: '6738d0a0c2b4e9a1d0f00999', name: 'Biển xanh', slug: 'bien-xanh' },
+  ],
   variants: [],
 };
 
@@ -176,6 +180,7 @@ describe('toProductQuery', () => {
         q: '  sò ',
         status: 'active',
         category: 'not-an-id',
+        collection: '6738d0a0c2b4e9a1d0f00999',
         featured: 'true',
         page: '2',
         size: '500',
@@ -184,6 +189,7 @@ describe('toProductQuery', () => {
       q: 'sò',
       status: 'active',
       categoryID: undefined,
+      collectionID: '6738d0a0c2b4e9a1d0f00999',
       isFeatured: true,
       page: 2,
       itemPerPage: 100,

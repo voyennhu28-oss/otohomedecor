@@ -46,3 +46,15 @@
 - Ảnh: jpg / png / webp, ≤ 5MB, ≤ 10 ảnh mỗi lần, kiểm tra ở FE trước khi gửi. Upload / xóa trả lại cả danh sách ảnh → ghi thẳng vào cache chi tiết. Không có API đổi thứ tự ảnh: ảnh đầu là ảnh đại diện.
 - Ô số trong form dùng `requiredNumber` (trống → `NaN` → báo "Nhập ...") hoặc `optionalNumber` (trống → `null`) từ `components/admin/number-input.tsx`.
 - Lỗi 409 trùng slug gắn vào ô slug, trùng SKU (dialog biến thể) gắn vào ô SKU; còn lại qua `setServerErrors`.
+- Form sản phẩm có chọn bộ sưu tập (`collectionIDs`, tối đa 20); danh sách lọc được theo bộ sưu tập (`?collection=` → `collectionID`).
+
+## Bộ sưu tập (`features/admin-collections`)
+
+- API chưa có trong `docs/api-docs`; đọc theo `backend/src/app/collections` và `backend/docs/code-notes/collections.md`.
+- `GET /admin/collections` trả tất cả (không phân trang) → tìm / lọc / sắp xếp / phân trang ở client, lưu trên URL.
+- Trạng thái hiển thị tính ở FE (`getCollectionState`) giống `visibleCollectionWhere` của backend: tắt → "Đang tắt"; `startsAt` sau hiện tại → "Sắp diễn ra"; `endsAt` ≤ hiện tại → "Đã kết thúc"; còn lại "Đang hiển thị".
+- Thời gian nhập bằng `datetime-local` (giờ máy người dùng), gửi lên dạng ISO. Khi sửa chỉ gửi field đã đổi; so sánh thời gian theo chuỗi `yyyy-MM-ddTHH:mm` để không gửi nhầm vì lệch giây. Xóa trắng → gửi `null` (bỏ giới hạn).
+- Ảnh bìa: 1 ảnh, upload riêng (`POST /admin/collections/:id/image`, field `file`). Lúc tạo mới, ảnh chọn trước được tải lên ngay sau khi tạo xong; lúc sửa, đổi / xóa ảnh có tác dụng ngay (không chờ bấm Lưu).
+- Sản phẩm của bộ sưu tập: dialog 2 tab. "Đang có" = `GET /admin/products?collectionID=` (gỡ từng sản phẩm). "Thêm sản phẩm" = tìm trong toàn bộ sản phẩm, chọn nhiều (giữ qua các trang, tối đa 200 mỗi lần), sản phẩm đã có (theo `collectionIDs`) bị khóa.
+- Xóa bộ sưu tập là xóa mềm; `collectionIDs` của sản phẩm vẫn giữ ID cũ nhưng backend chỉ trả bộ sưu tập chưa xóa.
+- Kiểm tra file ảnh (loại, dung lượng) dùng chung `lib/image-files.ts` với ảnh sản phẩm.
