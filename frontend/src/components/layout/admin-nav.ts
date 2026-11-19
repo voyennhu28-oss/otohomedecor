@@ -16,6 +16,7 @@ export type AdminNavItem = {
   href: string;
   label: string;
   icon: IconSvgElement;
+  badge?: 'pendingOrders';
 };
 
 export type AdminNavGroup = {
@@ -32,7 +33,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   {
     label: 'Bán hàng',
     items: [
-      { href: '/admin/orders', label: 'Đơn hàng', icon: ShoppingBag01Icon },
+      {
+        href: '/admin/orders',
+        label: 'Đơn hàng',
+        icon: ShoppingBag01Icon,
+        badge: 'pendingOrders',
+      },
       { href: '/admin/payments', label: 'Thanh toán', icon: CreditCardIcon },
       {
         href: '/admin/promotions',

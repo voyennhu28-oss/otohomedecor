@@ -15,11 +15,13 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { usePendingOrderCount } from '@/features/admin-dashboard/hooks/use-admin-dashboard';
 
 import { ADMIN_NAV, isAdminNavActive } from './admin-nav';
 import { AdminUserMenu } from './admin-user-menu';
@@ -27,6 +29,7 @@ import { AdminUserMenu } from './admin-user-menu';
 export function AdminSidebar() {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { data: pendingOrders } = usePendingOrderCount();
 
   const closeOnMobile = () => {
     if (isMobile) setOpenMobile(false);
@@ -87,6 +90,16 @@ export function AdminSidebar() {
                         <HugeiconsIcon icon={item.icon} strokeWidth={1.75} />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
+                      {item.badge === 'pendingOrders' &&
+                        !!pendingOrders &&
+                        pendingOrders > 0 && (
+                          <SidebarMenuBadge
+                            className='top-1.5! rounded-sm bg-secondary text-[11px] text-secondary-foreground'
+                            aria-label={`${pendingOrders} đơn chờ xác nhận`}
+                          >
+                            {pendingOrders > 99 ? '99+' : pendingOrders}
+                          </SidebarMenuBadge>
+                        )}
                     </SidebarMenuItem>
                   );
                 })}

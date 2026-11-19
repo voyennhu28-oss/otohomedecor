@@ -51,6 +51,7 @@ function useInvalidateOrders() {
       queryClient.invalidateQueries({ queryKey: ADMIN_ORDERS_KEY }),
       queryClient.invalidateQueries({ queryKey: ADMIN_PAYMENTS_KEY }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
     ]);
 }
 

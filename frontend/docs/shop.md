@@ -5,6 +5,7 @@
 - Nền trắng. Chữ gần đen ngả ấm, bề mặt phụ màu cát nhạt (màu vỏ sò). Không có màu nhấn rực: ảnh sản phẩm và ánh đèn là điểm màu.
 - `--radius: 0.25rem`: nút, ô nhập, card tối đa 4px.
 - Sidebar admin: trắng ngả cát rất nhẹ để tách khỏi vùng nội dung trắng.
+- Màu dữ liệu biểu đồ `--chart-1`: nâu hổ phách `oklch(0.584 0.109 62)` (≈ `#a96b2e`, tông ánh đèn). Đã chạy bộ kiểm tra màu (độ sáng 0.43–0.77, độ bão hòa ≥ 0.10, tương phản ≥ 3:1 trên nền trắng); các tông nâu nhạt hơn bị coi là ngả xám. Chỉ dùng cho mark của biểu đồ / thanh tỉ lệ, chữ vẫn dùng token chữ.
 - Tiêu đề: **Cormorant Garamond**, serif nét thanh kiểu Garamond, chữ hoa giãn rộng cùng tinh thần chữ khắc trong logo; bản nghiêng mềm như ánh đèn.
 - Nội dung, nút, nhãn: **Be Vietnam Pro**, thiết kế riêng cho dấu tiếng Việt, đọc rõ ở cỡ nhỏ; in hoa giãn chữ giống tagline "LIGHT WHAT YOU FEEL" của logo.
 - `label-caps`: nhãn nhỏ in hoa giãn chữ (nút, nhãn, tiêu đề cột footer), giống tagline logo. `display-caps`: chữ hoa serif giãn rộng như "O T H E o" trong logo, cỡ chữ đặt riêng.

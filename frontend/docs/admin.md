@@ -74,3 +74,13 @@
 - `/admin/payments`: giao dịch SePay, tab "Cần đối soát" (`status=failed`) / "Đã khớp đơn" (`paid`), tìm theo mã đơn.
 - Backend không lưu lý do không khớp, FE đoán từ dữ liệu hiện tại (`mismatchReason`): số tiền khác tổng đơn → "Sai số tiền"; đơn đã hủy / trả hàng → "Tiền về khi đơn đã hủy"; còn lại → "Chuyển trùng". Kèm việc nên làm (`suggestedAction`). Xử lý (xác nhận nhận tiền / hoàn tiền) làm ở trang chi tiết đơn.
 - Dialog chi tiết hiện các field chính của payload SePay và JSON gốc.
+
+## Bảng điều khiển (`features/admin-dashboard`)
+
+- Một lần `GET /admin/dashboard` cho kỳ đang xem + một lần cho **kỳ liền trước cùng số ngày** (`previousRange`) để tính % thay đổi ở 4 ô KPI. Kỳ trước bằng 0 thì ghi "Kỳ trước chưa có số liệu". Đơn hủy tăng là xấu (`upIsGood={false}`).
+- Khoảng ngày: 7 / 30 / 90 ngày, tháng này, tùy chọn (`?range=&from=&to=`, tối đa 366 ngày như backend). Ngày tính theo máy admin (giờ VN), gửi `YYYY-MM-DD`.
+- Biểu đồ doanh thu: cột 1 màu (`--chart-1`), cột tối đa 24px, bo 4px đầu cột, lưới ngang mảnh; tooltip ngày + doanh thu + số đơn; nút "Bảng" để xem số liệu dạng bảng. Khoảng > 92 ngày thì gộp theo tuần (thứ Hai đầu tuần) cho đỡ dày.
+- Đơn theo trạng thái / sản phẩm bán chạy dùng danh sách có thanh (meter list), 1 màu, không dùng biểu đồ tròn. Mỗi dòng trạng thái dẫn sang danh sách đơn đã lọc đúng trạng thái + khoảng ngày.
+- "Cần xử lý": đơn chờ xác nhận (tổng, không theo khoảng ngày), giao dịch cần đối soát (trong khoảng), hàng sắp hết (ngưỡng chọn được: hết hàng / ≤ 5 / 10 / 20, `?low=`), dẫn thẳng sang tab Biến thể của sản phẩm.
+- Badge số đơn chờ xác nhận trên mục "Đơn hàng" ở sidebar: `GET /admin/orders?status=pending&itemPerPage=1` lấy `totalItems` (nhẹ hơn gọi dashboard), tự làm mới mỗi 60 giây và sau mỗi thao tác đơn.
+- `StatTile` (`components/admin/stat-tile.tsx`) dùng lại được cho các trang khác.
