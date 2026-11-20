@@ -33,7 +33,7 @@ Backend NestJS nằm ở `../backend`. Quy tắc nghiệp vụ ở [`../backend/
 | Dữ liệu từ API | `@tanstack/react-query` 5                                                                                                                               |                                                                                                                                                                                              |
 | State toàn cục | `zustand` 5                                                                                                                                             |                                                                                                                                                                                              |
 | Khác           | `date-fns` 4, `next-themes`, `sonner` (toast)                                                                                                           |                                                                                                                                                                                              |
-| Lint / format  | ESLint 9 (`npm run lint`), Prettier + `prettier-plugin-tailwindcss`                                                                                     | Chưa có test                                                                                                                                                                                 |
+| Lint / format  | ESLint 9 (`npm run lint`), Prettier + `prettier-plugin-tailwindcss`                                                                                     | Test: Vitest (`npm run test:run`, file `*.test.ts` cạnh code). `npm run check` = lint + typecheck + format:check + test, chạy tự động ở pre-commit khi commit có file `frontend/`            |
 
 Trước khi cài thư viện mới, kiểm tra `package.json` xem đã có thứ tương đương chưa.
 
@@ -44,6 +44,7 @@ npm run dev                       # http://localhost:3000 (khớp FE_URL của b
 npm run build
 npm run lint
 npx prettier --write .
+npm run check                     # lint + tsc + prettier --check + vitest (giống pre-commit)
 npx shadcn@latest add <component> # thêm component shadcn, KHÔNG viết tay
 ```
 
@@ -167,6 +168,6 @@ src/
 
 ## Trước khi báo xong
 
-1. `npm run lint` và `npm run build` không lỗi.
+1. `npm run check` và `npm run build` không lỗi.
 2. Thay đổi đụng tới API thì đã đối chiếu với controller / DTO của backend.
 3. Nếu đổi quy ước trong file này thì cập nhật file và báo cho người dùng.
