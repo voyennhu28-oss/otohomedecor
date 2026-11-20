@@ -1,7 +1,7 @@
 # Lộ trình nối API cho frontend
 
 Dựa trên `docs/api-docs` (89 endpoint). Admin làm trước (44 endpoint `/admin/...`), shop làm sau.
-Trang admin chưa làm hiện khung `ComingSoon` ghi giai đoạn + endpoint (`src/app/admin/_components/coming-soon.tsx`); làm xong trang nào thì xóa khung đó.
+Toàn bộ trang admin đã nối API (khung `ComingSoon` đã xóa). Phần còn lại là shop.
 
 Thứ tự admin theo phụ thuộc dữ liệu: có danh mục → có sản phẩm → khách mới đặt được đơn → dashboard mới có số liệu.
 
@@ -12,7 +12,7 @@ Thứ tự admin theo phụ thuộc dữ liệu: có danh mục → có sản ph
 | 2 | Đơn hàng, thanh toán | 6 | Xong |
 | 3 | Dashboard | 1 | Xong |
 | 4 | Khuyến mãi, vùng giao hàng | 10 | Xong |
-| 5 | Tài khoản, đánh giá | 8 | |
+| 5 | Tài khoản, đánh giá | 8 | Xong |
 | 6+ | Shop | 45 | |
 
 ---
@@ -66,8 +66,8 @@ Tài liệu: 10, 11. Cần xong trước khi làm checkout ở shop (phí ship v
 
 Tài liệu: 03 (phần admin), 15 (phần admin).
 
-- **Tài khoản** (`/admin/users`): lọc `q`, `role`, `status`; chi tiết có sổ địa chỉ, số đơn, tổng chi tiêu; tạo tài khoản (cả admin), khóa / mở, xóa. Ẩn thao tác tự hạ quyền / tự khóa / tự xóa chính mình (backend cũng chặn).
-- **Đánh giá** (`/admin/reviews`): lọc theo trạng thái, sao, sản phẩm; duyệt / ẩn / đưa về chờ duyệt; xóa ảnh vi phạm.
+- [x] **Tài khoản** (`/admin/users`): lọc `q`, `role`, `status`; chi tiết có sổ địa chỉ, số đơn, tổng chi tiêu; tạo tài khoản (cả admin), khóa / mở, xóa. Ẩn thao tác tự hạ quyền / tự khóa / tự xóa chính mình (backend cũng chặn).
+- [x] **Đánh giá** (`/admin/reviews`): lọc theo trạng thái, sao, sản phẩm; duyệt / ẩn / đưa về chờ duyệt; xóa ảnh vi phạm.
 
 ## GĐ 6+: Shop
 
