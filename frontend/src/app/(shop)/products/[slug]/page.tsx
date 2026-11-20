@@ -1,14 +1,45 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
-export const metadata: Metadata = { title: 'Chi tiết sản phẩm' };
+import { getProduct } from '@/features/catalog/queries';
 
-export default function ProductDetailPage() {
+import {
+  ProductDetailSkeleton,
+  ProductDetailView,
+} from './_components/product-detail';
+
+type ProductPageProps = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({
+  params,
+}: ProductPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const result = await getProduct(slug);
+  if (result.status !== 'found') return { title: 'Sản phẩm' };
+
+  const { product } = result;
+  const cover = [...product.images].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  )[0];
+  const description =
+    product.shortDescription ??
+    `${product.name}, đèn trang trí ghép tay từ vỏ tự nhiên.`;
+
+  return {
+    title: product.name,
+    description,
+    openGraph: {
+      title: product.name,
+      description,
+      images: cover ? [{ url: cover.url, alt: cover.alt ?? product.name }] : [],
+    },
+  };
+}
+
+export default function ProductPage({ params }: ProductPageProps) {
   return (
-    <section className='container mx-auto px-6 py-16'>
-      <h1 className='text-5xl font-medium'>Chi tiết sản phẩm</h1>
-      <p className='mt-4 text-muted-foreground'>
-        GET /products/:slug (variants, ảnh), /products/:slug/related.
-      </p>
-    </section>
+    <Suspense fallback={<ProductDetailSkeleton />}>
+      <ProductDetailView params={params} />
+    </Suspense>
   );
 }

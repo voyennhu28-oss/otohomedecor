@@ -13,6 +13,7 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from '@/components/ui/native-select';
+import { getPageItems } from '@/lib/pagination';
 import { cn } from '@/lib/utils';
 
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
@@ -166,21 +167,4 @@ function PageButton({
       <HugeiconsIcon icon={icon} strokeWidth={1.75} />
     </Button>
   );
-}
-
-function getPageItems(page: number, totalPages: number) {
-  const pages = new Set([1, totalPages]);
-  for (let p = page - 2; p <= page + 2; p++) {
-    if (p >= 1 && p <= totalPages) pages.add(p);
-  }
-  const sorted = [...pages].sort((a, b) => a - b);
-  const items: (number | 'ellipsis')[] = [];
-  sorted.forEach((p, index) => {
-    const prev = sorted[index - 1];
-    if (prev !== undefined && p - prev > 1) {
-      items.push(p - prev === 2 ? prev + 1 : 'ellipsis');
-    }
-    items.push(p);
-  });
-  return items;
 }

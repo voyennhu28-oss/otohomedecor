@@ -18,6 +18,19 @@ export type Collection = {
 
 export type CollectionRef = { id: string; name: string; slug: string };
 
+export type PublicCollection = Pick<
+  Collection,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'description'
+  | 'image'
+  | 'isFeatured'
+  | 'sortOrder'
+  | 'startsAt'
+  | 'endsAt'
+>;
+
 export type CreateCollectionInput = {
   name: string;
   slug?: string;

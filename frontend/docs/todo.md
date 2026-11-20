@@ -1,6 +1,7 @@
 # Việc còn dở
 
-- **Landing page dùng dữ liệu giữ chỗ** (`app/(shop)/_components/placeholder-data.ts`): thay `FEATURED_PRODUCTS` bằng `GET /products/featured` (Server Component). Shape giữ chỗ không phải shape API; khi nối dùng type trong `features/products/types.ts`.
+- Thêm vào giỏ đã gọi API nhưng chưa có `CartSheet` / số lượng trên header để xem giỏ; toast chưa có nút "Xem giỏ".
+- Admin sửa sản phẩm / danh mục / bộ sưu tập thì shop thấy chậm tối đa vài phút (cache `minutes`). Muốn thấy ngay cần route handler gọi `revalidateTag(CATALOG_TAGS...)` khi admin lưu, hoặc backend gọi webhook.
 - Nội dung nháp cần chỉnh theo thực tế: danh sách loại vỏ dùng làm đèn (trang chủ), các bước làm một chiếc đèn.
 - Header: nút giỏ hàng (`CartSheet`) đặt cạnh `HeaderUserMenu` khi có API giỏ hàng.
 - Footer: thông tin liên hệ (địa chỉ, số điện thoại), mạng xã hội.

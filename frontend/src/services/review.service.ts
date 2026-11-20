@@ -2,6 +2,8 @@ import type { ImageItem } from '@/features/products/types';
 import type {
   AdminReviewListItem,
   AdminReviewQuery,
+  ProductReviewPage,
+  ProductReviewQuery,
   Review,
   ReviewStatus,
 } from '@/features/reviews/types';
@@ -10,6 +12,12 @@ import { toQueryString } from '@/lib/query-string';
 import type { Page } from '@/types/api';
 
 export const reviewService = {
+  productReviews: (productID: string, query: ProductReviewQuery) =>
+    api.get<ProductReviewPage>(
+      `/products/${productID}/reviews${toQueryString(query)}`,
+      { skipAuthRefresh: true },
+    ),
+
   adminList: (query: AdminReviewQuery) =>
     api.get<Page<AdminReviewListItem>>(`/admin/reviews${toQueryString(query)}`),
 

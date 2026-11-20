@@ -7,7 +7,7 @@ import { SectionTitle } from '@/components/section-title';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-import { ImagePlaceholder } from './image-placeholder';
+import { ImagePlaceholder } from '@/components/image-placeholder';
 
 export function LampSwitch() {
   const [on, setOn] = useState(false);

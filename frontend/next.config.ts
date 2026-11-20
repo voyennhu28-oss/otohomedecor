@@ -2,9 +2,11 @@ import type { NextConfig } from 'next';
 import path from 'node:path';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  images: {
+    remotePatterns: [new URL('https://res.cloudinary.com/**')],
+  },
   turbopack: {
     root: path.join(__dirname),
     rules: {

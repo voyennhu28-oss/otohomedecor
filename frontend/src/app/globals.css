@@ -16,6 +16,26 @@
       transform: translateX(-50%);
     }
   }
+  --ease-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-rise: rise 0.9s var(--ease-soft) both;
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+  --animate-fade: fade 0.7s var(--ease-soft) both;
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  --animate-settle: settle 1.8s var(--ease-soft) both;
+  @keyframes settle {
+    from {
+      transform: scale(1.06);
+    }
+  }
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -153,4 +173,22 @@
   font-family: var(--font-cormorant);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+
+@utility reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--reveal-delay, 0) * 1%) entry
+        calc(55% + var(--reveal-delay, 0) * 1%);
+    }
+  }
 }

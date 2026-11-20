@@ -12,6 +12,11 @@ export type Category = {
   deletedAt: string | null;
 };
 
+export type PublicCategoryNode = Pick<
+  Category,
+  'id' | 'name' | 'slug' | 'description' | 'imageUrl' | 'parentID' | 'sortOrder'
+> & { children: PublicCategoryNode[] };
+
 export type AdminCategoryNode = Category & {
   productCount: number;
   children: AdminCategoryNode[];

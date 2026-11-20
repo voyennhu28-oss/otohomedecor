@@ -1,14 +1,25 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
-export const metadata: Metadata = { title: 'Sản phẩm' };
+import type { CatalogSearchParams } from '@/features/catalog/product-query';
 
-export default function ProductsPage() {
+import { Catalog } from './_components/catalog';
+import { CatalogSkeleton } from './_components/catalog-skeleton';
+
+export const metadata: Metadata = {
+  title: 'Sản phẩm',
+  description:
+    'Đèn trang trí ghép tay từ vỏ sò, vỏ điệp, xà cừ. Lọc theo chất liệu, không gian, phong cách và khoảng giá.',
+};
+
+export default function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<CatalogSearchParams>;
+}) {
   return (
-    <section className='container mx-auto px-6 py-16'>
-      <h1 className='text-5xl font-medium'>Sản phẩm</h1>
-      <p className='mt-4 text-muted-foreground'>
-        Danh sách + bộ lọc: GET /products, GET /products/filters.
-      </p>
-    </section>
+    <Suspense fallback={<CatalogSkeleton />}>
+      <Catalog searchParams={searchParams} />
+    </Suspense>
   );
 }

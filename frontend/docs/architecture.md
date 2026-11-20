@@ -35,6 +35,11 @@
 - `cacheComponents` bật: component dùng `useSearchParams` / `usePathname` ở route động phải nằm trong `<Suspense>` (vd `ShopNavLinks` có fallback `ShopNavList` không active; form reset mật khẩu; các trang admin dùng `useUrlFilters`).
 - **Instant navigation**: Next coi mọi `page.tsx` không khai báo là `instant = true`. Trang sau `AuthGuard` chỉ render sau khi có `/me` ở trình duyệt nên bị bỏ khi prerender ("dropped segment"). Vì vậy **mỗi** `page.tsx` dưới `admin/` và `(shop)/account/` có `export const instant = false`. Đặt ở layout không áp xuống page.
 - Trang động (`/products/[slug]`, `/blog/[slug]`, `/account/orders/[orderNumber]`): khi làm thật đọc params bằng `await props.params`; phần đọc params / gọi API bọc `<Suspense>` hoặc có `loading.tsx`.
+- **Dữ liệu public ở server** (`features/catalog/queries.ts`): mỗi hàm `'use cache'` + `cacheTag` (`CATALOG_TAGS`) + `cacheLife('minutes')`. Gọi qua `catalogService`, mỗi request có `skipAuthRefresh` (không đụng `refreshPromise` dùng chung của module, nguyên nhân lỗi "use cache awaiting a promise created outside it") và `AbortSignal.timeout(8000)` (backend trên Render ngủ thì mất ~20s mới dậy).
+  - Gọi API lỗi: **không ném lỗi** trong `'use cache'` (lỗi lúc prerender làm hỏng build), trả `null` / `[]` với `cacheLife('seconds')` để không bị cache lâu và Next không đưa vào static shell.
+  - Trang chủ (prerender): `getFeaturedProducts` / `getShowcaseCollections` khi nhận `null` gọi thêm `connection()` để phần đó render lại lúc request thay vì đóng băng thông báo lỗi.
+  - HTML prerender có skeleton đứng trước rồi mới tới nội dung thật trong `<div hidden id="S:…">` (React thay vào ngay khi tải). Thấy chữ skeleton trong HTML không có nghĩa là thiếu dữ liệu.
+- Vitest trên Windows: chạy từ thư mục có ổ đĩa viết hoa (`C:\...`, như PowerShell / pre-commit). Chạy từ đường dẫn `c:/...` hoặc `/c/...` (Git Bash) thì Vitest nạp 2 bản và mọi file báo "failed to find the current suite".
 - Ảnh URL do admin nhập (domain bất kỳ) dùng `<img>` thay vì `next/image` (cần khai báo `remotePatterns`), kèm `eslint-disable-next-line @next/next/no-img-element`.
 
 ## Hook dùng chung

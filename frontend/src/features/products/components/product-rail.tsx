@@ -4,13 +4,13 @@ import { ArrowLeft02Icon, ArrowRight02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { ProductCard } from '@/features/products/types';
 import { cn } from '@/lib/utils';
 
-import type { PlaceholderProduct } from './placeholder-data';
-import { ProductTile } from './product-tile';
+import { ProductTile } from '@/features/products/components/product-tile';
 
 type ProductRailProps = {
-  products: PlaceholderProduct[];
+  products: ProductCard[];
   label: string;
 };
 
@@ -58,7 +58,7 @@ export function ProductRail({ products, label }: ProductRailProps) {
       >
         {products.map((product) => (
           <li
-            key={product.slug}
+            key={product.id}
             className='w-[78%] shrink-0 snap-start sm:w-[45%] lg:w-[38%]'
           >
             <ProductTile product={product} />

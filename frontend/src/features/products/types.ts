@@ -38,6 +38,34 @@ export type Product = {
   deletedAt: string | null;
 };
 
+export type ProductCard = Pick<
+  Product,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'shortDescription'
+  | 'images'
+  | 'minPrice'
+  | 'maxPrice'
+  | 'colors'
+  | 'ratingAvg'
+  | 'ratingCount'
+  | 'soldCount'
+  | 'isFeatured'
+  | 'allowBackorder'
+>;
+
+export type ProductSort =
+  'newest' | 'price_asc' | 'price_desc' | 'best_selling' | 'rating';
+
+export type ProductFilterOptions = {
+  rooms: Room[];
+  styles: Style[];
+  materials: Material[];
+  colors: string[];
+  price: { min: number; max: number };
+};
+
 export type VariantOption = { name: string; value: string };
 
 export type Dimensions = {
@@ -133,4 +161,24 @@ export type ProductImportResult = {
   totalRows: number;
   created: { name: string; slug: string }[];
   errors: { rows: number[]; product?: string; messages: string[] }[];
+};
+
+export type PublicVariant = Pick<
+  ProductVariant,
+  | 'id'
+  | 'sku'
+  | 'name'
+  | 'options'
+  | 'price'
+  | 'compareAtPrice'
+  | 'stock'
+  | 'dimensions'
+  | 'weightKg'
+  | 'images'
+>;
+
+export type ProductDetail = Omit<Product, 'collectionIDs'> & {
+  category: CategoryRef;
+  collections: CategoryRef[];
+  variants: PublicVariant[];
 };

@@ -1,18 +1,21 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { Suspense } from 'react';
 
 import { SectionTitle } from '@/components/section-title';
 
 import { ArrowLink } from './_components/arrow-link';
 import { CtaLink } from './_components/cta-link';
-import { ImagePlaceholder } from './_components/image-placeholder';
+import {
+  CollectionsSection,
+  CollectionsSkeleton,
+  FeaturedProducts,
+  FeaturedProductsSkeleton,
+} from './_components/home-sections';
+import { ImagePlaceholder } from '@/components/image-placeholder';
 import { LampSwitch } from './_components/lamp-switch';
 import { Marquee } from './_components/marquee';
-import {
-  FEATURED_PRODUCTS,
-  MAKING_STEPS,
-} from './_components/placeholder-data';
-import { ProductRail } from './_components/product-rail';
+import { MAKING_STEPS } from './_components/making-steps';
 
 export const metadata: Metadata = {
   title: 'Đèn trang trí làm từ vỏ sò',
@@ -26,34 +29,49 @@ const SHELLS = [
   { name: 'Xà cừ', photo: 'Ảnh cận: mảnh xà cừ ánh cầu vồng' },
 ];
 
+const rise = (delay: number) => ({ animationDelay: `${delay}ms` });
+
 export default function HomePage() {
   return (
     <>
       <section className='grid lg:grid-cols-[3fr_2fr] lg:items-center'>
-        <Image
-          src='/images/oto_banner.png'
-          alt='Đèn trang trí vỏ sò O The o đang sáng trên bàn gỗ trong phòng khách'
-          width={1280}
-          height={720}
-          sizes='(min-width: 1024px) 60vw, 100vw'
-          loading='eager'
-          fetchPriority='high'
-          className='aspect-video w-full object-cover'
-        />
+        <div className='overflow-hidden'>
+          <Image
+            src='/images/oto_banner.png'
+            alt='Đèn trang trí vỏ sò O The o đang sáng trên bàn gỗ trong phòng khách'
+            width={1280}
+            height={720}
+            sizes='(min-width: 1024px) 60vw, 100vw'
+            loading='eager'
+            fetchPriority='high'
+            className='aspect-video w-full object-cover motion-safe:animate-settle'
+          />
+        </div>
         <div className='flex flex-col items-start gap-6 px-6 py-14 md:px-12 lg:px-12 lg:py-16 xl:px-20'>
-          <p className='label-caps'>Làm thủ công</p>
-          <h1 className='text-5xl leading-[1.05] font-medium text-balance md:text-6xl xl:text-7xl'>
+          <p className='label-caps motion-safe:animate-rise' style={rise(100)}>
+            Làm thủ công
+          </p>
+          <h1
+            className='text-5xl leading-[1.05] font-medium text-balance motion-safe:animate-rise md:text-6xl xl:text-7xl'
+            style={rise(220)}
+          >
             Đèn trang trí làm từ vỏ sò
           </h1>
-          <p className='max-w-[48ch] text-base leading-relaxed text-muted-foreground'>
+          <p
+            className='max-w-[48ch] text-base leading-relaxed text-muted-foreground motion-safe:animate-rise'
+            style={rise(360)}
+          >
             Mỗi chiếc đèn được ghép tay từ vỏ sò thật. Khi bật, ánh sáng đi qua
             lớp vỏ mỏng và hiện rõ từng đường vân; khi tắt, đèn vẫn là một món
             trang trí đẹp cho góc nhà.
           </p>
-          <CtaLink href='/products' className='mt-2'>
-            Xem các mẫu đèn
-          </CtaLink>
-          <ArrowLink href='#bat-den'>Xem lúc đèn bật</ArrowLink>
+          <div
+            className='mt-2 flex flex-col items-start gap-6 motion-safe:animate-rise'
+            style={rise(500)}
+          >
+            <CtaLink href='/products'>Xem các mẫu đèn</CtaLink>
+            <ArrowLink href='#bat-den'>Xem lúc đèn bật</ArrowLink>
+          </div>
         </div>
       </section>
 
@@ -71,7 +89,7 @@ export default function HomePage() {
         aria-labelledby='noi-bat-title'
         className='container mx-auto grid gap-12 px-6 py-20 md:py-28 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.3fr)] lg:items-center lg:gap-16'
       >
-        <div className='flex flex-col items-start gap-6'>
+        <div className='flex reveal flex-col items-start gap-6'>
           <SectionTitle
             id='noi-bat-title'
             serif='Sản phẩm'
@@ -84,8 +102,19 @@ export default function HomePage() {
           </p>
           <ArrowLink href='/products'>Xem tất cả sản phẩm</ArrowLink>
         </div>
-        <ProductRail products={FEATURED_PRODUCTS} label='Sản phẩm nổi bật' />
+        <div
+          className='min-w-0 reveal'
+          style={{ '--reveal-delay': 10 } as React.CSSProperties}
+        >
+          <Suspense fallback={<FeaturedProductsSkeleton />}>
+            <FeaturedProducts />
+          </Suspense>
+        </div>
       </section>
+
+      <Suspense fallback={<CollectionsSkeleton />}>
+        <CollectionsSection />
+      </Suspense>
 
       <section
         aria-labelledby='cach-lam-title'
@@ -97,16 +126,20 @@ export default function HomePage() {
             serif='Cách làm'
             caps='một chiếc đèn'
             stacked
-            className='md:col-span-6'
+            className='reveal md:col-span-6'
           />
-          <p className='max-w-prose text-base leading-relaxed text-muted-foreground md:col-span-5 md:col-start-8'>
+          <p className='max-w-prose reveal text-base leading-relaxed text-muted-foreground md:col-span-5 md:col-start-8'>
             Mỗi chiếc đèn đi qua bốn bước, đều làm bằng tay.
           </p>
         </div>
 
         <ol className='mt-14 grid gap-x-8 gap-y-12 sm:grid-cols-2 md:mt-20 lg:grid-cols-4'>
           {MAKING_STEPS.map((step, index) => (
-            <li key={step.title} className='flex flex-col gap-4 border-t pt-6'>
+            <li
+              key={step.title}
+              className='flex reveal flex-col gap-4 border-t pt-6'
+              style={{ '--reveal-delay': index * 6 } as React.CSSProperties}
+            >
               <span
                 aria-hidden
                 className='font-heading text-6xl leading-none italic tabular-nums'
@@ -129,8 +162,12 @@ export default function HomePage() {
         className='container mx-auto grid gap-12 px-6 py-20 md:py-28 lg:grid-cols-12 lg:items-center lg:gap-10'
       >
         <ul className='grid grid-cols-3 gap-3 sm:gap-6 lg:col-span-7'>
-          {SHELLS.map((shell) => (
-            <li key={shell.name} className='flex flex-col gap-4'>
+          {SHELLS.map((shell, index) => (
+            <li
+              key={shell.name}
+              className='flex reveal flex-col gap-4'
+              style={{ '--reveal-delay': index * 8 } as React.CSSProperties}
+            >
               <ImagePlaceholder
                 label={shell.photo}
                 tone='deep'
@@ -143,7 +180,7 @@ export default function HomePage() {
           ))}
         </ul>
 
-        <div className='flex flex-col items-start gap-6 lg:col-span-4 lg:col-start-9'>
+        <div className='flex reveal flex-col items-start gap-6 lg:col-span-4 lg:col-start-9'>
           <SectionTitle
             id='cau-chuyen-title'
             serif='Câu chuyện'
