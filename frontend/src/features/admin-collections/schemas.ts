@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import { z } from 'zod';
 
 import type {
@@ -6,14 +5,20 @@ import type {
   CreateCollectionInput,
   UpdateCollectionInput,
 } from '@/features/collections/types';
+import {
+  LOCAL_DATETIME_PATTERN,
+  localInputToISO as toISO,
+  toLocalInput,
+} from '@/lib/datetime';
+
+export { toLocalInput };
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const LOCAL_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 const dateTimeField = z
   .string()
   .refine(
-    (value) => value === '' || LOCAL_DATETIME.test(value),
+    (value) => value === '' || LOCAL_DATETIME_PATTERN.test(value),
     'Thời gian không hợp lệ',
   );
 
@@ -74,12 +79,6 @@ export const COLLECTION_FORM_FIELDS = [
   'startsAt',
   'endsAt',
 ] as const;
-
-export function toLocalInput(iso: string | null | undefined) {
-  return iso ? format(new Date(iso), "yyyy-MM-dd'T'HH:mm") : '';
-}
-
-const toISO = (local: string) => new Date(local).toISOString();
 
 export function toCollectionFormValues(
   collection?: Collection | null,

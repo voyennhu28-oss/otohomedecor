@@ -1,0 +1,42 @@
+export const CITIES = [
+  'Hà Nội',
+  'Hải Phòng',
+  'Huế',
+  'Đà Nẵng',
+  'Hồ Chí Minh',
+  'Cần Thơ',
+] as const;
+
+export const PROVINCES = [
+  ...CITIES,
+  'Lai Châu',
+  'Điện Biên',
+  'Sơn La',
+  'Lạng Sơn',
+  'Cao Bằng',
+  'Tuyên Quang',
+  'Lào Cai',
+  'Thái Nguyên',
+  'Phú Thọ',
+  'Bắc Ninh',
+  'Hưng Yên',
+  'Ninh Bình',
+  'Quảng Ninh',
+  'Thanh Hóa',
+  'Nghệ An',
+  'Hà Tĩnh',
+  'Quảng Trị',
+  'Quảng Ngãi',
+  'Gia Lai',
+  'Khánh Hòa',
+  'Lâm Đồng',
+  'Đắk Lắk',
+  'Đồng Nai',
+  'Tây Ninh',
+  'Vĩnh Long',
+  'Đồng Tháp',
+  'Cà Mau',
+  'An Giang',
+] as const;
+
+export type Province = (typeof PROVINCES)[number];

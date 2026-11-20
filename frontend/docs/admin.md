@@ -84,3 +84,17 @@
 - "Cần xử lý": đơn chờ xác nhận (tổng, không theo khoảng ngày), giao dịch cần đối soát (trong khoảng), hàng sắp hết (ngưỡng chọn được: hết hàng / ≤ 5 / 10 / 20, `?low=`), dẫn thẳng sang tab Biến thể của sản phẩm.
 - Badge số đơn chờ xác nhận trên mục "Đơn hàng" ở sidebar: `GET /admin/orders?status=pending&itemPerPage=1` lấy `totalItems` (nhẹ hơn gọi dashboard), tự làm mới mỗi 60 giây và sau mỗi thao tác đơn.
 - `StatTile` (`components/admin/stat-tile.tsx`) dùng lại được cho các trang khác.
+
+## Khuyến mãi (`features/admin-promotions`)
+
+- `/admin/promotions`: phân trang ở server, tìm theo mã / tên (`q`), tab bật / tạm ngừng (`isActive`). API không lọc theo trạng thái thời gian nên trạng thái hiển thị tính ở FE (`getPromotionState`): tạm ngừng → sắp áp dụng → hết hạn → hết lượt → đang áp dụng.
+- Mô tả mức giảm và công thức tính tiền giảm (`describeDiscount`, `computeDiscount`) giống `backend/src/app/promotions/promotion.util.ts`; form có dòng ví dụ tiền giảm cho 1 đơn mẫu (tạm tính ≥ 1.000.000₫, phí ship 30.000₫).
+- Form: loại `percentage` 1–100% (+ trần giảm tùy chọn), `fixed_amount` ≥ 1₫, `free_shipping` ẩn ô giá trị (gửi `value: 0`, `maxDiscount: null`, giống backend tự chuẩn hóa). Ô "tổng lượt" / "lượt mỗi khách" / "trần giảm" để trống = không giới hạn (`null`). Bắt đầu để trống khi tạo = áp dụng ngay (backend mặc định thời điểm tạo); khi sửa thì bắt buộc. Sửa không cho tổng lượt nhỏ hơn số đã dùng. 409 (trùng mã) gắn vào ô mã.
+
+## Vùng giao hàng (`features/admin-shipping-zones`)
+
+- `/admin/shipping-zones`: API trả tất cả, không phân trang. Đầu trang là độ phủ: số tỉnh có vùng đang hoạt động / 34 và danh sách tỉnh chưa đặt hàng được.
+- Mỗi tỉnh chỉ thuộc 1 vùng **đang hoạt động** (backend trả 409). FE kiểm tra trước (`provinceOwners`, `conflictMessage`): ô chọn tỉnh khóa các tỉnh đã thuộc vùng khác khi vùng đang sửa bật; bật lại một vùng đang tắt cũng kiểm tra trước. Tỉnh gửi lên theo thứ tự chuẩn của `PROVINCES` (`constants/shipping.ts`, giống backend).
+- "Thử tính phí" trong form dùng `estimateShippingFee`, cùng công thức với checkout (docs/api-docs/10): free ship khi tạm tính ≥ ngưỡng và không có hàng cồng kềnh; còn lại `baseFee + ceil(kg − baseWeightKg) × feePerKg (+ phụ phí cồng kềnh)`.
+- Xóa vùng là xóa cứng.
+- `SegmentedControl` (`components/admin/segmented-control.tsx`): nhóm nút chọn 1 có điều hướng phím mũi tên, dùng chung.

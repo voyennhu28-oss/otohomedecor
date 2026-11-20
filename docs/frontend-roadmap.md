@@ -9,9 +9,9 @@ Thứ tự admin theo phụ thuộc dữ liệu: có danh mục → có sản ph
 |---|---|---|---|
 | 0 | Nền tảng | | Format response + layout xong, còn lại chưa |
 | 1 | Danh mục, sản phẩm, variant, ảnh, bộ sưu tập | 19 + 9 | Xong |
-| 2 | Đơn hàng, thanh toán | 6 | |
-| 3 | Dashboard | 1 | |
-| 4 | Khuyến mãi, vùng giao hàng | 10 | |
+| 2 | Đơn hàng, thanh toán | 6 | Xong |
+| 3 | Dashboard | 1 | Xong |
+| 4 | Khuyến mãi, vùng giao hàng | 10 | Xong |
 | 5 | Tài khoản, đánh giá | 8 | |
 | 6+ | Shop | 45 | |
 
@@ -42,25 +42,25 @@ Tài liệu: 05, 06, 07, 08.
 
 Tài liệu: 13, 14.
 
-- **Đơn hàng** (`/admin/orders`): lọc theo trạng thái (tab), phương thức, trạng thái thanh toán, khoảng ngày, mã đơn, email. Xuất Excel theo bộ lọc đang chọn.
-- **Chi tiết** (`/admin/orders/[id]`): sản phẩm (snapshot trong đơn), địa chỉ, bảng tiền, `statusHistory` dạng timeline, giao dịch SePay. Nút đổi trạng thái **chỉ hiện bước hợp lệ** (bảng chuyển trạng thái trong 13-orders.md), có ô ghi chú; hủy thì bắt buộc lý do. Nút "Xác nhận đã nhận tiền" (`mark-paid`) cho đơn chuyển khoản chưa trả.
-- **Thanh toán** (`/admin/payments`): giao dịch SePay, lọc `status=failed` để đối soát, link sang đơn tương ứng.
+- [x] **Đơn hàng** (`/admin/orders`): lọc theo trạng thái (tab), phương thức, trạng thái thanh toán, khoảng ngày, mã đơn, email. Xuất Excel theo bộ lọc đang chọn.
+- [x] **Chi tiết** (`/admin/orders/[id]`): sản phẩm (snapshot trong đơn), địa chỉ, bảng tiền, `statusHistory` dạng timeline, giao dịch SePay. Nút đổi trạng thái **chỉ hiện bước hợp lệ** (bảng chuyển trạng thái trong 13-orders.md), có ô ghi chú; hủy thì bắt buộc lý do. Nút "Xác nhận đã nhận tiền" (`mark-paid`) cho đơn chuyển khoản chưa trả.
+- [x] **Thanh toán** (`/admin/payments`): giao dịch SePay, lọc `status=failed` để đối soát, link sang đơn tương ứng.
 
 ## GĐ 3: Dashboard
 
-Tài liệu: 16. Cần thư viện biểu đồ (shadcn `chart` dùng recharts, chưa cài: hỏi trước khi thêm).
+Tài liệu: 16. Biểu đồ dùng shadcn `chart` (recharts, đã cài theo đồng ý của người dùng).
 
-- Chọn khoảng ngày; 4 thẻ số: doanh thu, số đơn, giá trị đơn trung bình, đơn hủy.
-- Biểu đồ doanh thu theo ngày, số đơn theo trạng thái, top sản phẩm.
-- "Cần xử lý": đơn chờ xác nhận, giao dịch lỗi, hàng sắp hết (link sang sản phẩm / đơn).
-- Badge số đơn `pending` trên mục "Đơn hàng" của sidebar (`needsAttention.pendingOrders`).
+- [x] Chọn khoảng ngày; 4 thẻ số: doanh thu, số đơn, giá trị đơn trung bình, đơn hủy.
+- [x] Biểu đồ doanh thu theo ngày, số đơn theo trạng thái, top sản phẩm.
+- [x] "Cần xử lý": đơn chờ xác nhận, giao dịch lỗi, hàng sắp hết (link sang sản phẩm / đơn).
+- [x] Badge số đơn `pending` trên mục "Đơn hàng" của sidebar (lấy `totalItems` của `GET /admin/orders?status=pending`).
 
 ## GĐ 4: Khuyến mãi & vùng giao hàng
 
 Tài liệu: 10, 11. Cần xong trước khi làm checkout ở shop (phí ship và mã giảm giá tính ở `POST /checkout/preview`).
 
-- **Khuyến mãi**: CRUD mã giảm giá. Form đổi theo `type` (`percentage` có `maxDiscount`; `free_shipping` ẩn ô giá trị), đơn tối thiểu, tổng lượt / lượt mỗi khách, `startsAt` / `endsAt`, bật / tắt.
-- **Vùng giao hàng**: CRUD vùng; chọn nhiều tỉnh (34 giá trị `PROVINCES`), phí cơ bản theo `baseWeightKg`, phí mỗi kg, phụ phí cồng kềnh, ngưỡng free ship, số ngày giao.
+- [x] **Khuyến mãi**: CRUD mã giảm giá. Form đổi theo `type` (`percentage` có `maxDiscount`; `free_shipping` ẩn ô giá trị), đơn tối thiểu, tổng lượt / lượt mỗi khách, `startsAt` / `endsAt`, bật / tắt.
+- [x] **Vùng giao hàng**: CRUD vùng; chọn nhiều tỉnh (34 giá trị `PROVINCES`), phí cơ bản theo `baseWeightKg`, phí mỗi kg, phụ phí cồng kềnh, ngưỡng free ship, số ngày giao.
 
 ## GĐ 5: Tài khoản & đánh giá
 
