@@ -1,15 +1,29 @@
 import { z } from 'zod';
 
 const PASSWORD_MAX_BYTES = 72;
-const PHONE_PATTERN = /^(0|\+84)\d{9}$/;
+export const PHONE_PATTERN = /^(0|\+84)\d{9}$/;
 
-const emailField = z
+export const emailField = z
   .string()
   .trim()
   .min(1, 'Nhập email')
   .pipe(z.email('Email không hợp lệ'));
 
-const passwordField = z
+export const fullNameField = z
+  .string()
+  .trim()
+  .min(1, 'Nhập họ và tên')
+  .max(100, 'Họ và tên tối đa 100 ký tự');
+
+export const optionalPhoneField = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value === '' || PHONE_PATTERN.test(value),
+    'Số điện thoại gồm 10 số, bắt đầu bằng 0 hoặc +84',
+  );
+
+export const passwordField = z
   .string()
   .min(8, 'Mật khẩu cần ít nhất 8 ký tự')
   .refine(
@@ -25,19 +39,9 @@ export const signInSchema = z.object({
 });
 
 export const signUpSchema = z.object({
-  fullName: z
-    .string()
-    .trim()
-    .min(1, 'Nhập họ và tên')
-    .max(100, 'Họ và tên tối đa 100 ký tự'),
+  fullName: fullNameField,
   email: emailField,
-  phone: z
-    .string()
-    .trim()
-    .refine(
-      (value) => value === '' || PHONE_PATTERN.test(value),
-      'Số điện thoại gồm 10 số, bắt đầu bằng 0 hoặc +84',
-    ),
+  phone: optionalPhoneField,
   password: passwordField,
 });
 

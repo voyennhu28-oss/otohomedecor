@@ -9,7 +9,6 @@
 - Menu (`components/layout/admin-nav.ts`): mỗi nhóm nên có từ 2 mục, tránh menu vụn. `/admin` chỉ active đúng trang đó; mục khác active cả ở trang con. Breadcrumb đọc nhóm / trang từ đây, khớp đường dẫn dài nhất trước.
 - Breadcrumb: Nhóm › Trang › Trang con. Không có gốc "Quản trị" (đã có cạnh logo). Nhóm không phải trang nên không có link. Đoạn con `new` / `edit` / `import` có tên riêng, còn lại (ID, mã đơn) là "Chi tiết". Mobile chỉ hiện trang hiện tại.
 - `AdminPageHeader`: tiêu đề cỡ vừa (không dùng tiêu đề hero của shop), mô tả, nút thao tác bên phải.
-- Trang chưa nối API dùng `ComingSoon` (giai đoạn + endpoint), xóa khi làm xong.
 
 ## Trang danh sách
 
@@ -98,3 +97,19 @@
 - "Thử tính phí" trong form dùng `estimateShippingFee`, cùng công thức với checkout (docs/api-docs/10): free ship khi tạm tính ≥ ngưỡng và không có hàng cồng kềnh; còn lại `baseFee + ceil(kg − baseWeightKg) × feePerKg (+ phụ phí cồng kềnh)`.
 - Xóa vùng là xóa cứng.
 - `SegmentedControl` (`components/admin/segmented-control.tsx`): nhóm nút chọn 1 có điều hướng phím mũi tên, dùng chung.
+
+## Tài khoản (`features/admin-users`)
+
+- `/admin/users`: phân trang ở server, tab quyền (`role`), lọc trạng thái, tìm theo email / tên / SĐT (`q`).
+- Không tự hạ quyền / tự khóa / tự xóa chính mình (backend chặn 400): dòng của admin đang đăng nhập không có nút khóa / xóa; form sửa chính mình khóa ô quyền và trạng thái, và không gửi 2 field này.
+- Khóa (`status: inactive`) thu hồi mọi refresh token → người dùng bị đăng xuất khắp nơi; xóa là xóa mềm, email không đăng ký lại được. Cả hai hỏi xác nhận.
+- Tạo tài khoản: rule email / mật khẩu (đếm byte) / SĐT dùng chung với form đăng ký (`emailField`, `passwordField`, `optionalPhoneField`, `fullNameField` export từ `features/auth/schemas.ts`). SĐT trống thì không gửi (DTO strict). 409 email trùng gắn vào ô email.
+- Chi tiết (dialog): số đơn, tổng chi (chỉ đơn đã giao), số đánh giá, sổ địa chỉ; nút "Xem đơn của khách" mở `/admin/orders?by=email&q=<email>`.
+- Sửa / tạo xong làm mới cả `['me']` (phòng khi admin sửa tên chính mình).
+
+## Đánh giá (`features/admin-reviews`)
+
+- `/admin/reviews`: phân trang ở server, tab trạng thái, lọc số sao, lọc theo sản phẩm (`?product=<id>&pname=<tên hiển thị>`; API chỉ nhận ID nên tên lưu kèm trên URL để hiện chip). Đặt bộ lọc sản phẩm từ menu "Xem đánh giá của sản phẩm này" trên từng đánh giá.
+- Đánh giá mới mặc định `approved` (hiện ngay); admin ẩn (`hidden`) hoặc đưa về `pending`. Chỉ `approved` được tính vào điểm sản phẩm, nên đổi trạng thái thì làm mới cả danh sách sản phẩm.
+- Dạng thẻ thay vì bảng (nội dung chủ yếu là chữ + ảnh). Bấm ảnh để xem lớn và gỡ ảnh không phù hợp (`DELETE /admin/reviews/:id/images/:publicID`, xóa luôn trên kho ảnh).
+- `RatingStars` (`components/rating-stars.tsx`) dùng chung cho shop sau này.

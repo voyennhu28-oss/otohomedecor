@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
-import { AdminPageHeader } from '@/components/layout/admin-page-header';
-
-import { ComingSoon } from '@/app/admin/_components/coming-soon';
+import { DataTableSkeleton } from '@/components/admin/data-table-state';
+import { UsersManager } from '@/features/admin-users/components/users-manager';
 
 export const instant = false;
 
@@ -10,21 +10,8 @@ export const metadata: Metadata = { title: 'Tài khoản' };
 
 export default function AdminUsersPage() {
   return (
-    <>
-      <AdminPageHeader
-        title='Tài khoản'
-        description='Khách hàng và quản trị viên.'
-      />
-      <ComingSoon
-        phase='Giai đoạn 5'
-        endpoints={[
-          'GET /admin/users',
-          'GET /admin/users/:id',
-          'POST /admin/users',
-          'PATCH /admin/users/:id',
-          'DELETE /admin/users/:id',
-        ]}
-      />
-    </>
+    <Suspense fallback={<DataTableSkeleton label='Đang tải tài khoản' />}>
+      <UsersManager />
+    </Suspense>
   );
 }
